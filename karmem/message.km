@@ -1,0 +1,26 @@
+karmem structs @packed(true) @golang.package(`structs`);
+
+enum StatusCode uint8 {
+    StatusMsg;
+    NewBlockHashesMsg;
+    TransactionsMsg;
+    GetBlockHeadersMsg;
+    BlockHeadersMsg;
+    GetBlockBodiesMsg;
+    BlockBodiesMsg;
+    NewBlockMsg;
+    GetNodeDataMsg;
+    NodeDataMsg;
+    GetReceiptsMsg;
+    ReceiptsMsg;
+    NewPooledTransactionHashesMsg;
+    GetPooledTransactionMsg;
+    PooledTransactionsMsg;
+}
+
+struct Message table {
+    Code StatusCode;
+    Size uint32;
+    Payload []byte;
+    ReceiveAt uint32;
+}
