@@ -43,7 +43,7 @@ func Discover(ctx context.Context, h host.Host, dht *dht.IpfsDHT, rendezvous str
 					continue
 				}
 				if h.Network().Connectedness(p.ID) != network.Connected {
-					_, err := h.Network().DialPeer(ctx, p.ID)
+					conn, err := h.Network().DialPeer(ctx, p.ID)
 					if err != nil {
 						log.WithField("peerID", p.ID).Debugln("Connect to node failed.")
 						continue

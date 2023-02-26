@@ -1,4 +1,4 @@
-package structs
+package p2p
 
 import (
 	karmem "karmem.org/golang"
