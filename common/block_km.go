@@ -1,4 +1,4 @@
-package core
+package common
 
 import (
 	karmem "karmem.org/golang"
@@ -7,7 +7,7 @@ import (
 
 var _ unsafe.Pointer
 
-var _Null = make([]byte, 120)
+var _Null = make([]byte, 136)
 var _NullReader = karmem.NewReader(_Null)
 
 type (
@@ -22,6 +22,7 @@ const (
 )
 
 type TransactionBody struct {
+	Hash      [32]byte
 	Signature []byte
 	Address   [20]byte
 	Public    [33]byte
@@ -48,45 +49,47 @@ func (x *TransactionBody) WriteAsRoot(writer *karmem.Writer) (offset uint, err e
 
 func (x *TransactionBody) Write(writer *karmem.Writer, start uint) (offset uint, err error) {
 	offset = start
-	size := uint(104)
+	size := uint(136)
 	if offset == 0 {
 		offset, err = writer.Alloc(size)
 		if err != nil {
 			return 0, err
 		}
 	}
-	writer.Write4At(offset, uint32(97))
+	writer.Write4At(offset, uint32(129))
+	__HashOffset := offset + 4
+	writer.WriteAt(__HashOffset, (*[32]byte)(unsafe.Pointer(&x.Hash))[:])
 	__SignatureSize := uint(1 * len(x.Signature))
 	__SignatureOffset, err := writer.Alloc(__SignatureSize)
 	if err != nil {
 		return 0, err
 	}
-	writer.Write4At(offset+4, uint32(__SignatureOffset))
-	writer.Write4At(offset+4+4, uint32(__SignatureSize))
-	writer.Write4At(offset+4+4+4, 1)
+	writer.Write4At(offset+36, uint32(__SignatureOffset))
+	writer.Write4At(offset+36+4, uint32(__SignatureSize))
+	writer.Write4At(offset+36+4+4, 1)
 	__SignatureSlice := *(*[3]uint)(unsafe.Pointer(&x.Signature))
 	__SignatureSlice[1] = __SignatureSize
 	__SignatureSlice[2] = __SignatureSize
 	writer.WriteAt(__SignatureOffset, *(*[]byte)(unsafe.Pointer(&__SignatureSlice)))
-	__AddressOffset := offset + 16
+	__AddressOffset := offset + 48
 	writer.WriteAt(__AddressOffset, (*[20]byte)(unsafe.Pointer(&x.Address))[:])
-	__PublicOffset := offset + 36
+	__PublicOffset := offset + 68
 	writer.WriteAt(__PublicOffset, (*[33]byte)(unsafe.Pointer(&x.Public))[:])
 	__DataSize := uint(1 * len(x.Data))
 	__DataOffset, err := writer.Alloc(__DataSize)
 	if err != nil {
 		return 0, err
 	}
-	writer.Write4At(offset+69, uint32(__DataOffset))
-	writer.Write4At(offset+69+4, uint32(__DataSize))
-	writer.Write4At(offset+69+4+4, 1)
+	writer.Write4At(offset+101, uint32(__DataOffset))
+	writer.Write4At(offset+101+4, uint32(__DataSize))
+	writer.Write4At(offset+101+4+4, 1)
 	__DataSlice := *(*[3]uint)(unsafe.Pointer(&x.Data))
 	__DataSlice[1] = __DataSize
 	__DataSlice[2] = __DataSize
 	writer.WriteAt(__DataOffset, *(*[]byte)(unsafe.Pointer(&__DataSlice)))
-	__ExpireOffset := offset + 81
+	__ExpireOffset := offset + 113
 	writer.Write8At(__ExpireOffset, *(*uint64)(unsafe.Pointer(&x.Expire)))
-	__TimestampOffset := offset + 89
+	__TimestampOffset := offset + 121
 	writer.Write8At(__TimestampOffset, *(*uint64)(unsafe.Pointer(&x.Timestamp)))
 
 	return offset, nil
@@ -97,6 +100,12 @@ func (x *TransactionBody) ReadAsRoot(reader *karmem.Reader) {
 }
 
 func (x *TransactionBody) Read(viewer *TransactionBodyViewer, reader *karmem.Reader) {
+	__HashSlice := viewer.Hash()
+	__HashLen := len(__HashSlice)
+	copy(x.Hash[:], __HashSlice)
+	for i := __HashLen; i < len(x.Hash); i++ {
+		x.Hash[i] = 0
+	}
 	__SignatureSlice := viewer.Signature(reader)
 	__SignatureLen := len(__SignatureSlice)
 	if __SignatureLen > cap(x.Signature) {
@@ -141,19 +150,19 @@ func NewTransaction() Transaction {
 	return Transaction{}
 }
 
-func (x *Transaction) PacketIdentifier() PacketIdentifier {
+func (tx *Transaction) PacketIdentifier() PacketIdentifier {
 	return PacketIdentifierTransaction
 }
 
-func (x *Transaction) Reset() {
-	x.Read((*TransactionViewer)(unsafe.Pointer(&_Null)), _NullReader)
+func (tx *Transaction) Reset() {
+	tx.Read((*TransactionViewer)(unsafe.Pointer(&_Null)), _NullReader)
 }
 
-func (x *Transaction) WriteAsRoot(writer *karmem.Writer) (offset uint, err error) {
-	return x.Write(writer, 0)
+func (tx *Transaction) WriteAsRoot(writer *karmem.Writer) (offset uint, err error) {
+	return tx.Write(writer, 0)
 }
 
-func (x *Transaction) Write(writer *karmem.Writer, start uint) (offset uint, err error) {
+func (tx *Transaction) Write(writer *karmem.Writer, start uint) (offset uint, err error) {
 	offset = start
 	size := uint(8)
 	if offset == 0 {
@@ -162,25 +171,25 @@ func (x *Transaction) Write(writer *karmem.Writer, start uint) (offset uint, err
 			return 0, err
 		}
 	}
-	__BodySize := uint(104)
+	__BodySize := uint(136)
 	__BodyOffset, err := writer.Alloc(__BodySize)
 	if err != nil {
 		return 0, err
 	}
 	writer.Write4At(offset+0, uint32(__BodyOffset))
-	if _, err := x.Body.Write(writer, __BodyOffset); err != nil {
+	if _, err := tx.Body.Write(writer, __BodyOffset); err != nil {
 		return offset, err
 	}
 
 	return offset, nil
 }
 
-func (x *Transaction) ReadAsRoot(reader *karmem.Reader) {
-	x.Read(NewTransactionViewer(reader, 0), reader)
+func (tx *Transaction) ReadAsRoot(reader *karmem.Reader) {
+	tx.Read(NewTransactionViewer(reader, 0), reader)
 }
 
-func (x *Transaction) Read(viewer *TransactionViewer, reader *karmem.Reader) {
-	x.Body.Read(viewer.Body(reader), reader)
+func (tx *Transaction) Read(viewer *TransactionViewer, reader *karmem.Reader) {
+	tx.Body.Read(viewer.Body(reader), reader)
 }
 
 type BlockHeader struct {
@@ -334,7 +343,7 @@ func (x *Block) Read(viewer *BlockViewer, reader *karmem.Reader) {
 }
 
 type TransactionBodyViewer struct {
-	_data [104]byte
+	_data [136]byte
 }
 
 func NewTransactionBodyViewer(reader *karmem.Reader, offset uint32) (v *TransactionBodyViewer) {
@@ -351,12 +360,21 @@ func NewTransactionBodyViewer(reader *karmem.Reader, offset uint32) (v *Transact
 func (x *TransactionBodyViewer) size() uint32 {
 	return *(*uint32)(unsafe.Pointer(&x._data))
 }
-func (x *TransactionBodyViewer) Signature(reader *karmem.Reader) (v []byte) {
-	if 4+12 > x.size() {
+func (x *TransactionBodyViewer) Hash() (v []byte) {
+	if 4+32 > x.size() {
 		return []byte{}
 	}
-	offset := *(*uint32)(unsafe.Add(unsafe.Pointer(&x._data), 4))
-	size := *(*uint32)(unsafe.Add(unsafe.Pointer(&x._data), 4+4))
+	slice := [3]uintptr{
+		uintptr(unsafe.Add(unsafe.Pointer(&x._data), 4)), 32, 32,
+	}
+	return *(*[]byte)(unsafe.Pointer(&slice))
+}
+func (x *TransactionBodyViewer) Signature(reader *karmem.Reader) (v []byte) {
+	if 36+12 > x.size() {
+		return []byte{}
+	}
+	offset := *(*uint32)(unsafe.Add(unsafe.Pointer(&x._data), 36))
+	size := *(*uint32)(unsafe.Add(unsafe.Pointer(&x._data), 36+4))
 	if !reader.IsValidOffset(offset, size) {
 		return []byte{}
 	}
@@ -370,29 +388,29 @@ func (x *TransactionBodyViewer) Signature(reader *karmem.Reader) (v []byte) {
 	return *(*[]byte)(unsafe.Pointer(&slice))
 }
 func (x *TransactionBodyViewer) Address() (v []byte) {
-	if 16+20 > x.size() {
+	if 48+20 > x.size() {
 		return []byte{}
 	}
 	slice := [3]uintptr{
-		uintptr(unsafe.Add(unsafe.Pointer(&x._data), 16)), 20, 20,
+		uintptr(unsafe.Add(unsafe.Pointer(&x._data), 48)), 20, 20,
 	}
 	return *(*[]byte)(unsafe.Pointer(&slice))
 }
 func (x *TransactionBodyViewer) Public() (v []byte) {
-	if 36+33 > x.size() {
+	if 68+33 > x.size() {
 		return []byte{}
 	}
 	slice := [3]uintptr{
-		uintptr(unsafe.Add(unsafe.Pointer(&x._data), 36)), 33, 33,
+		uintptr(unsafe.Add(unsafe.Pointer(&x._data), 68)), 33, 33,
 	}
 	return *(*[]byte)(unsafe.Pointer(&slice))
 }
 func (x *TransactionBodyViewer) Data(reader *karmem.Reader) (v []byte) {
-	if 69+12 > x.size() {
+	if 101+12 > x.size() {
 		return []byte{}
 	}
-	offset := *(*uint32)(unsafe.Add(unsafe.Pointer(&x._data), 69))
-	size := *(*uint32)(unsafe.Add(unsafe.Pointer(&x._data), 69+4))
+	offset := *(*uint32)(unsafe.Add(unsafe.Pointer(&x._data), 101))
+	size := *(*uint32)(unsafe.Add(unsafe.Pointer(&x._data), 101+4))
 	if !reader.IsValidOffset(offset, size) {
 		return []byte{}
 	}
@@ -403,16 +421,16 @@ func (x *TransactionBodyViewer) Data(reader *karmem.Reader) (v []byte) {
 	return *(*[]byte)(unsafe.Pointer(&slice))
 }
 func (x *TransactionBodyViewer) Expire() (v uint64) {
-	if 81+8 > x.size() {
+	if 113+8 > x.size() {
 		return v
 	}
-	return *(*uint64)(unsafe.Add(unsafe.Pointer(&x._data), 81))
+	return *(*uint64)(unsafe.Add(unsafe.Pointer(&x._data), 113))
 }
 func (x *TransactionBodyViewer) Timestamp() (v uint64) {
-	if 89+8 > x.size() {
+	if 121+8 > x.size() {
 		return v
 	}
-	return *(*uint64)(unsafe.Add(unsafe.Pointer(&x._data), 89))
+	return *(*uint64)(unsafe.Add(unsafe.Pointer(&x._data), 121))
 }
 
 type TransactionViewer struct {

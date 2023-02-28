@@ -1,9 +1,10 @@
-package p2p
+package node
 
 import (
 	"context"
 	"github.com/libp2p/go-libp2p-kad-dht"
-	host "github.com/libp2p/go-libp2p/core/host"
+	"github.com/libp2p/go-libp2p/core/discovery"
+	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/p2p/discovery/routing"
 	log "github.com/sirupsen/logrus"
@@ -16,25 +17,28 @@ func Discover(ctx context.Context, h host.Host, dht *dht.IpfsDHT, rendezvous str
 	ttl, err := routingDiscovery.Advertise(ctx, rendezvous)
 
 	if err != nil {
-		log.Errorln("Routing discovery start failed.")
+		log.WithField("error", err).Errorln("Routing discovery start failed.")
 	}
 
 	log.WithFields(log.Fields{
 		"ttl": ttl,
 	}).Infoln("Routing discovery start.")
 
-	ticker := time.NewTicker(1 * time.Second)
+	ticker := time.NewTicker(5 * time.Second)
 	defer ticker.Stop()
+
+	handler := GetHandlerInst()
 
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			peers, err := routingDiscovery.FindPeers(ctx, rendezvous)
+			dht.RefreshRoutingTable()
+			peers, err := routingDiscovery.FindPeers(ctx, rendezvous, discovery.Limit(20))
 
 			if err != nil {
-				log.WithField("error", err).Debugln("Find peers failed.")
+				log.WithField("error", err).Errorln("Find peers failed.")
 				continue
 			}
 
@@ -43,9 +47,19 @@ func Discover(ctx context.Context, h host.Host, dht *dht.IpfsDHT, rendezvous str
 					continue
 				}
 				if h.Network().Connectedness(p.ID) != network.Connected {
-					conn, err := h.Network().DialPeer(ctx, p.ID)
+					_, err := h.Network().DialPeer(ctx, p.ID)
 					if err != nil {
-						log.WithField("peerID", p.ID).Debugln("Connect to node failed.")
+						log.WithFields(log.Fields{
+							"peerID": p.ID,
+							"error":  err,
+						}).Errorln("Connect to node failed.")
+						continue
+					}
+
+					s, err := h.NewStream(ctx, p.ID, ProtocolId)
+					_, err = handler.NewPeer(p.ID, &s)
+					if err != nil {
+						log.WithField("error", err).Errorln("Create new peer failed.")
 						continue
 					}
 				}

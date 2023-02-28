@@ -1,6 +1,8 @@
 karmem structs @packed(true) @golang.package(`structs`);
 
 enum StatusCode uint8 {
+    PingMsg;
+    PongMsg;
     StatusMsg;
     NewBlockHashesMsg;
     TransactionsMsg;
@@ -16,6 +18,7 @@ enum StatusCode uint8 {
     NewPooledTransactionHashesMsg;
     GetPooledTransactionMsg;
     PooledTransactionsMsg;
+    GetBlockByHeight;
 }
 
 struct Message table {
