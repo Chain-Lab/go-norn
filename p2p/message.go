@@ -12,7 +12,8 @@ import (
 var writerPool = sync.Pool{New: func() any { return karmem.NewWriter(1024) }}
 
 // Send 方法用于提供一个通用的消息发送接口
-func Send(w bufio.Writer, msgcode StatusCode, writer karmem.Writer) error {
+func Send(rw *bufio.ReadWriter, msgcode StatusCode, writer karmem.Writer) {
+	// todo: 这里的 ReadWriter 传值是否存在问题, 此外还需要传入空值发送 ping/pong 信息
 	msgWriter := writerPool.Get().(*karmem.Writer)
 	payload := writer.Bytes()
 	// todo: 这里数据的大小暂时留空，作为冗余字段
@@ -25,19 +26,24 @@ func Send(w bufio.Writer, msgcode StatusCode, writer karmem.Writer) error {
 	}
 
 	if _, err := msg.WriteAsRoot(msgWriter); err != nil {
-		log.WithField("error", err).Debugln("Encode data failed.")
-		return err
+		log.WithField("error", err).Errorln("Encode data failed.")
+		return
 	}
 
-	msgBytes := msgWriter.Bytes()
-	_, err := w.Write(msgBytes)
+	msgBytes := append(msgWriter.Bytes(), 0xff)
+	length, err := rw.Write(msgBytes)
 	if err != nil {
-		log.WithField("error", err).Debugln("Send data to peer errored.")
-		return err
+		log.WithField("error", err).Errorln("Send data to peer errored.")
+		return
 	}
+	rw.Flush()
+
+	log.WithFields(log.Fields{
+		"length": length,
+	}).Debugln("Send message to peer.")
 
 	msgWriter.Reset()
 	writerPool.Put(msgWriter)
 
-	return nil
+	//return nil
 }

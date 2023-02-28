@@ -15,21 +15,23 @@ type (
 )
 
 const (
-	StatusCodeStatusMsg                     StatusCode = 0
-	StatusCodeNewBlockHashesMsg             StatusCode = 1
-	StatusCodeTransactionsMsg               StatusCode = 2
-	StatusCodeGetBlockHeadersMsg            StatusCode = 3
-	StatusCodeBlockHeadersMsg               StatusCode = 4
-	StatusCodeGetBlockBodiesMsg             StatusCode = 5
-	StatusCodeBlockBodiesMsg                StatusCode = 6
-	StatusCodeNewBlockMsg                   StatusCode = 7
-	StatusCodeGetNodeDataMsg                StatusCode = 8
-	StatusCodeNodeDataMsg                   StatusCode = 9
-	StatusCodeGetReceiptsMsg                StatusCode = 10
-	StatusCodeReceiptsMsg                   StatusCode = 11
-	StatusCodeNewPooledTransactionHashesMsg StatusCode = 12
-	StatusCodeGetPooledTransactionMsg       StatusCode = 13
-	StatusCodePooledTransactionsMsg         StatusCode = 14
+	StatusCodePingMsg                       StatusCode = 0
+	StatusCodePongMsg                       StatusCode = 1
+	StatusCodeStatusMsg                     StatusCode = 2
+	StatusCodeNewBlockHashesMsg             StatusCode = 3
+	StatusCodeTransactionsMsg               StatusCode = 4
+	StatusCodeGetBlockHeadersMsg            StatusCode = 5
+	StatusCodeBlockHeadersMsg               StatusCode = 6
+	StatusCodeGetBlockBodiesMsg             StatusCode = 7
+	StatusCodeBlockBodiesMsg                StatusCode = 8
+	StatusCodeNewBlockMsg                   StatusCode = 9
+	StatusCodeGetNodeDataMsg                StatusCode = 10
+	StatusCodeNodeDataMsg                   StatusCode = 11
+	StatusCodeGetReceiptsMsg                StatusCode = 12
+	StatusCodeReceiptsMsg                   StatusCode = 13
+	StatusCodeNewPooledTransactionHashesMsg StatusCode = 14
+	StatusCodeGetPooledTransactionMsg       StatusCode = 15
+	StatusCodePooledTransactionsMsg         StatusCode = 16
 )
 
 type (
