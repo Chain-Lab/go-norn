@@ -12,12 +12,13 @@ import (
 )
 
 const (
-	pingInterval = 3 * time.Second
+	pingInterval = 15 * time.Second
 )
 
 var (
 	contextOnce sync.Once
 	peerContext context.Context
+	writerPool  = sync.Pool{New: func() any { return karmem.NewWriter(1024) }}
 )
 
 type Peer struct {
@@ -78,7 +79,7 @@ func (p *Peer) pingLoop() {
 		select {
 		case <-ping.C:
 			log.Debugln("Send ping to peer.")
-			Send(p.rw, StatusCodePingMsg, *karmem.NewWriter(0))
+			p.Send(StatusCodePingMsg, *karmem.NewWriter(0))
 			ping.Reset(pingInterval)
 		}
 	}
@@ -125,12 +126,52 @@ func (p *Peer) handle(msg *Message) error {
 	switch {
 	case msg.Code == StatusCodePingMsg:
 		karmemWriter := karmem.NewWriter(0)
-		log.WithField("peer", p.peerID).Infoln("Receive peer ping message.")
-		go Send(p.rw, StatusCodePongMsg, *karmemWriter)
+		log.WithField("peer", p.peerID).Traceln("Receive peer ping message.")
+		go p.Send(StatusCodePongMsg, *karmemWriter)
 	}
 	return nil
 }
 
 func (p *Peer) disconnect() {
 
+}
+
+// Send 方法用于提供一个通用的消息发送接口
+func (p *Peer) Send(msgcode StatusCode, writer karmem.Writer) {
+	// todo: 这里的 ReadWriter 传值是否存在问题, 此外还需要传入空值发送 ping/pong 信息
+	msgWriter := writerPool.Get().(*karmem.Writer)
+	defer msgWriter.Reset()
+	defer writerPool.Put(msgWriter)
+	
+	payload := writer.Bytes()
+	// todo: 这里数据的大小暂时留空，作为冗余字段
+	// todo: 观察一下这里处理数据会不会有较高的耗时，特别是数据比较大的情况下
+	msg := Message{
+		Code:      msgcode,
+		Size:      uint32(len(payload)),
+		Payload:   payload,
+		ReceiveAt: 0,
+	}
+
+	if _, err := msg.WriteAsRoot(msgWriter); err != nil {
+		log.WithField("error", err).Errorln("Encode data failed.")
+		return
+	}
+
+	msgBytes := append(msgWriter.Bytes(), 0xff)
+	length, err := p.rw.Write(msgBytes)
+	if err != nil {
+		log.WithField("error", err).Errorln("Send data to peer errored.")
+		return
+	}
+	p.rw.Flush()
+
+	log.WithFields(log.Fields{
+		"length": length,
+	}).Debugln("Send message to peer.")
+
+	msgWriter.Reset()
+	writerPool.Put(msgWriter)
+
+	//return nil
 }

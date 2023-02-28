@@ -1,6 +1,7 @@
 karmem structs @packed(true) @golang.package(`structs`);
 
 struct TransactionBody table {
+    Hash [32]byte;
     Signature [<73]byte;
     Address [20]byte;
     Public [33]byte;
@@ -20,8 +21,6 @@ struct BlockHeader table {
     MerkleRoot [32]byte;
     Height uint64;
 }
-
-
 
 struct Block table {
     Header BlockHeader;
