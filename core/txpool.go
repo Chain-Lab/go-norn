@@ -5,20 +5,24 @@ import (
 	"sync"
 )
 
-var (
-	txOnce     sync.Once
-	txPoolInst *txPool
+const (
+	maxTxPackageCount = 3000
 )
 
-type txPool struct {
+var (
+	txOnce     sync.Once
+	txPoolInst *TxPool
+)
+
+type TxPool struct {
 	txQueue chan *common.Hash
 	txs     map[common.Hash]*common.Transaction
 	lock    sync.RWMutex
 }
 
-func GetTxPool() *txPool {
+func GetTxPool() *TxPool {
 	txOnce.Do(func() {
-		txPoolInst = &txPool{
+		txPoolInst = &TxPool{
 			txQueue: make(chan *common.Hash),
 			txs:     make(map[common.Hash]*common.Transaction),
 		}
@@ -28,7 +32,30 @@ func GetTxPool() *txPool {
 
 // Package 用于打包交易，这里返回的是 Transaction 的切片
 // todo： 需要具体观察打包交易时的效率问题
-func (pool *txPool) Package() []common.Transaction {
+func (pool *TxPool) Package() []common.Transaction {
 	pool.lock.RLock()
 	defer pool.lock.RUnlock()
+
+	count := 0
+	result := make([]common.Transaction, 3000)
+
+	for txHash := range pool.txQueue {
+		tx := pool.txs[*txHash]
+		if !tx.Verify() {
+			continue
+		}
+		// todo： 这里是传值还是传指针？
+		result = append(result, *tx)
+		count++
+
+		if count >= maxTxPackageCount-1 {
+			break
+		}
+	}
+
+	return result
+}
+
+func (pool *TxPool) AddTx(transaction *common.Transaction) {
+	// todo: 还是需要和 Package 的锁相关联，保证 Package 能抢到锁
 }

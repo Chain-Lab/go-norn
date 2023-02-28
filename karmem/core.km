@@ -26,3 +26,7 @@ struct Block table {
     Header BlockHeader;
     Transactions []Transaction;
 }
+
+struct Status table {
+    BlockHeight uint64;
+}
