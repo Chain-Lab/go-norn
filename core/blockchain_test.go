@@ -25,11 +25,11 @@ func TestBlockChain_InsertBlock(t *testing.T) {
 		txs = append(txs, *tx)
 	}
 
-	bc := BlockChain{}
+	bc := GetBlockChainInst()
 	block, _ := bc.PackageNewBlock(txs)
 
 	startTime := time.Now()
-	err = bc.insertBlock(block)
+	err = bc.InsertBlock(block)
 
 	if err != nil {
 		t.Fatal(err)

@@ -187,7 +187,8 @@ func (bc *blockChain) writeCache(block *common.Block) {
 	bc.blockCache.Add(block.Header.BlockHash, block)
 }
 
-func (bc *blockChain) insertBlock(block *common.Block) error {
+// todo: 这里作为公开函数只是为了测试
+func (bc *blockChain) InsertBlock(block *common.Block) error {
 	var err error
 	count := len(block.Transactions)
 	keys := make([][]byte, count+1)
@@ -200,8 +201,6 @@ func (bc *blockChain) insertBlock(block *common.Block) error {
 	//fmt.Printf("Data size %d bytes.", len(values[0]))
 
 	bc.latestLock.RLock()
-	defer bc.latestLock.RUnlock()
-
 	bc.latestBlock = block
 	bc.latestHeight = int(block.Header.Height)
 	bc.latestLock.RUnlock()
@@ -235,7 +234,7 @@ func (bc *blockChain) insertBlock(block *common.Block) error {
 func (bc *blockChain) databaseWriter() {
 	select {
 	case block := <-bc.dbWriterQueue:
-		err := bc.insertBlock(block)
+		err := bc.InsertBlock(block)
 
 		if err != nil {
 			log.WithField("error", err).Errorln("Insert block to database failed")
