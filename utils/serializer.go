@@ -20,6 +20,7 @@ func DeserializeBlock(byteBlockData []byte) (*common.Block, error) {
 
 func SerializeBlock(block *common.Block) ([]byte, error) {
 	writer := writePool.Get().(*karmem.Writer)
+	defer writer.Reset()
 	defer writePool.Put(writer)
 
 	_, err := block.WriteAsRoot(writer)
@@ -29,8 +30,29 @@ func SerializeBlock(block *common.Block) ([]byte, error) {
 	}
 
 	result := writer.Bytes()
-	writer.Reset()
-	writePool.Put(result)
+
+	return result, nil
+}
+
+func DeserializeTransaction(byteTxData []byte) (*common.Transaction, error) {
+	transaction := new(common.Transaction)
+	transaction.ReadAsRoot(karmem.NewReader(byteTxData))
+
+	return transaction, nil
+}
+
+func SerializeTransaction(transaction *common.Transaction) ([]byte, error) {
+	writer := writePool.Get().(*karmem.Writer)
+	defer writer.Reset()
+	defer writePool.Put(writer)
+
+	_, err := transaction.WriteAsRoot(writer)
+	if err != nil {
+		log.WithField("error", err).Debugln("Transaction serialize failed.")
+		return nil, err
+	}
+
+	result := writer.Bytes()
 
 	return result, nil
 }

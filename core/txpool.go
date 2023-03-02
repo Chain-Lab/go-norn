@@ -56,6 +56,14 @@ func (pool *TxPool) Package() []common.Transaction {
 	return result
 }
 
-func (pool *TxPool) AddTx(transaction *common.Transaction) {
+func (pool *TxPool) Add(transaction *common.Transaction) {
 	// todo: 还是需要和 Package 的锁相关联，保证 Package 能抢到锁
+}
+
+func (pool *TxPool) Contain(hash common.Hash) bool {
+	return pool.txs[hash] != nil
+}
+
+func (pool *TxPool) Get(hash common.Hash) *common.Transaction {
+	return pool.txs[hash]
 }

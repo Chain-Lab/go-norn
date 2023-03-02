@@ -32,6 +32,7 @@ const (
 	StatusCodeNewPooledTransactionHashesMsg StatusCode = 14
 	StatusCodeGetPooledTransactionMsg       StatusCode = 15
 	StatusCodePooledTransactionsMsg         StatusCode = 16
+	StatusCodeGetBlockByHeightMsg           StatusCode = 17
 )
 
 type (

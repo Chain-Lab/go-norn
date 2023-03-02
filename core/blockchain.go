@@ -17,12 +17,8 @@ const (
 	maxTransactionCache = 32768
 )
 
-var (
-	blockChainOnce sync.Once
-	blockInst      *blockChain
-)
-
-type blockChain struct {
+type BlockChain struct {
+	db            *utils.LevelDB
 	dbWriterQueue chan *common.Block
 
 	blockHeightMap *lru.Cache
@@ -34,43 +30,42 @@ type blockChain struct {
 	latestLock   sync.RWMutex
 }
 
-func GetBlockChainInst() *blockChain {
-	blockChainOnce.Do(func() {
-		blockCache, err := lru.New(maxBlockCache)
+func NewBlockchain() *BlockChain {
+	blockCache, err := lru.New(maxBlockCache)
 
-		if err != nil {
-			log.WithField("error", err).Debugln("Create block cache failed")
-			return
-		}
+	if err != nil {
+		log.WithField("error", err).Debugln("Create block cache failed")
+		return nil
+	}
 
-		txCache, err := lru.New(maxTransactionCache)
+	txCache, err := lru.New(maxTransactionCache)
 
-		if err != nil {
-			log.WithField("error", err).Debugln("Create transaction cache failed.")
-			return
-		}
+	if err != nil {
+		log.WithField("error", err).Debugln("Create transaction cache failed.")
+		return nil
+	}
 
-		blockHeightMap, err := lru.New(maxBlockCache)
+	blockHeightMap, err := lru.New(maxBlockCache)
 
-		if err != nil {
-			log.WithField("error", err).Debugln("Create block map cache failed.")
-			return
-		}
+	if err != nil {
+		log.WithField("error", err).Debugln("Create block map cache failed.")
+		return nil
+	}
 
-		blockInst = &blockChain{
-			dbWriterQueue:  make(chan *common.Block),
-			blockHeightMap: blockHeightMap,
-			blockCache:     blockCache,
-			txCache:        txCache,
-			latestBlock:    nil,
-			latestHeight:   -1,
-		}
-	})
-	return blockInst
+	chain := &BlockChain{
+		dbWriterQueue:  make(chan *common.Block),
+		blockHeightMap: blockHeightMap,
+		blockCache:     blockCache,
+		txCache:        txCache,
+		latestBlock:    nil,
+		latestHeight:   -1,
+	}
+
+	return chain
 }
 
 // PackageNewBlock 打包新的区块，传入交易序列
-func (bc *blockChain) PackageNewBlock(txs []common.Transaction) (*common.Block, error) {
+func (bc *BlockChain) PackageNewBlock(txs []common.Transaction) (*common.Block, error) {
 	merkleRoot := BuildMerkleTree(txs)
 	block := common.Block{
 		Header: common.BlockHeader{
@@ -85,7 +80,7 @@ func (bc *blockChain) PackageNewBlock(txs []common.Transaction) (*common.Block, 
 	return &block, nil
 }
 
-func (bc *blockChain) GetLatestBlock() (*common.Block, error) {
+func (bc *BlockChain) GetLatestBlock() (*common.Block, error) {
 	if bc.latestBlock != nil {
 		return bc.latestBlock, nil
 	}
@@ -117,7 +112,7 @@ func (bc *blockChain) GetLatestBlock() (*common.Block, error) {
 	return block, nil
 }
 
-func (bc *blockChain) GetBlockByHash(hash *common.Hash) (*common.Block, error) {
+func (bc *BlockChain) GetBlockByHash(hash *common.Hash) (*common.Block, error) {
 	// 先查询缓存是否命中
 	value, hit := bc.blockCache.Get(hash)
 
@@ -136,12 +131,12 @@ func (bc *blockChain) GetBlockByHash(hash *common.Hash) (*common.Block, error) {
 		return nil, err
 	}
 	block, _ := utils.DeserializeBlock(byteBlockData)
-	bc.writeCache(block)
+	bc.writeBlockCache(block)
 
 	return block, nil
 }
 
-func (bc *blockChain) GetBlockByHeight(height int) (*common.Block, error) {
+func (bc *BlockChain) GetBlockByHeight(height int) (*common.Block, error) {
 	// 先判断一下高度
 	if height > bc.latestHeight {
 		return nil, errors.New("Block height error.")
@@ -182,13 +177,18 @@ func (bc *blockChain) GetBlockByHeight(height int) (*common.Block, error) {
 	return block, nil
 }
 
-func (bc *blockChain) writeCache(block *common.Block) {
+func (bc *BlockChain) writeBlockCache(block *common.Block) {
 	bc.blockHeightMap.Add(block.Header.Height, block.Header.BlockHash)
 	bc.blockCache.Add(block.Header.BlockHash, block)
 }
 
+func (bc *BlockChain) writeTxCache(transaction *common.Transaction) {
+	hash := transaction.Body.Hash
+	bc.txCache.Add(hash, transaction)
+}
+
 // todo: 这里作为公开函数只是为了测试
-func (bc *blockChain) InsertBlock(block *common.Block) error {
+func (bc *BlockChain) InsertBlock(block *common.Block) error {
 	var err error
 	count := len(block.Transactions)
 	keys := make([][]byte, count+1)
@@ -204,7 +204,7 @@ func (bc *blockChain) InsertBlock(block *common.Block) error {
 	bc.latestBlock = block
 	bc.latestHeight = int(block.Header.Height)
 	bc.latestLock.RUnlock()
-	bc.writeCache(block)
+	bc.writeBlockCache(block)
 
 	db := utils.GetLevelDBInst()
 
@@ -231,13 +231,45 @@ func (bc *blockChain) InsertBlock(block *common.Block) error {
 }
 
 // databaseWriter 负责插入数据到数据库的协程
-func (bc *blockChain) databaseWriter() {
-	select {
-	case block := <-bc.dbWriterQueue:
-		err := bc.InsertBlock(block)
+func (bc *BlockChain) databaseWriter() {
+	for {
+		select {
+		case block := <-bc.dbWriterQueue:
+			err := bc.InsertBlock(block)
 
-		if err != nil {
-			log.WithField("error", err).Errorln("Insert block to database failed")
+			if err != nil {
+				log.WithField("error", err).Errorln("Insert block to database failed")
+			}
 		}
 	}
+}
+
+func (bc *BlockChain) GetTransactionByHash(hash common.Hash) (*common.Transaction, error) {
+	value, hit := bc.txCache.Get(hash)
+
+	if hit {
+		return value.(*common.Transaction), nil
+	}
+
+	txDBKey := utils.TxHash2DBKey(hash)
+	byteTransactionData, err := bc.db.Get(txDBKey)
+
+	if err != nil {
+		log.WithField("error", err).Debugln("Get tx data from database failed.")
+		return nil, err
+	}
+
+	transaction, err := utils.DeserializeTransaction(byteTransactionData)
+
+	if err != nil {
+		log.WithField("error", err).Debugln("Deserialize transaction failed.")
+		return nil, err
+	}
+
+	bc.writeTxCache(transaction)
+	return transaction, nil
+}
+
+func (bc *BlockChain) Height() int {
+	return bc.latestHeight
 }

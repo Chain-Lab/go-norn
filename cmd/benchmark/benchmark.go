@@ -80,7 +80,7 @@ func PackageBlockAndInsert() {
 		tx.Verify()
 	}
 
-	bc := core.GetBlockChainInst()
+	bc := core.NewBlockchain()
 	packageStart := time.Now()
 	block, err := bc.PackageNewBlock(txs)
 	packageTimeUsed := time.Since(packageStart)
@@ -105,6 +105,6 @@ func PackageBlockAndInsert() {
 
 func main() {
 	BuildAndVerifyTransaction()
-	BuildAndVerifyMassiveTransaction()
-	PackageBlockAndInsert()
+	//BuildAndVerifyMassiveTransaction()
+	//PackageBlockAndInsert()
 }

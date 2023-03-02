@@ -14,3 +14,7 @@ func BlockHeight2DBKey(height int) []byte {
 
 	return append([]byte("block#"), []byte(strHeight)...)
 }
+
+func TxHash2DBKey(hash common.Hash) []byte {
+	return append([]byte("tx#"), hash[:]...)
+}

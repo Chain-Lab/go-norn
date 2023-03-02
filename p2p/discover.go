@@ -4,7 +4,7 @@ import (
 	"context"
 	"github.com/libp2p/go-libp2p-kad-dht"
 	"github.com/libp2p/go-libp2p/core/discovery"
-	host "github.com/libp2p/go-libp2p/core/host"
+	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/p2p/discovery/routing"
 	log "github.com/sirupsen/logrus"

@@ -6,7 +6,7 @@ import (
 )
 
 var (
-	ProtocolId string = "/chronos/1.0.0"
+	ProtocolId = "/chronos/1.0.0"
 )
 
 // HandleStream 用于在收到对端连接时候处理 stream, 在这里构建 peer 用于通信

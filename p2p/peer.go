@@ -79,7 +79,7 @@ func (p *Peer) pingLoop() {
 		select {
 		case <-ping.C:
 			log.Debugln("Send ping to peer.")
-			p.Send(StatusCodePingMsg, *karmem.NewWriter(0))
+			p.Send(StatusCodePingMsg, _Null)
 			ping.Reset(pingInterval)
 		}
 	}
@@ -125,9 +125,10 @@ func (p *Peer) readLoop(errc chan<- error) {
 func (p *Peer) handle(msg *Message) error {
 	switch {
 	case msg.Code == StatusCodePingMsg:
-		karmemWriter := karmem.NewWriter(0)
 		log.WithField("peer", p.peerID).Traceln("Receive peer ping message.")
-		go p.Send(StatusCodePongMsg, *karmemWriter)
+		go p.Send(StatusCodePongMsg, _Null)
+		// todo: 怎么将消息传入到上层进行处理
+		// todo: channel 发送消息到 node/peer 中处理
 	}
 	return nil
 }
@@ -137,13 +138,12 @@ func (p *Peer) disconnect() {
 }
 
 // Send 方法用于提供一个通用的消息发送接口
-func (p *Peer) Send(msgcode StatusCode, writer karmem.Writer) {
+func (p *Peer) Send(msgcode StatusCode, payload []byte) {
 	// todo: 这里的 ReadWriter 传值是否存在问题, 此外还需要传入空值发送 ping/pong 信息
 	msgWriter := writerPool.Get().(*karmem.Writer)
 	defer msgWriter.Reset()
 	defer writerPool.Put(msgWriter)
-	
-	payload := writer.Bytes()
+
 	// todo: 这里数据的大小暂时留空，作为冗余字段
 	// todo: 观察一下这里处理数据会不会有较高的耗时，特别是数据比较大的情况下
 	msg := Message{
