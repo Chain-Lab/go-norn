@@ -1,6 +1,7 @@
 package core
 
 import (
+	"crypto/sha256"
 	"encoding/hex"
 	lru "github.com/hashicorp/golang-lru"
 	log "github.com/sirupsen/logrus"
@@ -15,7 +16,10 @@ import (
 const (
 	maxBlockCache       = 1024
 	maxTransactionCache = 32768
+	maxBlockProcessList = 64
 )
+
+type blockList []*common.Block
 
 type BlockChain struct {
 	db            *utils.LevelDB
@@ -28,37 +32,51 @@ type BlockChain struct {
 	latestBlock  *common.Block
 	latestHeight int
 	latestLock   sync.RWMutex
+
+	blockProcessList   blockList
+	blockProcessHeight int
+	currentBlock       *common.Block
+	nextBlockMap       *lru.Cache
+	blockQueueSize     int
+	appendLock         sync.RWMutex
 }
 
 func NewBlockchain() *BlockChain {
 	blockCache, err := lru.New(maxBlockCache)
-
 	if err != nil {
 		log.WithField("error", err).Debugln("Create block cache failed")
 		return nil
 	}
 
 	txCache, err := lru.New(maxTransactionCache)
-
 	if err != nil {
 		log.WithField("error", err).Debugln("Create transaction cache failed.")
 		return nil
 	}
 
 	blockHeightMap, err := lru.New(maxBlockCache)
-
 	if err != nil {
 		log.WithField("error", err).Debugln("Create block map cache failed.")
 		return nil
 	}
 
+	nextBlockMap, err := lru.New(maxBlockProcessList)
+	if err != nil {
+		log.WithField("error", err).Debugln("Create block process map failed.")
+		return nil
+	}
+
 	chain := &BlockChain{
-		dbWriterQueue:  make(chan *common.Block),
-		blockHeightMap: blockHeightMap,
-		blockCache:     blockCache,
-		txCache:        txCache,
-		latestBlock:    nil,
-		latestHeight:   -1,
+		dbWriterQueue:      make(chan *common.Block),
+		blockHeightMap:     blockHeightMap,
+		blockCache:         blockCache,
+		txCache:            txCache,
+		latestBlock:        nil,
+		latestHeight:       -1,
+		blockProcessList:   make(blockList, maxBlockProcessList),
+		blockProcessHeight: -1,
+		currentBlock:       nil,
+		nextBlockMap:       nextBlockMap,
 	}
 
 	return chain
@@ -66,19 +84,41 @@ func NewBlockchain() *BlockChain {
 
 // PackageNewBlock 打包新的区块，传入交易序列
 func (bc *BlockChain) PackageNewBlock(txs []common.Transaction) (*common.Block, error) {
+	latestBlock, err := bc.selectBlock()
+
+	if err != nil {
+		log.WithField("error", err).Debugln("Get latest block failed.")
+		return nil, err
+	}
+
 	merkleRoot := BuildMerkleTree(txs)
 	block := common.Block{
 		Header: common.BlockHeader{
 			Timestamp:     uint64(time.Now().UnixMilli()),
-			PrevBlockHash: [32]byte{},
+			PrevBlockHash: latestBlock.Header.BlockHash,
 			BlockHash:     [32]byte{},
 			MerkleRoot:    [32]byte(merkleRoot),
-			Height:        0,
+			Height:        latestBlock.Header.Height + 1,
 		},
 		Transactions: txs,
 	}
+
+	byteBlockHeaderData, err := utils.SerializeBlockHeader(&block.Header)
+
+	if err != nil {
+		log.WithField("error", err).Debugln("Serialize block header failed.")
+		return nil, err
+	}
+
+	hash := sha256.New()
+	hash.Write(byteBlockHeaderData)
+	blockHash := common.Hash(hash.Sum(nil))
+	block.Header.BlockHash = blockHash
+
 	return &block, nil
 }
+
+//todo：数据初始化
 
 func (bc *BlockChain) GetLatestBlock() (*common.Block, error) {
 	if bc.latestBlock != nil {
@@ -187,8 +227,9 @@ func (bc *BlockChain) writeTxCache(transaction *common.Transaction) {
 	bc.txCache.Add(hash, transaction)
 }
 
-// todo: 这里作为公开函数只是为了测试
+// InsertBlock 函数用于将区块插入到数据库中
 func (bc *BlockChain) InsertBlock(block *common.Block) error {
+	// todo: 这里作为 Public 函数只是为了测试
 	var err error
 	count := len(block.Transactions)
 	keys := make([][]byte, count+1)
@@ -244,6 +285,17 @@ func (bc *BlockChain) databaseWriter() {
 	}
 }
 
+func (bc *BlockChain) AppendBlockTask(block *common.Block) {
+	bc.appendLock.RLock()
+	defer bc.appendLock.RUnlock()
+
+	if int(block.Header.Height) <= bc.latestHeight {
+		return
+	}
+
+	//blockHash := block.Header.BlockHash
+}
+
 func (bc *BlockChain) GetTransactionByHash(hash common.Hash) (*common.Transaction, error) {
 	value, hit := bc.txCache.Get(hash)
 
@@ -272,4 +324,61 @@ func (bc *BlockChain) GetTransactionByHash(hash common.Hash) (*common.Transactio
 
 func (bc *BlockChain) Height() int {
 	return bc.latestHeight
+}
+
+func (bc *BlockChain) selectBlock() (*common.Block, error) {
+	bc.appendLock.RLock()
+	defer bc.appendLock.RUnlock()
+
+	list := bc.blockProcessList
+	current := list[0]
+
+	for idx := range list {
+		if len(list[idx].Transactions) > len(list[idx].Transactions) {
+			current = list[idx]
+			continue
+		} else if len(list[idx].Transactions) < len(list[idx].Transactions) {
+			continue
+		}
+
+		if list[idx].Header.Timestamp < current.Header.Timestamp {
+			current = list[idx]
+			continue
+		}
+	}
+
+	return bc.searchBestBlock(current.Header.BlockHash), nil
+}
+
+func (bc *BlockChain) searchBestBlock(hash common.Hash) *common.Block {
+	value, hit := bc.nextBlockMap.Get(hash)
+
+	if !hit {
+		return nil
+	}
+
+	list := value.(blockList)
+	current := list[0]
+
+	for idx := range list {
+		if len(list[idx].Transactions) > len(list[idx].Transactions) {
+			current = list[idx]
+			continue
+		} else if len(list[idx].Transactions) < len(list[idx].Transactions) {
+			continue
+		}
+
+		if list[idx].Header.Timestamp < current.Header.Timestamp {
+			current = list[idx]
+			continue
+		}
+	}
+
+	nxt := bc.searchBestBlock(current.Header.BlockHash)
+
+	if nxt == nil {
+		return current
+	} else {
+		return nxt
+	}
 }

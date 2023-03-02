@@ -56,3 +56,19 @@ func SerializeTransaction(transaction *common.Transaction) ([]byte, error) {
 
 	return result, nil
 }
+
+func SerializeBlockHeader(header *common.BlockHeader) ([]byte, error) {
+	writer := writePool.Get().(*karmem.Writer)
+	defer writer.Reset()
+	defer writePool.Put(writer)
+
+	_, err := header.WriteAsRoot(writer)
+	if err != nil {
+		log.WithField("error", err).Debugln("Transaction serialize failed.")
+		return nil, err
+	}
+
+	result := writer.Bytes()
+
+	return result, nil
+}

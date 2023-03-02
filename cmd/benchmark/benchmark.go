@@ -43,6 +43,7 @@ func BuildAndVerifyMassiveTransaction() {
 	for i := 0; i < 3000; i++ {
 		tx := buildTransaction(privateKey)
 		txs = append(txs, *tx)
+		//fmt.Printf("Transaction #%d, time %d us.\n", i+1, time.Since(buildStart).Microseconds())
 	}
 	buildTimeUsed := time.Since(buildStart)
 
@@ -53,11 +54,11 @@ func BuildAndVerifyMassiveTransaction() {
 	}
 	verifyTimeUsed := time.Since(verifyStart)
 
-	log.Infof("Build 3000 transactions use %d us.", buildTimeUsed)
-	log.Infof("Verify 3000 transactions use %d us.", verifyTimeUsed)
+	log.Infof("Build 3000 transactions use %d ns.", buildTimeUsed.Nanoseconds())
+	log.Infof("Verify 3000 transactions use %d ns.", verifyTimeUsed.Nanoseconds())
 
-	log.Infof("Build transaction average use %d us.", buildTimeUsed/3000)
-	log.Infof("Verify transaction average use %d us.", verifyTimeUsed/3000)
+	log.Infof("Build transaction average use %d ns.", buildTimeUsed.Nanoseconds()/3000)
+	log.Infof("Verify transaction average use %d ns.", verifyTimeUsed.Nanoseconds()/3000)
 
 }
 
@@ -105,6 +106,6 @@ func PackageBlockAndInsert() {
 
 func main() {
 	BuildAndVerifyTransaction()
-	//BuildAndVerifyMassiveTransaction()
+	BuildAndVerifyMassiveTransaction()
 	//PackageBlockAndInsert()
 }
