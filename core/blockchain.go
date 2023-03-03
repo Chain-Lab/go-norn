@@ -41,7 +41,7 @@ type BlockChain struct {
 	appendLock         sync.RWMutex
 }
 
-func NewBlockchain() *BlockChain {
+func NewBlockchain(db *utils.LevelDB) *BlockChain {
 	blockCache, err := lru.New(maxBlockCache)
 	if err != nil {
 		log.WithField("error", err).Debugln("Create block cache failed")
@@ -67,6 +67,7 @@ func NewBlockchain() *BlockChain {
 	}
 
 	chain := &BlockChain{
+		db:                 db,
 		dbWriterQueue:      make(chan *common.Block),
 		blockHeightMap:     blockHeightMap,
 		blockCache:         blockCache,
@@ -125,14 +126,13 @@ func (bc *BlockChain) GetLatestBlock() (*common.Block, error) {
 		return bc.latestBlock, nil
 	}
 
-	db := utils.GetLevelDBInst()
-	latestBlockHash, err := db.Get([]byte("latest"))
+	latestBlockHash, err := bc.db.Get([]byte("latest"))
 	if err != nil {
 		log.WithField("error", err).Errorln("Get latest block hash failed.")
 		return nil, err
 	}
 
-	byteBlockData, err := db.Get(utils.BlockHash2DBKey(common.Hash(latestBlockHash)))
+	byteBlockData, err := bc.db.Get(utils.BlockHash2DBKey(common.Hash(latestBlockHash)))
 
 	if err != nil {
 		log.WithFields(log.Fields{
@@ -162,9 +162,8 @@ func (bc *BlockChain) GetBlockByHash(hash *common.Hash) (*common.Block, error) {
 	}
 
 	blockKey := utils.BlockHash2DBKey(*hash)
-	db := utils.GetLevelDBInst()
 	// todo: 需要一个命名规范
-	byteBlockData, err := db.Get(blockKey)
+	byteBlockData, err := bc.db.Get(blockKey)
 
 	if err != nil {
 		log.WithField("error", err).Debugln("Get block data in database failed.")
@@ -197,9 +196,8 @@ func (bc *BlockChain) GetBlockByHeight(height int) (*common.Block, error) {
 	}
 
 	// 查询数据库
-	db := utils.GetLevelDBInst()
 	heightDBKey := utils.BlockHeight2DBKey(height)
-	blockHash, err := db.Get(heightDBKey)
+	blockHash, err := bc.db.Get(heightDBKey)
 
 	if err != nil {
 		log.WithField("error", err).Errorln("Get block hash with height failed.")
@@ -247,8 +245,6 @@ func (bc *BlockChain) InsertBlock(block *common.Block) error {
 	bc.latestLock.RUnlock()
 	bc.writeBlockCache(block)
 
-	db := utils.GetLevelDBInst()
-
 	for idx := range block.Transactions {
 		// todo： 或许需要校验一下交易是否合法
 		tx := block.Transactions[idx]
@@ -268,7 +264,7 @@ func (bc *BlockChain) InsertBlock(block *common.Block) error {
 		values[idx+1] = txWriter.Bytes()
 	}
 
-	return db.BatchInsert(keys, values)
+	return bc.db.BatchInsert(keys, values)
 }
 
 // databaseWriter 负责插入数据到数据库的协程

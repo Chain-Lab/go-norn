@@ -4,41 +4,33 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/errors"
-	"sync"
 )
 
-var (
-	databaseOnce sync.Once
-	levelDBInst  *LevelDB
-	db           *leveldb.DB
-)
-
-func GetLevelDBInst() *LevelDB {
-	databaseOnce.Do(func() {
-		levelDBInst = &LevelDB{}
-		var err error
-		db, err = leveldb.OpenFile("./data", nil)
-
-		if err != nil {
-			log.WithField("error", err).Errorln("Open leveldb failed.")
-			return
-		}
-	})
-	return levelDBInst
+type LevelDB struct {
+	db *leveldb.DB
 }
 
-type LevelDB struct{}
+func NewLevelDB(path string) (*LevelDB, error) {
+	db, err := leveldb.OpenFile(path, nil)
+
+	if err != nil {
+		log.WithField("error", err).Errorln("Open leveldb failed.")
+		return nil, err
+	}
+
+	return &LevelDB{db: db}, nil
+}
 
 func (ld *LevelDB) Get(key []byte) ([]byte, error) {
-	return db.Get(key, nil)
+	return ld.db.Get(key, nil)
 }
 
 func (ld *LevelDB) Insert(key []byte, value []byte) error {
-	return db.Put(key, value, nil)
+	return ld.db.Put(key, value, nil)
 }
 
 func (ld *LevelDB) Remove(key []byte) error {
-	return db.Delete(key, nil)
+	return ld.db.Delete(key, nil)
 }
 
 func (ld *LevelDB) BatchInsert(key [][]byte, value [][]byte) error {
@@ -52,7 +44,7 @@ func (ld *LevelDB) BatchInsert(key [][]byte, value [][]byte) error {
 		batch.Put(key[idx], value[idx])
 	}
 
-	return db.Write(batch, nil)
+	return ld.db.Write(batch, nil)
 }
 
 func (ld *LevelDB) BatchDelete(key [][]byte) error {
@@ -61,5 +53,5 @@ func (ld *LevelDB) BatchDelete(key [][]byte) error {
 		batch.Delete(key[idx])
 	}
 
-	return db.Write(batch, nil)
+	return ld.db.Write(batch, nil)
 }

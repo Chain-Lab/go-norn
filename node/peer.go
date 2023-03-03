@@ -42,26 +42,26 @@ type Peer struct {
 	// todo： 还需要将区块、交易传出给上层结构处理的管道
 }
 
-func NewPeer(peerId peer.ID, s *network.Stream, config PeerConfig) *Peer {
+func NewPeer(peerId peer.ID, s *network.Stream, config PeerConfig) (*Peer, error) {
 	pp, err := p2p.NewPeer(peerId, s)
 
 	if err != nil {
 		log.WithField("error", err).Errorln("Create p2p peer failed.")
-		return nil
+		return nil, err
 	}
 
 	blockLru, err := lru.New(maxKnownBlocks)
 
 	if err != nil {
 		log.WithField("error", err).Errorln("Create block lru failed.")
-		return nil
+		return nil, err
 	}
 
 	txLru, err := lru.New(maxKnownTxs)
 
 	if err != nil {
 		log.WithField("error", err).Errorln("Create transaction lru failed")
-		return nil
+		return nil, err
 	}
 
 	p := &Peer{
@@ -81,7 +81,7 @@ func NewPeer(peerId peer.ID, s *network.Stream, config PeerConfig) *Peer {
 	go p.broadcastTransaction()
 	go p.broadcastTxHash()
 
-	return p
+	return p, nil
 }
 
 func (p *Peer) RunPeer() {

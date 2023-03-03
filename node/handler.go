@@ -3,6 +3,8 @@ package node
 import (
 	"encoding/binary"
 	lru "github.com/hashicorp/golang-lru"
+	"github.com/libp2p/go-libp2p/core/network"
+	"github.com/libp2p/go-libp2p/core/peer"
 	log "github.com/sirupsen/logrus"
 	"go-chronos/common"
 	"go-chronos/core"
@@ -14,7 +16,8 @@ import (
 type msgHandler func(h *Handler, msg *p2p.Message, p *Peer)
 
 const (
-	maxKnownBlock = 1024
+	maxKnownBlock       = 1024
+	maxKnownTransaction = 32768
 )
 
 var handlerMap = map[p2p.StatusCode]msgHandler{
@@ -28,9 +31,13 @@ var handlerMap = map[p2p.StatusCode]msgHandler{
 	p2p.StatusCodeGetBlockByHeightMsg:           handlerGetBlockByHeightMsg,
 }
 
+var (
+	handlerInst *Handler = nil
+)
+
 type HandlerConfig struct {
-	txPool *core.TxPool
-	chain  *core.BlockChain
+	TxPool *core.TxPool
+	Chain  *core.BlockChain
 }
 
 type Handler struct {
@@ -46,21 +53,62 @@ type Handler struct {
 	chain  *core.BlockChain
 }
 
-func NewHandler() *Handler {
+func NewHandler(config *HandlerConfig) (*Handler, error) {
 	knownBlockCache, err := lru.New(maxKnownBlock)
 
 	if err != nil {
 		log.WithField("error", err).Debugln("Create known block cache failed.")
+		return nil, err
+	}
+
+	knownTxCache, err := lru.New(maxKnownTransaction)
+
+	if err != nil {
+		log.WithField("error", err).Debugln("Create known transaction cache failed.")
+		return nil, err
 	}
 
 	handler := &Handler{
 		// todo: 限制节点数量，Kad 应该限制了节点数量不超过20个
-		peerSet:             make([]*Peer, 40),
+		peerSet: make([]*Peer, 40),
+
 		blockBroadcastQueue: make(chan *common.Block, 64),
-		knownBlock:          knownBlockCache,
+		txBroadcastQueue:    make(chan *common.Transaction, 8192),
+
+		knownBlock:       knownBlockCache,
+		knownTransaction: knownTxCache,
+
+		txPool: config.TxPool,
+		chain:  config.Chain,
 	}
 
-	return handler
+	go handler.broadcastBlock()
+	go handler.broadcastTransaction()
+	handlerInst = handler
+
+	return handler, nil
+}
+
+func GetHandlerInst() *Handler {
+	// todo: 这样的写法会有脏读的问题，也就是在分配地址后，对象可能还没有完全初始化
+	return handlerInst
+}
+
+func (h *Handler) NewPeer(peerId peer.ID, s *network.Stream) (*Peer, error) {
+	config := PeerConfig{
+		txPool:  h.txPool,
+		handler: h,
+	}
+
+	p, err := NewPeer(peerId, s, config)
+
+	if err != nil {
+		log.WithField("error", err).Errorln("Create peer failed.")
+		return nil, err
+	}
+
+	h.peerSet = append(h.peerSet, p)
+	return p, err
 }
 
 func (h *Handler) isKnownTransaction(hash common.Hash) bool {

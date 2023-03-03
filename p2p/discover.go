@@ -8,6 +8,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/p2p/discovery/routing"
 	log "github.com/sirupsen/logrus"
+	"go-chronos/node"
 	"time"
 )
 
@@ -26,6 +27,8 @@ func Discover(ctx context.Context, h host.Host, dht *dht.IpfsDHT, rendezvous str
 
 	ticker := time.NewTicker(5 * time.Second)
 	defer ticker.Stop()
+
+	handler := node.GetHandlerInst()
 
 	for {
 		select {
@@ -56,14 +59,12 @@ func Discover(ctx context.Context, h host.Host, dht *dht.IpfsDHT, rendezvous str
 						continue
 					}
 
-					s, err := h.NewStream(ctx, p.ID, "/ping/1.0.0")
-					peer, err := NewPeer(p.ID, &s)
+					s, err := h.NewStream(ctx, p.ID, ProtocolId)
+					_, err = handler.NewPeer(p.ID, &s)
 					if err != nil {
 						log.WithField("error", err).Errorln("Create new peer failed.")
 						continue
 					}
-
-					go peer.Run()
 				}
 			}
 		}

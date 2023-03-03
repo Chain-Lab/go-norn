@@ -15,19 +15,18 @@ var (
 )
 
 type TxPool struct {
-	txQueue chan *common.Hash
-	txs     map[common.Hash]*common.Transaction
+	txQueue chan common.Hash
+	txs     sync.Map
+	flags   sync.Map
+	height  int
 	lock    sync.RWMutex
 }
 
-func GetTxPool() *TxPool {
-	txOnce.Do(func() {
-		txPoolInst = &TxPool{
-			txQueue: make(chan *common.Hash),
-			txs:     make(map[common.Hash]*common.Transaction),
-		}
-	})
-	return txPoolInst
+func NewTxPool() *TxPool {
+	return &TxPool{
+		txQueue: make(chan common.Hash, 8192),
+		txs:     sync.Map{},
+	}
 }
 
 // Package 用于打包交易，这里返回的是 Transaction 的切片
@@ -40,7 +39,12 @@ func (pool *TxPool) Package() []common.Transaction {
 	result := make([]common.Transaction, 3000)
 
 	for txHash := range pool.txQueue {
-		tx := pool.txs[*txHash]
+		value, hit := pool.txs.Load(txHash)
+		if !hit {
+			continue
+		}
+
+		tx := value.(*common.Transaction)
 		if !tx.Verify() {
 			continue
 		}
@@ -58,12 +62,24 @@ func (pool *TxPool) Package() []common.Transaction {
 
 func (pool *TxPool) Add(transaction *common.Transaction) {
 	// todo: 还是需要和 Package 的锁相关联，保证 Package 能抢到锁
+	// todo: 在当前版本下先直接加锁打包
+
+	txHash := transaction.Body.Hash
+	pool.txs.Store(txHash, transaction)
+	pool.txQueue <- txHash
 }
 
 func (pool *TxPool) Contain(hash common.Hash) bool {
-	return pool.txs[hash] != nil
+	_, hit := pool.txs.Load(hash)
+	return hit
 }
 
 func (pool *TxPool) Get(hash common.Hash) *common.Transaction {
-	return pool.txs[hash]
+	value, hit := pool.txs.Load(hash)
+
+	if !hit {
+		return nil
+	}
+
+	return value.(*common.Transaction)
 }
