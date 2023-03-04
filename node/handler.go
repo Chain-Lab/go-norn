@@ -2,15 +2,18 @@ package node
 
 import (
 	"encoding/binary"
+	"encoding/hex"
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
+	"github.com/libp2p/go-libp2p/core/protocol"
 	log "github.com/sirupsen/logrus"
 	"go-chronos/common"
 	"go-chronos/core"
 	"go-chronos/p2p"
 	"go-chronos/utils"
 	"math"
+	"time"
 )
 
 type msgHandler func(h *Handler, msg *p2p.Message, p *Peer)
@@ -18,6 +21,7 @@ type msgHandler func(h *Handler, msg *p2p.Message, p *Peer)
 const (
 	maxKnownBlock       = 1024
 	maxKnownTransaction = 32768
+	ProtocolId          = protocol.ID("/chronos/1.0.0")
 )
 
 var handlerMap = map[p2p.StatusCode]msgHandler{
@@ -25,10 +29,10 @@ var handlerMap = map[p2p.StatusCode]msgHandler{
 	p2p.StatusCodeNewBlockMsg:                   handleNewBlockMsg,
 	p2p.StatusCodeNewBlockHashesMsg:             handleNewBlockHashMsg,
 	p2p.StatusCodeBlockBodiesMsg:                handleBlockMsg,
-	p2p.StatusCodeTransactionsMsg:               handlerTransactionMsg,
-	p2p.StatusCodeNewPooledTransactionHashesMsg: handlerNewPooledTransactionHashesMsg,
-	p2p.StatusCodeGetPooledTransactionMsg:       handlerGetPooledTransactionMsg,
-	p2p.StatusCodeGetBlockByHeightMsg:           handlerGetBlockByHeightMsg,
+	p2p.StatusCodeTransactionsMsg:               handleTransactionMsg,
+	p2p.StatusCodeNewPooledTransactionHashesMsg: handleNewPooledTransactionHashesMsg,
+	p2p.StatusCodeGetPooledTransactionMsg:       handleGetPooledTransactionMsg,
+	p2p.StatusCodeGetBlockByHeightMsg:           handleGetBlockByHeightMsg,
 }
 
 var (
@@ -53,6 +57,22 @@ type Handler struct {
 	chain  *core.BlockChain
 }
 
+// HandleStream 用于在收到对端连接时候处理 stream, 在这里构建 peer 用于通信
+func HandleStream(s network.Stream) {
+	//ctx := GetPeerContext()
+	handler := GetHandlerInst()
+	conn := s.Conn()
+	//peer, err := NewPeer(ctx, conn.RemotePeer(), &conn)
+	_, err := handler.NewPeer(conn.RemotePeer(), &s)
+
+	log.Infoln("Receive new stream, handle stream.")
+
+	if err != nil {
+		log.WithField("error", err).Errorln("Handle stream error.")
+		return
+	}
+}
+
 func NewHandler(config *HandlerConfig) (*Handler, error) {
 	knownBlockCache, err := lru.New(maxKnownBlock)
 
@@ -70,7 +90,7 @@ func NewHandler(config *HandlerConfig) (*Handler, error) {
 
 	handler := &Handler{
 		// todo: 限制节点数量，Kad 应该限制了节点数量不超过20个
-		peerSet: make([]*Peer, 40),
+		peerSet: make([]*Peer, 0, 40),
 
 		blockBroadcastQueue: make(chan *common.Block, 64),
 		txBroadcastQueue:    make(chan *common.Transaction, 8192),
@@ -84,6 +104,7 @@ func NewHandler(config *HandlerConfig) (*Handler, error) {
 
 	go handler.broadcastBlock()
 	go handler.broadcastTransaction()
+	go handler.packageBlockRoutine()
 	handlerInst = handler
 
 	return handler, nil
@@ -94,8 +115,39 @@ func GetHandlerInst() *Handler {
 	return handlerInst
 }
 
+func (h *Handler) packageBlockRoutine() {
+	ticker := time.NewTicker(1 * time.Second)
+
+	for {
+		select {
+		case <-ticker.C:
+			//log.Debugln("Start package block.")
+			latest, _ := h.chain.GetLatestBlock()
+
+			if latest == nil {
+				log.Debugln("Waiting for genesis block.")
+				continue
+			}
+
+			txs := h.txPool.Package()
+			log.Debugf("Package %d txs.", len(txs))
+			newBlock, err := h.chain.PackageNewBlock(txs)
+
+			if err != nil {
+				log.WithField("error", err).Errorln("Package new block failed.")
+				continue
+			}
+
+			log.Debugf("Package new block# 0x%s", hex.EncodeToString(newBlock.Header.BlockHash[:]))
+			h.chain.AppendBlockTask(newBlock)
+			h.blockBroadcastQueue <- newBlock
+		}
+	}
+}
+
 func (h *Handler) NewPeer(peerId peer.ID, s *network.Stream) (*Peer, error) {
 	config := PeerConfig{
+		chain:   h.chain,
 		txPool:  h.txPool,
 		handler: h,
 	}
@@ -199,7 +251,7 @@ func handleStatusMsg(h *Handler, msg *p2p.Message, p *Peer) {
 	height := int(binary.LittleEndian.Uint64(payload))
 
 	if height > h.chain.Height() {
-
+		requestBlockWithHeight(h.chain.Height()+1, p)
 	}
 }
 
@@ -219,6 +271,13 @@ func handleNewBlockMsg(h *Handler, msg *p2p.Message, p *Peer) {
 
 	h.markBlock(blockHash)
 	p.MarkBlock(blockHash)
+
+	if block.Header.Height == 0 {
+		h.chain.InsertBlock(block)
+	} else {
+		h.chain.AppendBlockTask(block)
+	}
+
 	h.blockBroadcastQueue <- block
 }
 
@@ -245,9 +304,15 @@ func handleBlockMsg(h *Handler, msg *p2p.Message, p *Peer) {
 	blockHash := block.Header.BlockHash
 	h.markBlock(blockHash)
 	p.MarkBlock(blockHash)
+
+	if block.Header.Height == 0 {
+		h.chain.InsertBlock(block)
+	} else {
+		h.chain.AppendBlockTask(block)
+	}
 }
 
-func handlerTransactionMsg(h *Handler, msg *p2p.Message, p *Peer) {
+func handleTransactionMsg(h *Handler, msg *p2p.Message, p *Peer) {
 	payload := msg.Payload
 	transaction, err := utils.DeserializeTransaction(payload)
 
@@ -266,7 +331,7 @@ func handlerTransactionMsg(h *Handler, msg *p2p.Message, p *Peer) {
 	h.txBroadcastQueue <- transaction
 }
 
-func handlerNewPooledTransactionHashesMsg(h *Handler, msg *p2p.Message, p *Peer) {
+func handleNewPooledTransactionHashesMsg(h *Handler, msg *p2p.Message, p *Peer) {
 	txHash := common.Hash(msg.Payload)
 
 	if h.isKnownTransaction(txHash) {
@@ -276,7 +341,7 @@ func handlerNewPooledTransactionHashesMsg(h *Handler, msg *p2p.Message, p *Peer)
 	go requestTransactionWithHash(txHash, p)
 }
 
-func handlerGetPooledTransactionMsg(h *Handler, msg *p2p.Message, p *Peer) {
+func handleGetPooledTransactionMsg(h *Handler, msg *p2p.Message, p *Peer) {
 	txHash := common.Hash(msg.Payload)
 
 	tx := h.txPool.Get(txHash)
@@ -284,7 +349,7 @@ func handlerGetPooledTransactionMsg(h *Handler, msg *p2p.Message, p *Peer) {
 	go respondGetPooledTransaction(tx, p)
 }
 
-func handlerGetBlockByHeightMsg(h *Handler, msg *p2p.Message, p *Peer) {
+func handleGetBlockByHeightMsg(h *Handler, msg *p2p.Message, p *Peer) {
 	payload := msg.Payload
 	height := int(binary.LittleEndian.Uint64(payload))
 

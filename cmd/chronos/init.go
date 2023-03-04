@@ -11,6 +11,8 @@ var (
 	datadir   string
 	port      int
 	help      bool
+	genesis   bool
+	debug     bool
 )
 
 func init() {
@@ -18,13 +20,15 @@ func init() {
 	flag.StringVar(&datadir, "d", "./data", "Data directory path")
 	flag.IntVar(&port, "p", 31258, "Listening port")
 	flag.BoolVar(&help, "h", false, "Command help")
+	flag.BoolVar(&genesis, "g", false, "Create genesis block after 10s")
+	flag.BoolVar(&debug, "debug", false, "Debug log level")
 
 	flag.Usage = usage
 }
 
 func usage() {
 	fmt.Fprintf(os.Stderr, `chronos version: 1.0.0
-Usage: chronos [-b bootstrap] [-d datadir] [-p port] [-h help]
+Usage: chronos [-b bootstrap] [-d datadir] [-p port] [-h help] [-g genesis] [--debug]
 
 Options:
 `)

@@ -10,6 +10,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/multiformats/go-multiaddr"
 	log "github.com/sirupsen/logrus"
+	"go-chronos/node"
 	"go-chronos/p2p"
 )
 
@@ -94,7 +95,7 @@ func main() {
 		dht, err = NewKDHT(ctx, host, []multiaddr.Multiaddr{maddr})
 	}
 
-	go p2p.Discover(ctx, host, dht, "test")
+	go node.Discover(ctx, host, dht, "test")
 
 	select {}
 }

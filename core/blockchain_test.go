@@ -4,7 +4,10 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
+	"encoding/hex"
+	log "github.com/sirupsen/logrus"
 	"go-chronos/common"
+	"go-chronos/utils"
 	"testing"
 	"time"
 )
@@ -18,15 +21,24 @@ func TestBlockChain_InsertBlock(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	txs := make([]common.Transaction, 3000)
+	txs := make([]common.Transaction, 0, 3000)
 
 	for i := 0; i < 3000; i++ {
 		tx := buildTransaction(privateKey)
 		txs = append(txs, *tx)
 	}
 
-	bc := GetBlockChainInst()
-	block, _ := bc.PackageNewBlock(txs)
+	db, err := utils.NewLevelDB("./data")
+
+	if err != nil {
+		log.WithField("error", err).Errorln("Create or load database failed.")
+		return
+	}
+
+	bc := NewBlockchain(db)
+	bc.NewGenesisBlock()
+	block, _ := bc.PackageNewBlock([]common.Transaction{})
+	println(hex.EncodeToString(block.Header.BlockHash[:]))
 
 	startTime := time.Now()
 	err = bc.InsertBlock(block)

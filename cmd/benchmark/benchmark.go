@@ -37,7 +37,7 @@ func BuildAndVerifyMassiveTransaction() {
 		return
 	}
 
-	txs := make([]common.Transaction, 3000)
+	txs := make([]common.Transaction, 0, 3000)
 
 	buildStart := time.Now()
 	for i := 0; i < 3000; i++ {
@@ -70,7 +70,7 @@ func PackageBlockAndInsert() {
 		return
 	}
 
-	txs := make([]common.Transaction, 3000)
+	txs := make([]common.Transaction, 0, 3000)
 
 	for i := 0; i < 3000; i++ {
 		tx := buildTransaction(privateKey)

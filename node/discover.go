@@ -1,4 +1,4 @@
-package p2p
+package node
 
 import (
 	"context"
@@ -8,7 +8,6 @@ import (
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/p2p/discovery/routing"
 	log "github.com/sirupsen/logrus"
-	"go-chronos/node"
 	"time"
 )
 
@@ -28,7 +27,7 @@ func Discover(ctx context.Context, h host.Host, dht *dht.IpfsDHT, rendezvous str
 	ticker := time.NewTicker(5 * time.Second)
 	defer ticker.Stop()
 
-	handler := node.GetHandlerInst()
+	handler := GetHandlerInst()
 
 	for {
 		select {
@@ -44,8 +43,6 @@ func Discover(ctx context.Context, h host.Host, dht *dht.IpfsDHT, rendezvous str
 			}
 
 			for p := range peers {
-				log.Infoln(p.ID)
-
 				if p.ID == h.ID() {
 					continue
 				}

@@ -10,8 +10,8 @@ import (
 	log "github.com/sirupsen/logrus"
 	"go-chronos/core"
 	"go-chronos/node"
-	"go-chronos/p2p"
 	"go-chronos/utils"
+	"time"
 )
 
 func main() {
@@ -20,6 +20,10 @@ func main() {
 	if help {
 		flag.Usage()
 		return
+	}
+
+	if debug {
+		log.SetLevel(log.DebugLevel)
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -64,7 +68,7 @@ func main() {
 		log.WithField("error", err).Errorln("Create local host failed.")
 	}
 
-	host.SetStreamHandler(p2p.ProtocolId, p2p.HandleStream)
+	host.SetStreamHandler(node.ProtocolId, node.HandleStream)
 	log.Infof("Node address: /ip4/127.0.0.1/tcp/%v/p2p/%s", port, host.ID().String())
 
 	var kdht *dht.IpfsDHT
@@ -89,7 +93,20 @@ func main() {
 		}
 	}
 
-	go p2p.Discover(ctx, host, kdht, "Chronos network.")
+	go node.Discover(ctx, host, kdht, "Chronos network.")
+
+	if genesis {
+		log.Infof("Create genesis block after 10s...")
+		go func() {
+			ticker := time.NewTicker(10 * time.Second)
+
+			select {
+			case <-ticker.C:
+				log.Infof("Create genesis block.")
+				chain.NewGenesisBlock()
+			}
+		}()
+	}
 
 	select {}
 }

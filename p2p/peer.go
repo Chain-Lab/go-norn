@@ -3,6 +3,7 @@ package p2p
 import (
 	"bufio"
 	"context"
+	"encoding/base64"
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
 	log "github.com/sirupsen/logrus"
@@ -13,6 +14,7 @@ import (
 
 const (
 	pingInterval = 15 * time.Second
+	bufferSize   = 10 * 1024 * 1024
 )
 
 var (
@@ -24,8 +26,12 @@ var (
 type Peer struct {
 	peerID peer.ID
 
-	rw *bufio.ReadWriter
-	wg sync.WaitGroup
+	rw       *bufio.ReadWriter
+	wg       sync.WaitGroup
+	msgQueue chan *Message
+
+	wLock sync.RWMutex
+	rLock sync.RWMutex
 }
 
 func GetPeerContext() context.Context {
@@ -42,11 +48,14 @@ func GetPeerContext() context.Context {
 //	}
 //}
 
-func NewPeer(id peer.ID, s *network.Stream) (*Peer, error) {
+func NewPeer(id peer.ID, s *network.Stream, msgQueue chan *Message) (*Peer, error) {
 	p := Peer{
-		peerID: id,
-		rw:     bufio.NewReadWriter(bufio.NewReader(*s), bufio.NewWriter(*s)),
+		peerID:   id,
+		rw:       bufio.NewReadWriter(bufio.NewReaderSize(*s, bufferSize), bufio.NewWriterSize(*s, bufferSize)),
+		msgQueue: msgQueue,
 	}
+
+	go p.Run()
 
 	return &p, nil
 }
@@ -69,9 +78,8 @@ func (p *Peer) Id() peer.ID {
 }
 
 func (p *Peer) pingLoop() {
-	ping := time.NewTimer(pingInterval)
+	ping := time.NewTicker(pingInterval)
 	defer p.wg.Done()
-	defer ping.Stop()
 
 	log.Infoln("Start ping loop.")
 
@@ -79,8 +87,7 @@ func (p *Peer) pingLoop() {
 		select {
 		case <-ping.C:
 			log.Debugln("Send ping to peer.")
-			p.Send(StatusCodePingMsg, _Null)
-			ping.Reset(pingInterval)
+			p.Send(StatusCodePingMsg, make([]byte, 0))
 		}
 	}
 }
@@ -94,6 +101,8 @@ func (p *Peer) readLoop(errc chan<- error) {
 		log.Traceln("New read loop.")
 		dataBytes, err := p.rw.ReadBytes(0xff)
 
+		//log.Infof("Read byte code data: %v", dataBytes)
+
 		if err != nil {
 			log.WithField("error", err).Errorln("Read bytes error.")
 			errc <- err
@@ -105,32 +114,44 @@ func (p *Peer) readLoop(errc chan<- error) {
 		if len(dataBytes) == 0 {
 			continue
 		}
+		//log.Infof("Receive byte data %v", dataBytes)
 		dataBytes = dataBytes[:len(dataBytes)-1]
 
+		decodedPayload := make([]byte, base64.StdEncoding.DecodedLen(len(dataBytes)))
+		l, _ := base64.StdEncoding.Decode(decodedPayload, dataBytes)
+
 		msg := messagePool.Get().(*Message)
-		msg.ReadAsRoot(karmem.NewReader(dataBytes))
+		msg.ReadAsRoot(karmem.NewReader(decodedPayload[:l]))
 
 		now := time.Now()
 
 		// todo: 修改编码为int64
 		msg.ReceiveAt = uint32(now.UnixMilli())
 
-		if err = p.handle(msg); err != nil {
-			errc <- err
-			return
-		}
+		log.WithFields(log.Fields{
+			"code":   msg.Code,
+			"length": len(dataBytes),
+		}).Debugln("Receive message.")
+		p.handle(msg)
+
+		messagePool.Put(msg)
 	}
 }
 
-func (p *Peer) handle(msg *Message) error {
+func (p *Peer) handle(msg *Message) {
 	switch {
 	case msg.Code == StatusCodePingMsg:
 		log.WithField("peer", p.peerID).Traceln("Receive peer ping message.")
-		go p.Send(StatusCodePongMsg, _Null)
+		p.Send(StatusCodePongMsg, make([]byte, 0))
+		return
 		// todo: 怎么将消息传入到上层进行处理
 		// todo: channel 发送消息到 node/peer 中处理
+	case msg.Code == StatusCodePongMsg:
+		return
+	default:
+		p.msgQueue <- msg
 	}
-	return nil
+	return
 }
 
 func (p *Peer) disconnect() {
@@ -138,7 +159,10 @@ func (p *Peer) disconnect() {
 }
 
 // Send 方法用于提供一个通用的消息发送接口
-func (p *Peer) Send(msgcode StatusCode, payload []byte) {
+func (p *Peer) Send(msgCode StatusCode, payload []byte) {
+	p.wLock.RLock()
+	defer p.wLock.RUnlock()
+
 	// todo: 这里的 ReadWriter 传值是否存在问题, 此外还需要传入空值发送 ping/pong 信息
 	msgWriter := writerPool.Get().(*karmem.Writer)
 	defer msgWriter.Reset()
@@ -147,7 +171,7 @@ func (p *Peer) Send(msgcode StatusCode, payload []byte) {
 	// todo: 这里数据的大小暂时留空，作为冗余字段
 	// todo: 观察一下这里处理数据会不会有较高的耗时，特别是数据比较大的情况下
 	msg := Message{
-		Code:      msgcode,
+		Code:      msgCode,
 		Size:      uint32(len(payload)),
 		Payload:   payload,
 		ReceiveAt: 0,
@@ -158,16 +182,29 @@ func (p *Peer) Send(msgcode StatusCode, payload []byte) {
 		return
 	}
 
-	msgBytes := append(msgWriter.Bytes(), 0xff)
-	length, err := p.rw.Write(msgBytes)
+	msgBytes := msgWriter.Bytes()
+
+	encodedPayload := make([]byte, base64.StdEncoding.EncodedLen(len(msgBytes)))
+	base64.StdEncoding.Encode(encodedPayload, msgBytes)
+	encodedPayload = append(encodedPayload, 0xff)
+
+	length, err := p.rw.Write(encodedPayload)
 	if err != nil {
-		log.WithField("error", err).Errorln("Send data to peer errored.")
+		log.WithFields(
+			log.Fields{
+				"error":  err,
+				"length": length,
+			}).Errorln("Send data to peer errored.")
+		//log.Debugf("Data bytes: %v", msgBytes)
 		return
 	}
 	p.rw.Flush()
 
+	//log.Infof("Send byte data %v", msgBytes)
+
 	log.WithFields(log.Fields{
 		"length": length,
+		"code":   msg.Code,
 	}).Debugln("Send message to peer.")
 
 	msgWriter.Reset()

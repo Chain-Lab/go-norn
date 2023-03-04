@@ -4,6 +4,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"go-chronos/p2p"
 	"go-chronos/utils"
+	"time"
 )
 
 func (p *Peer) broadcastBlock() {
@@ -52,6 +53,18 @@ func (p *Peer) broadcastTxHash() {
 		select {
 		case txHash := <-p.txAnnounce:
 			p.peer.Send(p2p.StatusCodeNewPooledTransactionHashesMsg, txHash[:])
+		}
+	}
+}
+
+func (p *Peer) sendStatus() {
+	ticker := time.NewTicker(5 * time.Second)
+	for {
+		select {
+		case <-ticker.C:
+			height := p.chain.Height()
+
+			requestStatusMsg(height, p)
 		}
 	}
 }

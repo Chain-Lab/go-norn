@@ -20,6 +20,7 @@ const (
 )
 
 type PeerConfig struct {
+	chain   *core.BlockChain
 	txPool  *core.TxPool
 	handler *Handler
 }
@@ -31,6 +32,7 @@ type Peer struct {
 	queuedBlocks    chan *common.Block
 	queuedBlockAnns chan common.Hash
 
+	chain       *core.BlockChain
 	txPool      *core.TxPool
 	handler     *Handler
 	knownTxs    *lru.Cache
@@ -43,7 +45,8 @@ type Peer struct {
 }
 
 func NewPeer(peerId peer.ID, s *network.Stream, config PeerConfig) (*Peer, error) {
-	pp, err := p2p.NewPeer(peerId, s)
+	msgQueue := make(chan *p2p.Message)
+	pp, err := p2p.NewPeer(peerId, s, msgQueue)
 
 	if err != nil {
 		log.WithField("error", err).Errorln("Create p2p peer failed.")
@@ -69,17 +72,21 @@ func NewPeer(peerId peer.ID, s *network.Stream, config PeerConfig) (*Peer, error
 		knownBlocks:     blockLru,
 		queuedBlocks:    make(chan *common.Block, maxQueuedBlocks),
 		queuedBlockAnns: make(chan common.Hash, maxQueuedBlockAnns),
+		chain:           config.chain,
 		txPool:          config.txPool,
 		handler:         config.handler,
 		knownTxs:        txLru,
 		txBroadcast:     make(chan *common.Transaction, maxQueuedTxs),
 		txAnnounce:      make(chan common.Hash, maxQueuedTxAnns),
+		msgQueue:        msgQueue,
 	}
 
 	go p.broadcastBlock()
 	go p.broadcastBlockHash()
 	go p.broadcastTransaction()
 	go p.broadcastTxHash()
+	go p.sendStatus()
+	go p.Handle()
 
 	return p, nil
 }
@@ -128,8 +135,12 @@ func (p *Peer) Handle() {
 	for {
 		select {
 		case msg := <-p.msgQueue:
+			//log.Infoln("Receive code ", msg.Code)
 			handle := handlerMap[msg.Code]
-			go handle(p.handler, msg, p)
+
+			if handle != nil {
+				go handle(p.handler, msg, p)
+			}
 		}
 	}
 }

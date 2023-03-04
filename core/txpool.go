@@ -1,6 +1,7 @@
 package core
 
 import (
+	log "github.com/sirupsen/logrus"
 	"go-chronos/common"
 	"sync"
 )
@@ -15,7 +16,7 @@ var (
 )
 
 type TxPool struct {
-	txQueue chan common.Hash
+	txQueue []common.Hash
 	txs     sync.Map
 	flags   sync.Map
 	height  int
@@ -24,7 +25,7 @@ type TxPool struct {
 
 func NewTxPool() *TxPool {
 	return &TxPool{
-		txQueue: make(chan common.Hash, 8192),
+		txQueue: make([]common.Hash, 0, 8192),
 		txs:     sync.Map{},
 	}
 }
@@ -35,27 +36,32 @@ func (pool *TxPool) Package() []common.Transaction {
 	pool.lock.RLock()
 	defer pool.lock.RUnlock()
 
-	count := 0
-	result := make([]common.Transaction, 3000)
+	//count := 0
+	result := make([]common.Transaction, 0, 3000)
+	log.Debugln("Start package txpool.")
 
-	for txHash := range pool.txQueue {
-		value, hit := pool.txs.Load(txHash)
-		if !hit {
-			continue
-		}
+	// 初期测试，直接返回空切片
 
-		tx := value.(*common.Transaction)
-		if !tx.Verify() {
-			continue
-		}
-		// todo： 这里是传值还是传指针？
-		result = append(result, *tx)
-		count++
-
-		if count >= maxTxPackageCount-1 {
-			break
-		}
-	}
+	//for idx := range pool.txQueue {
+	//	txHash := pool.txQueue[idx]
+	//	value, hit := pool.txs.Load(txHash)
+	//	pool.txs.Delete(txHash)
+	//	if !hit {
+	//		continue
+	//	}
+	//
+	//	tx := value.(*common.Transaction)
+	//	if !tx.Verify() {
+	//		continue
+	//	}
+	//	// todo： 这里是传值还是传指针？
+	//	result = append(result, *tx)
+	//	count++
+	//
+	//	if count >= maxTxPackageCount-1 {
+	//		break
+	//	}
+	//}
 
 	return result
 }
@@ -63,10 +69,12 @@ func (pool *TxPool) Package() []common.Transaction {
 func (pool *TxPool) Add(transaction *common.Transaction) {
 	// todo: 还是需要和 Package 的锁相关联，保证 Package 能抢到锁
 	// todo: 在当前版本下先直接加锁打包
+	pool.lock.RLock()
+	defer pool.lock.RUnlock()
 
 	txHash := transaction.Body.Hash
 	pool.txs.Store(txHash, transaction)
-	pool.txQueue <- txHash
+	pool.txQueue = append(pool.txQueue, txHash)
 }
 
 func (pool *TxPool) Contain(hash common.Hash) bool {

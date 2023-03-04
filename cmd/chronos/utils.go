@@ -8,7 +8,6 @@ import (
 	"github.com/multiformats/go-multiaddr"
 	log "github.com/sirupsen/logrus"
 	"go-chronos/node"
-	"go-chronos/p2p"
 )
 
 func NewKDHT(ctx context.Context, host host.Host, bootstrapPeers []multiaddr.Multiaddr) (*dht.IpfsDHT, error) {
@@ -40,7 +39,7 @@ func NewKDHT(ctx context.Context, host host.Host, bootstrapPeers []multiaddr.Mul
 		if err := host.Connect(ctx, *peerinfo); err != nil {
 			log.Printf("Error while connecting to node %q: %-v", peerinfo, err)
 		} else {
-			s, err := host.NewStream(ctx, peerinfo.ID, p2p.ProtocolId)
+			s, err := host.NewStream(ctx, peerinfo.ID, node.ProtocolId)
 
 			if err != nil {
 				log.WithField("error", err).Errorln("Create new stream error.")

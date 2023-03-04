@@ -18,7 +18,7 @@ func TestBuildMerkleTree(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	txs := make([]common.Transaction, 3000)
+	txs := make([]common.Transaction, 0, 3000)
 
 	for i := 0; i < 3000; i++ {
 		tx := buildTransaction(privateKey)

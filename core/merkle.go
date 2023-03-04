@@ -21,6 +21,11 @@ func mergeHash(leftNode *node, rightNode *node) []byte {
 
 func BuildMerkleTree(txs []common.Transaction) []byte {
 	length := len(txs)
+
+	if length <= 0 {
+		return make([]byte, 32)
+	}
+
 	nodes := make([]node, length)
 	for idx := range txs {
 		nodes[idx] = node{
