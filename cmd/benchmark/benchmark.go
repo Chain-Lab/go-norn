@@ -7,6 +7,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"go-chronos/common"
 	"go-chronos/core"
+	"go-chronos/utils"
 	"time"
 )
 
@@ -80,8 +81,15 @@ func PackageBlockAndInsert() {
 		tx := txs[i]
 		tx.Verify()
 	}
+	db, err := utils.NewLevelDB("./data")
 
-	bc := core.NewBlockchain()
+	if err != nil {
+		panic(err)
+	}
+
+	bc := core.NewBlockchain(db)
+	bc.NewGenesisBlock()
+
 	packageStart := time.Now()
 	block, err := bc.PackageNewBlock(txs)
 	packageTimeUsed := time.Since(packageStart)
@@ -92,7 +100,7 @@ func PackageBlockAndInsert() {
 	}
 
 	insertStart := time.Now()
-	err = bc.InsertBlock(block)
+	bc.InsertBlock(block)
 	if err != nil {
 		log.WithField("error", err).Panicln("Insert block failed.")
 		return
@@ -107,5 +115,5 @@ func PackageBlockAndInsert() {
 func main() {
 	BuildAndVerifyTransaction()
 	BuildAndVerifyMassiveTransaction()
-	//PackageBlockAndInsert()
+	PackageBlockAndInsert()
 }
