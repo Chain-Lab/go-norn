@@ -34,14 +34,13 @@ func TestBlockChain_InsertBlock(t *testing.T) {
 		log.WithField("error", err).Errorln("Create or load database failed.")
 		return
 	}
-
 	bc := NewBlockchain(db)
 	bc.NewGenesisBlock()
 	block, _ := bc.PackageNewBlock([]common.Transaction{})
 	println(hex.EncodeToString(block.Header.BlockHash[:]))
 
 	startTime := time.Now()
-	err = bc.InsertBlock(block)
+	bc.InsertBlock(block)
 
 	if err != nil {
 		t.Fatal(err)

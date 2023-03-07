@@ -13,6 +13,7 @@ var (
 	help      bool
 	genesis   bool
 	debug     bool
+	test      bool
 )
 
 func init() {
@@ -22,6 +23,7 @@ func init() {
 	flag.BoolVar(&help, "h", false, "Command help")
 	flag.BoolVar(&genesis, "g", false, "Create genesis block after 10s")
 	flag.BoolVar(&debug, "debug", false, "Debug log level")
+	flag.BoolVar(&test, "test", false, "Send transaction test")
 
 	flag.Usage = usage
 }

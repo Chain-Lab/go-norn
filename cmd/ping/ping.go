@@ -14,6 +14,9 @@ import (
 	"go-chronos/p2p"
 )
 
+// !! 这部分代码只是初期测试 kademlia 使用，由于后续底层代码结构变动
+// 该部分的代码已经不能完成测试
+
 func NewKDHT(ctx context.Context, host host.Host, bootstrapPeers []multiaddr.Multiaddr) (*dht.IpfsDHT, error) {
 	// dht 的配置项
 	var options []dht.Option
@@ -46,7 +49,7 @@ func NewKDHT(ctx context.Context, host host.Host, bootstrapPeers []multiaddr.Mul
 			if err != nil {
 				log.WithField("error", err).Errorln("Create new stream error.")
 			}
-			p, err := p2p.NewPeer(peerinfo.ID, &s)
+			p, err := p2p.NewPeer(peerinfo.ID, &s, nil)
 
 			go p.Run()
 			log.Printf("Connection established with bootstrap node: %q", *peerinfo)
@@ -71,7 +74,7 @@ func main() {
 		libp2p.ListenAddrs(sourceMultiAddr),
 	)
 
-	host.SetStreamHandler("/ping/1.0.0", p2p.HandleStream)
+	host.SetStreamHandler("/ping/1.0.0", node.HandleStream)
 
 	log.Infof("Node address: /ip4/127.0.0.1/tcp/%v/p2p/%s", *sourcePort, host.ID().String())
 

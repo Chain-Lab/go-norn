@@ -110,13 +110,19 @@ func NewHandler(config *HandlerConfig) (*Handler, error) {
 	return handler, nil
 }
 
+// AddTransaction 仅用于测试
+func (h *Handler) AddTransaction(tx *common.Transaction) {
+	h.txBroadcastQueue <- tx
+	h.txPool.Add(tx)
+}
+
 func GetHandlerInst() *Handler {
 	// todo: 这样的写法会有脏读的问题，也就是在分配地址后，对象可能还没有完全初始化
 	return handlerInst
 }
 
 func (h *Handler) packageBlockRoutine() {
-	ticker := time.NewTicker(1 * time.Second)
+	ticker := time.NewTicker(5 * time.Second)
 
 	for {
 		select {
@@ -164,7 +170,8 @@ func (h *Handler) NewPeer(peerId peer.ID, s *network.Stream) (*Peer, error) {
 }
 
 func (h *Handler) isKnownTransaction(hash common.Hash) bool {
-	if h.txPool.Contain(hash) {
+	strHash := hex.EncodeToString(hash[:])
+	if h.txPool.Contain(strHash) {
 		return true
 	}
 
@@ -187,6 +194,7 @@ func (h *Handler) broadcastBlock() {
 
 			peersCount := len(peers)
 			countBroadcastBlock := int(math.Sqrt(float64(peersCount)))
+			log.WithField("count", countBroadcastBlock).Debugln("Broadcast block.")
 
 			for idx := 0; idx < countBroadcastBlock; idx++ {
 				peers[idx].AsyncSendNewBlock(block)
@@ -208,7 +216,7 @@ func (h *Handler) broadcastTransaction() {
 
 			peersCount := len(peers)
 			countBroadcastBody := int(math.Sqrt(float64(peersCount)))
-
+			//log.WithField("count", countBroadcastBody).Debugln("Broadcast transaction.")
 			for idx := 0; idx < countBroadcastBody; idx++ {
 				peers[idx].AsyncSendTransaction(tx)
 			}
@@ -222,9 +230,10 @@ func (h *Handler) broadcastTransaction() {
 
 func (h *Handler) getPeersWithoutBlock(blockHash common.Hash) []*Peer {
 	list := make([]*Peer, 0, len(h.peerSet))
+	strHash := hex.EncodeToString(blockHash[:])
 	for idx := range h.peerSet {
 		peer := h.peerSet[idx]
-		if !peer.KnownBlock(blockHash) {
+		if !peer.KnownBlock(strHash) {
 			list = append(list, peer)
 		}
 	}
@@ -233,17 +242,22 @@ func (h *Handler) getPeersWithoutBlock(blockHash common.Hash) []*Peer {
 
 func (h *Handler) getPeersWithoutTransaction(txHash common.Hash) []*Peer {
 	list := make([]*Peer, 0, len(h.peerSet))
+	strHash := hex.EncodeToString(txHash[:])
 	for idx := range h.peerSet {
 		peer := h.peerSet[idx]
-		if !peer.KnownTransaction(txHash) {
+		if !peer.KnownTransaction(strHash) {
 			list = append(list, peer)
 		}
 	}
 	return list
 }
 
-func (h *Handler) markBlock(hash common.Hash) {
+func (h *Handler) markBlock(hash string) {
 	h.knownBlock.Add(hash, nil)
+}
+
+func (h *Handler) markTransaction(hash string) {
+	h.knownTransaction.Add(hash, nil)
 }
 
 func handleStatusMsg(h *Handler, msg *p2p.Message, p *Peer) {
@@ -251,6 +265,7 @@ func handleStatusMsg(h *Handler, msg *p2p.Message, p *Peer) {
 	height := int(binary.LittleEndian.Uint64(payload))
 
 	if height > h.chain.Height() {
+		log.WithField("height", h.chain.Height()+1).Debugln("Request block.")
 		requestBlockWithHeight(h.chain.Height()+1, p)
 	}
 }
@@ -265,15 +280,16 @@ func handleNewBlockMsg(h *Handler, msg *p2p.Message, p *Peer) {
 	}
 
 	blockHash := block.Header.BlockHash
-	if h.knownBlock.Contains(blockHash) {
+	strHash := hex.EncodeToString(blockHash[:])
+	if h.knownBlock.Contains(strHash) {
 		return
 	}
 
-	h.markBlock(blockHash)
-	p.MarkBlock(blockHash)
+	h.markBlock(strHash)
+	p.MarkBlock(strHash)
 
 	if block.Header.Height == 0 {
-		h.chain.InsertBlock(block)
+		go h.chain.InsertBlock(block)
 	} else {
 		h.chain.AppendBlockTask(block)
 	}
@@ -302,11 +318,14 @@ func handleBlockMsg(h *Handler, msg *p2p.Message, p *Peer) {
 	}
 
 	blockHash := block.Header.BlockHash
-	h.markBlock(blockHash)
-	p.MarkBlock(blockHash)
+	strHash := hex.EncodeToString(blockHash[:])
+	h.markBlock(strHash)
+	p.MarkBlock(strHash)
+
+	log.WithField("height", block.Header.Height).Infoln("Receive block.")
 
 	if block.Header.Height == 0 {
-		h.chain.InsertBlock(block)
+		go h.chain.InsertBlock(block)
 	} else {
 		h.chain.AppendBlockTask(block)
 	}
@@ -315,25 +334,34 @@ func handleBlockMsg(h *Handler, msg *p2p.Message, p *Peer) {
 func handleTransactionMsg(h *Handler, msg *p2p.Message, p *Peer) {
 	payload := msg.Payload
 	transaction, err := utils.DeserializeTransaction(payload)
+	//if len(transaction.Body.Data) == 0 {
+	//	log.WithFields(log.Fields{
+	//		"hash":    hex.EncodeToString(transaction.Body.Hash[:]),
+	//		"expire":  transaction.Body.Expire,
+	//		"data":    hex.EncodeToString(transaction.Body.Data),
+	//		"payload": hex.EncodeToString(payload),
+	//	}).Panicln("Receive transaction.")
+	//}
 
 	if err != nil {
 		log.WithField("error", err).Debugln("Deserializer transaction failed.")
 		return
 	}
 
-	txHash := transaction.Body.Hash
+	txHash := hex.EncodeToString(transaction.Body.Hash[:])
 
-	if h.isKnownTransaction(txHash) {
+	if h.isKnownTransaction(transaction.Body.Hash) {
 		return
 	}
 
+	p.MarkTransaction(txHash)
+	h.markTransaction(txHash)
 	h.txPool.Add(transaction)
 	h.txBroadcastQueue <- transaction
 }
 
 func handleNewPooledTransactionHashesMsg(h *Handler, msg *p2p.Message, p *Peer) {
 	txHash := common.Hash(msg.Payload)
-
 	if h.isKnownTransaction(txHash) {
 		return
 	}
@@ -343,8 +371,9 @@ func handleNewPooledTransactionHashesMsg(h *Handler, msg *p2p.Message, p *Peer) 
 
 func handleGetPooledTransactionMsg(h *Handler, msg *p2p.Message, p *Peer) {
 	txHash := common.Hash(msg.Payload)
+	strHash := hex.EncodeToString(txHash[:])
 
-	tx := h.txPool.Get(txHash)
+	tx := h.txPool.Get(strHash)
 
 	go respondGetPooledTransaction(tx, p)
 }
@@ -359,5 +388,6 @@ func handleGetBlockByHeightMsg(h *Handler, msg *p2p.Message, p *Peer) {
 		return
 	}
 
+	//log.Infof("Send block to peer.")
 	go respondGetBlockByHeight(block, p)
 }

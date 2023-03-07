@@ -45,7 +45,7 @@ func main() {
 		Chain:  chain,
 	}
 
-	_, err = node.NewHandler(&hConfig)
+	h, err := node.NewHandler(&hConfig)
 	if err != nil {
 		log.WithField("error", err).Errorln("Create handler failed.")
 		return
@@ -104,6 +104,10 @@ func main() {
 			case <-ticker.C:
 				log.Infof("Create genesis block.")
 				chain.NewGenesisBlock()
+
+				if test {
+					go sendTransaction(h)
+				}
 			}
 		}()
 	}

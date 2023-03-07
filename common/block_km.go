@@ -150,19 +150,19 @@ func NewTransaction() Transaction {
 	return Transaction{}
 }
 
-func (x *Transaction) PacketIdentifier() PacketIdentifier {
+func (tx *Transaction) PacketIdentifier() PacketIdentifier {
 	return PacketIdentifierTransaction
 }
 
-func (x *Transaction) Reset() {
-	x.Read((*TransactionViewer)(unsafe.Pointer(&_Null)), _NullReader)
+func (tx *Transaction) Reset() {
+	tx.Read((*TransactionViewer)(unsafe.Pointer(&_Null)), _NullReader)
 }
 
-func (x *Transaction) WriteAsRoot(writer *karmem.Writer) (offset uint, err error) {
-	return x.Write(writer, 0)
+func (tx *Transaction) WriteAsRoot(writer *karmem.Writer) (offset uint, err error) {
+	return tx.Write(writer, 0)
 }
 
-func (x *Transaction) Write(writer *karmem.Writer, start uint) (offset uint, err error) {
+func (tx *Transaction) Write(writer *karmem.Writer, start uint) (offset uint, err error) {
 	offset = start
 	size := uint(8)
 	if offset == 0 {
@@ -177,19 +177,19 @@ func (x *Transaction) Write(writer *karmem.Writer, start uint) (offset uint, err
 		return 0, err
 	}
 	writer.Write4At(offset+0, uint32(__BodyOffset))
-	if _, err := x.Body.Write(writer, __BodyOffset); err != nil {
+	if _, err := tx.Body.Write(writer, __BodyOffset); err != nil {
 		return offset, err
 	}
 
 	return offset, nil
 }
 
-func (x *Transaction) ReadAsRoot(reader *karmem.Reader) {
-	x.Read(NewTransactionViewer(reader, 0), reader)
+func (tx *Transaction) ReadAsRoot(reader *karmem.Reader) {
+	tx.Read(NewTransactionViewer(reader, 0), reader)
 }
 
-func (x *Transaction) Read(viewer *TransactionViewer, reader *karmem.Reader) {
-	x.Body.Read(viewer.Body(reader), reader)
+func (tx *Transaction) Read(viewer *TransactionViewer, reader *karmem.Reader) {
+	tx.Body.Read(viewer.Body(reader), reader)
 }
 
 type BlockHeader struct {

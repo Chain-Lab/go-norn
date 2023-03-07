@@ -1,4 +1,4 @@
-package common
+package utils
 
 import (
 	"crypto/ecdsa"
@@ -6,18 +6,19 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	log "github.com/sirupsen/logrus"
+	"go-chronos/common"
 	"go-chronos/crypto"
 	karmem "karmem.org/golang"
 	"testing"
 	"time"
 )
 
-func buildTransaction(key *ecdsa.PrivateKey) *Transaction {
+func buildTransaction(key *ecdsa.PrivateKey) *common.Transaction {
 	data := make([]byte, 32)
 	rand.Read(data)
 	timestamp := time.Now().UnixMilli()
 
-	txBody := TransactionBody{
+	txBody := common.TransactionBody{
 		Data:      data,
 		Timestamp: uint64(timestamp),
 		Expire:    uint64(timestamp + 3000),
@@ -44,31 +45,33 @@ func buildTransaction(key *ecdsa.PrivateKey) *Transaction {
 
 	txBody.Hash = [32]byte(txHashBytes)
 	txBody.Signature = txSignatureBytes
-	tx := Transaction{
+	tx := common.Transaction{
 		Body: txBody,
 	}
 
 	return &tx
 }
 
-func TestBuildTransactionAndVerifyTransaction(t *testing.T) {
-	//log.SetLevel(log.DebugLevel)
-	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+func TestSerializeTransaction(t *testing.T) {
+	prv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 
+	if err != nil {
+		t.Fatal("Generate keypair failed.")
+	}
+
+	tx := buildTransaction(prv)
+
+	txByteData, err := SerializeTransaction(tx)
 	if err != nil {
 		t.Fatal(err)
 	}
-	st := time.Now()
-	transaction := buildTransaction(privateKey)
-	buildTimeUsed := time.Since(st)
 
-	st = time.Now()
-	result := transaction.Verify()
-	verifyTimeUsed := time.Since(st)
-	if !result {
-		t.Fatal("Verify transaction failed.")
+	txCopyed, err := DeserializeTransaction(txByteData)
+	if err != nil {
+		t.Fatal(err)
 	}
 
-	t.Logf("Build transaction use %d μs", buildTimeUsed.Microseconds())
-	t.Logf("Verify transaction use %d μs", verifyTimeUsed.Microseconds())
+	if !txCopyed.Verify() {
+		t.Fatal("Verify transaction failed.")
+	}
 }

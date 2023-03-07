@@ -16,7 +16,7 @@ import (
 const (
 	maxBlockCache       = 1024
 	maxTransactionCache = 32768
-	maxBlockProcessList = 32
+	maxBlockProcessList = 12
 )
 
 type blockList []*common.Block
@@ -159,7 +159,8 @@ func (bc *BlockChain) GetLatestBlock() (*common.Block, error) {
 
 func (bc *BlockChain) GetBlockByHash(hash *common.Hash) (*common.Block, error) {
 	// 先查询缓存是否命中
-	value, hit := bc.blockCache.Get(hash)
+	strHash := hex.EncodeToString(hash[:])
+	value, hit := bc.blockCache.Get(strHash)
 
 	if hit {
 		// 命中缓存， 直接返回区块
@@ -182,15 +183,15 @@ func (bc *BlockChain) GetBlockByHash(hash *common.Hash) (*common.Block, error) {
 
 func (bc *BlockChain) GetBlockByHeight(height int) (*common.Block, error) {
 	// 先判断一下高度
-	if height > bc.latestHeight {
+	if height > bc.latestHeight && bc.latestHeight != -1 {
 		return nil, errors.New("Block height error.")
 	}
 
 	// 查询缓存里面是否有区块的信息
-	value, ok := bc.blockHeightMap.Get(height)
+	value, ok := bc.blockHeightMap.Get(uint64(height))
 	if ok {
-		blockHash := value.(*common.Hash)
-		block, err := bc.GetBlockByHash(blockHash)
+		blockHash := common.Hash(value.([32]byte))
+		block, err := bc.GetBlockByHash(&blockHash)
 
 		if err != nil {
 			log.WithField("error", err).Errorln("Get block by hash failed.")
@@ -205,7 +206,10 @@ func (bc *BlockChain) GetBlockByHeight(height int) (*common.Block, error) {
 	blockHash, err := bc.db.Get(heightDBKey)
 
 	if err != nil {
-		log.WithField("error", err).Errorln("Get block hash with height failed.")
+		log.WithFields(log.Fields{
+			"error": err,
+			"key":   string(heightDBKey),
+		}).Errorln("Get block hash with height failed.")
 		return nil, err
 	}
 
@@ -213,7 +217,9 @@ func (bc *BlockChain) GetBlockByHeight(height int) (*common.Block, error) {
 	block, err := bc.GetBlockByHash(&hash)
 
 	if err != nil {
-		log.WithField("error", err).Errorln("Get block by hash failed.")
+		log.WithFields(log.Fields{
+			"error": err,
+		}).Errorln("Get block by hash failed.")
 		return nil, err
 	}
 
@@ -222,36 +228,47 @@ func (bc *BlockChain) GetBlockByHeight(height int) (*common.Block, error) {
 
 func (bc *BlockChain) writeBlockCache(block *common.Block) {
 	bc.blockHeightMap.Add(block.Header.Height, block.Header.BlockHash)
-	bc.blockCache.Add(block.Header.BlockHash, block)
+	blockHash := hex.EncodeToString(block.Header.BlockHash[:])
+	bc.blockCache.Add(blockHash, block)
 }
 
 func (bc *BlockChain) writeTxCache(transaction *common.Transaction) {
 	hash := transaction.Body.Hash
-	bc.txCache.Add(hash, transaction)
+	strHash := hex.EncodeToString(hash[:])
+	bc.txCache.Add(strHash, transaction)
 }
 
 // InsertBlock 函数用于将区块插入到数据库中
-func (bc *BlockChain) InsertBlock(block *common.Block) error {
+func (bc *BlockChain) InsertBlock(block *common.Block) {
 	// todo: 这里作为 Public 函数只是为了测试
 	var err error
 	count := len(block.Transactions)
+
+	bc.latestLock.RLock()
+	if int(block.Header.Height) <= bc.latestHeight {
+		bc.latestLock.RUnlock()
+		return
+	}
+	bc.latestBlock = block
+	bc.latestHeight = int(block.Header.Height)
+	bc.latestLock.RUnlock()
+	bc.writeBlockCache(block)
 
 	// todo: 把这里的魔数改成声明
 	keys := make([][]byte, count+3)
 	values := make([][]byte, count+3)
 	//fmt.Printf("Data size %d bytes.", len(values[0]))
 
-	bc.latestLock.RLock()
-	bc.latestBlock = block
-	bc.latestHeight = int(block.Header.Height)
-	bc.latestLock.RUnlock()
-	bc.writeBlockCache(block)
-	log.WithField("hash", hex.EncodeToString(block.Header.BlockHash[:])).Infoln("Insert block to database.")
+	log.WithFields(log.Fields{
+		"hash":   hex.EncodeToString(block.Header.BlockHash[:]),
+		"height": block.Header.Height,
+		"count":  len(block.Transactions),
+	}).Infoln("Insert block to database.")
 
 	keys[0] = utils.BlockHash2DBKey(block.Header.BlockHash)
 	values[0], err = utils.SerializeBlock(block)
 	if err != nil {
-		return err
+		return
 	}
 
 	keys[1] = []byte("latest")
@@ -272,13 +289,13 @@ func (bc *BlockChain) InsertBlock(block *common.Block) error {
 				"error": err,
 				"hash":  hex.EncodeToString(tx.Body.Hash[:]),
 			}).Errorln("Encode transaction failed.")
-			return err
+			return
 		}
 
 		values[idx+3] = txWriter.Bytes()
 	}
 
-	return bc.db.BatchInsert(keys, values)
+	bc.db.BatchInsert(keys, values)
 }
 
 // databaseWriter 负责插入数据到数据库的协程
@@ -286,11 +303,11 @@ func (bc *BlockChain) databaseWriter() {
 	for {
 		select {
 		case block := <-bc.dbWriterQueue:
-			err := bc.InsertBlock(block)
-
-			if err != nil {
-				log.WithField("error", err).Errorln("Insert block to database failed")
-			}
+			bc.InsertBlock(block)
+			//
+			//if err != nil {
+			//	log.WithField("error", err).Errorln("Insert block to database failed")
+			//}
 		}
 	}
 }
@@ -325,11 +342,11 @@ func (bc *BlockChain) AppendBlockTask(block *common.Block) {
 		}
 
 		bc.cleanupSelectQueue()
-		_ = bc.InsertBlock(bestBlock)
-		if err != nil {
-			return
-		}
+		idx--
+		go bc.InsertBlock(bestBlock)
 	}
+
+	log.Infof("Blcok process list length: %d", len(bc.blockProcessList))
 	if len(bc.blockProcessList) > idx {
 		bc.blockProcessList[idx] = append(bc.blockProcessList[idx], block)
 	} else {
@@ -355,7 +372,8 @@ func (bc *BlockChain) AppendBlockTask(block *common.Block) {
 }
 
 func (bc *BlockChain) GetTransactionByHash(hash common.Hash) (*common.Transaction, error) {
-	value, hit := bc.txCache.Get(hash)
+	strHash := hex.EncodeToString(hash[:])
+	value, hit := bc.txCache.Get(strHash)
 
 	if hit {
 		return value.(*common.Transaction), nil
@@ -391,11 +409,13 @@ func (bc *BlockChain) selectBlock(head bool) (*common.Block, error) {
 	defer bc.appendLock.RUnlock()
 
 	if len(bc.blockProcessList) == 0 {
+		log.Infoln("Process list is empty, return latest block.")
 		return bc.GetLatestBlock()
 	}
 	list := bc.blockProcessList[0]
 
 	if len(list) == 0 {
+		log.Infoln("Process list[0] is empty, return latest block.")
 		return bc.GetLatestBlock()
 	}
 

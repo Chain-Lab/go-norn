@@ -14,21 +14,22 @@ import (
 
 const (
 	pingInterval = 15 * time.Second
-	bufferSize   = 10 * 1024 * 1024
+	//bufferSize   = 50 * 1024 * 1024
 )
 
 var (
 	contextOnce sync.Once
 	peerContext context.Context
-	writerPool  = sync.Pool{New: func() any { return karmem.NewWriter(1024) }}
+	//writerPool  = sync.Pool{New: func() any { return karmem.NewWriter(1024) }}
 )
 
 type Peer struct {
 	peerID peer.ID
 
-	rw       *bufio.ReadWriter
-	wg       sync.WaitGroup
-	msgQueue chan *Message
+	rw        *bufio.ReadWriter
+	wg        sync.WaitGroup
+	msgQueue  chan *Message
+	sendQueue chan *Message
 
 	wLock sync.RWMutex
 	rLock sync.RWMutex
@@ -50,9 +51,11 @@ func GetPeerContext() context.Context {
 
 func NewPeer(id peer.ID, s *network.Stream, msgQueue chan *Message) (*Peer, error) {
 	p := Peer{
-		peerID:   id,
-		rw:       bufio.NewReadWriter(bufio.NewReaderSize(*s, bufferSize), bufio.NewWriterSize(*s, bufferSize)),
-		msgQueue: msgQueue,
+		peerID: id,
+		//rw:       bufio.NewReadWriter(bufio.NewReaderSize(*s, bufferSize), bufio.NewWriterSize(*s, bufferSize)),
+		rw:        bufio.NewReadWriter(bufio.NewReader(*s), bufio.NewWriter(*s)),
+		msgQueue:  msgQueue,
+		sendQueue: make(chan *Message),
 	}
 
 	go p.Run()
@@ -70,6 +73,7 @@ func (p *Peer) Run() {
 	p.wg.Add(2)
 	go p.pingLoop()
 	go p.readLoop(readErr)
+	go p.writeLoop()
 	return
 }
 
@@ -95,7 +99,7 @@ func (p *Peer) pingLoop() {
 func (p *Peer) readLoop(errc chan<- error) {
 	log.Traceln("Start read loop.")
 
-	var messagePool = sync.Pool{New: func() any { return new(Message) }}
+	//var messagePool = sync.Pool{New: func() any { return new(Message) }}
 	defer p.wg.Done()
 	for {
 		log.Traceln("New read loop.")
@@ -120,7 +124,7 @@ func (p *Peer) readLoop(errc chan<- error) {
 		decodedPayload := make([]byte, base64.StdEncoding.DecodedLen(len(dataBytes)))
 		l, _ := base64.StdEncoding.Decode(decodedPayload, dataBytes)
 
-		msg := messagePool.Get().(*Message)
+		msg := new(Message)
 		msg.ReadAsRoot(karmem.NewReader(decodedPayload[:l]))
 
 		now := time.Now()
@@ -128,13 +132,15 @@ func (p *Peer) readLoop(errc chan<- error) {
 		// todo: 修改编码为int64
 		msg.ReceiveAt = uint32(now.UnixMilli())
 
-		log.WithFields(log.Fields{
-			"code":   msg.Code,
-			"length": len(dataBytes),
-		}).Debugln("Receive message.")
+		//log.WithFields(log.Fields{
+		//	"code":   msg.Code,
+		//	"length": len(dataBytes),
+		//	"data":   hex.EncodeToString(decodedPayload),
+		//}).Infoln("Receive message.")
 		p.handle(msg)
 
-		messagePool.Put(msg)
+		//msg.Reset()
+		//messagePool.Put(msg)
 	}
 }
 
@@ -160,16 +166,6 @@ func (p *Peer) disconnect() {
 
 // Send 方法用于提供一个通用的消息发送接口
 func (p *Peer) Send(msgCode StatusCode, payload []byte) {
-	p.wLock.RLock()
-	defer p.wLock.RUnlock()
-
-	// todo: 这里的 ReadWriter 传值是否存在问题, 此外还需要传入空值发送 ping/pong 信息
-	msgWriter := writerPool.Get().(*karmem.Writer)
-	defer msgWriter.Reset()
-	defer writerPool.Put(msgWriter)
-
-	// todo: 这里数据的大小暂时留空，作为冗余字段
-	// todo: 观察一下这里处理数据会不会有较高的耗时，特别是数据比较大的情况下
 	msg := Message{
 		Code:      msgCode,
 		Size:      uint32(len(payload)),
@@ -177,38 +173,58 @@ func (p *Peer) Send(msgCode StatusCode, payload []byte) {
 		ReceiveAt: 0,
 	}
 
-	if _, err := msg.WriteAsRoot(msgWriter); err != nil {
-		log.WithField("error", err).Errorln("Encode data failed.")
-		return
+	//log.WithField("payload", hex.EncodeToString(payload)).Infoln("Send msg to channel.")
+	p.sendQueue <- &msg
+}
+
+func (p *Peer) writeLoop() {
+	log.Infoln("Start write loop.")
+	for {
+		select {
+		case msg := <-p.sendQueue:
+			//msgWriter := writerPool.Get().(*karmem.Writer)
+			msgWriter := karmem.NewWriter(1024)
+			//log.WithFields(log.Fields{
+			//	"code":    msg.Code,
+			//	"payload": hex.EncodeToString(msg.Payload),
+			//}).Debugln("Start write buffer.")
+
+			if _, err := msg.WriteAsRoot(msgWriter); err != nil {
+				log.WithField("error", err).Errorln("Encode data failed.")
+				break
+			}
+
+			msgBytes := msgWriter.Bytes()
+
+			encodedPayload := make([]byte, base64.StdEncoding.EncodedLen(len(msgBytes)))
+			base64.StdEncoding.Encode(encodedPayload, msgBytes)
+			encodedPayload = append(encodedPayload, 0xff)
+
+			length, err := p.rw.Write(encodedPayload)
+
+			if err != nil {
+				log.WithFields(
+					log.Fields{
+						"error":  err,
+						"length": length,
+						"code":   msg.Code,
+					}).Errorln("Send data to peer errored.")
+				//log.Debugf("Data bytes: %v", msgBytes)
+				break
+			}
+
+			// 这里必须强制 Flush， 否则短消息收不到
+			p.rw.Flush()
+
+			//log.WithFields(log.Fields{
+			//	"length":    length,
+			//	"code":      msg.Code,
+			//	"data":      hex.EncodeToString(msgBytes),
+			//	"timestamp": time.Now().Nanosecond(),
+			//}).Infoln("Send message to peer.")
+
+			//msgWriter.Reset()
+			//writerPool.Put(msgWriter)
+		}
 	}
-
-	msgBytes := msgWriter.Bytes()
-
-	encodedPayload := make([]byte, base64.StdEncoding.EncodedLen(len(msgBytes)))
-	base64.StdEncoding.Encode(encodedPayload, msgBytes)
-	encodedPayload = append(encodedPayload, 0xff)
-
-	length, err := p.rw.Write(encodedPayload)
-	if err != nil {
-		log.WithFields(
-			log.Fields{
-				"error":  err,
-				"length": length,
-			}).Errorln("Send data to peer errored.")
-		//log.Debugf("Data bytes: %v", msgBytes)
-		return
-	}
-	p.rw.Flush()
-
-	//log.Infof("Send byte data %v", msgBytes)
-
-	log.WithFields(log.Fields{
-		"length": length,
-		"code":   msg.Code,
-	}).Debugln("Send message to peer.")
-
-	msgWriter.Reset()
-	writerPool.Put(msgWriter)
-
-	//return nil
 }

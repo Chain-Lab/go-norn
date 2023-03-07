@@ -27,7 +27,7 @@ func (p *Peer) broadcastBlockHash() {
 	for {
 		select {
 		case blockHash := <-p.queuedBlockAnns:
-			p.peer.Send(p2p.StatusCodeBlockBodiesMsg, blockHash[:])
+			p.peer.Send(p2p.StatusCodeNewBlockHashesMsg, blockHash[:])
 		}
 	}
 }
@@ -36,13 +36,20 @@ func (p *Peer) broadcastTransaction() {
 	for {
 		select {
 		case tx := <-p.txBroadcast:
+			// todo: 对序列化的一个优化的地方，添加 sync.Pool，需要针对不同场景来设计
 			byteTxData, err := utils.SerializeTransaction(tx)
 
 			if err != nil {
 				log.WithField("error", err).Debugln("Serialize block failed.")
-				continue
+				break
 			}
-
+			//log.WithFields(log.Fields{
+			//	"hash":      hex.EncodeToString(tx.Body.Hash[:]),
+			//	"expire":    tx.Body.Expire,
+			//	"data":      hex.EncodeToString(tx.Body.Data),
+			//	"payload":   hex.EncodeToString(byteTxData),
+			//	"timestamp": time.Now().Nanosecond(),
+			//}).Infoln("Send transaction.")
 			p.peer.Send(p2p.StatusCodeTransactionsMsg, byteTxData)
 		}
 	}

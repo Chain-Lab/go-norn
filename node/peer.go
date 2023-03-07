@@ -1,6 +1,7 @@
 package node
 
 import (
+	"encoding/hex"
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
@@ -95,25 +96,26 @@ func (p *Peer) RunPeer() {
 
 }
 
-func (p *Peer) MarkBlock(blockHash common.Hash) {
+func (p *Peer) MarkBlock(blockHash string) {
 	p.knownBlocks.Add(blockHash, nil)
 }
 
-func (p *Peer) MarkTransaction(txHash common.Hash) {
+func (p *Peer) MarkTransaction(txHash string) {
 	p.knownTxs.Add(txHash, nil)
 }
 
-func (p *Peer) KnownBlock(blockHash common.Hash) bool {
+func (p *Peer) KnownBlock(blockHash string) bool {
 	return p.knownBlocks.Contains(blockHash)
 }
 
-func (p *Peer) KnownTransaction(txHash common.Hash) bool {
+func (p *Peer) KnownTransaction(txHash string) bool {
 	return p.knownTxs.Contains(txHash)
 }
 
 func (p *Peer) AsyncSendNewBlock(block *common.Block) {
 	blockHash := block.Header.BlockHash
-	p.MarkTransaction(blockHash)
+	strHash := hex.EncodeToString(blockHash[:])
+	p.MarkBlock(strHash)
 	p.queuedBlocks <- block
 }
 
@@ -123,7 +125,8 @@ func (p *Peer) AsyncSendNewBlockHash(blockHash common.Hash) {
 
 func (p *Peer) AsyncSendTransaction(tx *common.Transaction) {
 	txHash := tx.Body.Hash
-	p.MarkTransaction(txHash)
+	strHash := hex.EncodeToString(txHash[:])
+	p.MarkTransaction(strHash)
 	p.txBroadcast <- tx
 }
 
@@ -135,7 +138,9 @@ func (p *Peer) Handle() {
 	for {
 		select {
 		case msg := <-p.msgQueue:
-			//log.Infoln("Receive code ", msg.Code)
+			if msg.Code != p2p.StatusCodeTransactionsMsg {
+				log.Infoln("Receive code ", msg.Code)
+			}
 			handle := handlerMap[msg.Code]
 
 			if handle != nil {

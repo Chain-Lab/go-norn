@@ -5,19 +5,20 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/sha256"
+	"encoding/hex"
 	log "github.com/sirupsen/logrus"
 	karmem "karmem.org/golang"
-	"sync"
 )
 
-var writerPool = sync.Pool{New: func() any { return karmem.NewWriter(1024) }}
+//var writerPool = sync.Pool{New: func() any { return karmem.NewWriter(1024) }}
 
-func (t *Transaction) Verify() bool {
-	writer := writerPool.Get().(*karmem.Writer)
-	defer writer.Reset()
-	defer writerPool.Put(writer)
+func (tx *Transaction) Verify() bool {
+	//writer := writerPool.Get().(*karmem.Writer)
+	//defer writerPool.Put(writer)
+	//defer writer.Reset()
+	writer := karmem.NewWriter(1024)
 
-	txBody := t.Body
+	txBody := tx.Body
 	byteSignature := make([]byte, len(txBody.Signature))
 	bytePublicKey := txBody.Public[:]
 	// todo: 这样将 [32]byte 转换为 []byte 是否存在风险
@@ -32,10 +33,22 @@ func (t *Transaction) Verify() bool {
 		Y:     y,
 	}
 
-	txBody.Signature = []byte{}
-	txBody.Hash = [32]byte{}
-
 	if _, err := txBody.WriteAsRoot(writer); err != nil {
+		log.WithField("error", err).Debugln("Karmem writer error.")
+		return false
+	}
+
+	// 为了数据安全起见， 验证的过程先复制一份，然后在复制上面读取
+	txByteData := writer.Bytes()
+	txBodyCopy := new(TransactionBody)
+	txBodyCopy.ReadAsRoot(karmem.NewReader(txByteData))
+
+	// 将哈希和签名设置为空
+	txBodyCopy.Hash = [32]byte{}
+	txBodyCopy.Signature = []byte{}
+
+	writer.Reset()
+	if _, err := txBodyCopy.WriteAsRoot(writer); err != nil {
 		log.WithField("error", err).Debugln("Karmem writer error.")
 		return false
 	}
@@ -45,7 +58,10 @@ func (t *Transaction) Verify() bool {
 	txHashBytes := hash.Sum(nil)
 
 	if bytes.Compare(txHashBytes, byteHash) != 0 {
-		log.Debugln("Transaction hash not match.")
+		log.WithFields(log.Fields{
+			"hash":  hex.EncodeToString(byteHash),
+			"local": hex.EncodeToString(txHashBytes),
+		}).Debugln("Transaction hash not match.")
 		return false
 	}
 
