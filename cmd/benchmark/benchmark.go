@@ -11,6 +11,8 @@ import (
 	"time"
 )
 
+// !! todo： 注意，以后每次进行 benchmark 测试时记录一下当前版本号
+
 func BuildAndVerifyTransaction() {
 	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {

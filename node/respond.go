@@ -18,7 +18,7 @@ func respondGetPooledTransaction(tx *common.Transaction, p *Peer) {
 	p.peer.Send(p2p.StatusCodePooledTransactionsMsg, bytesTransactionData)
 }
 
-func respondGetBlockByHeight(block *common.Block, p *Peer) {
+func respondSyncGetBlock(block *common.Block, p *Peer) {
 	bytesBlockData, err := utils.SerializeBlock(block)
 
 	if err != nil {
@@ -26,5 +26,15 @@ func respondGetBlockByHeight(block *common.Block, p *Peer) {
 		return
 	}
 
-	p.peer.Send(p2p.StatusCodeBlockBodiesMsg, bytesBlockData)
+	p.peer.Send(p2p.StatusCodeSyncBlocksMsg, bytesBlockData)
+}
+
+func respondGetSyncStatus(msg *p2p.SyncStatusMsg, p *Peer) {
+	byteStatusMsg, err := utils.SerializeStatusMsg(msg)
+
+	if err != nil {
+		return
+	}
+
+	p.peer.Send(p2p.StatusCodeSyncStatusReq, byteStatusMsg)
 }

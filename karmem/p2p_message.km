@@ -1,4 +1,4 @@
-karmem structs @packed(true) @golang.package(`structs`);
+karmem structs @packed(true) @golang.package(`p2p`);
 
 enum StatusCode uint8 {
     PingMsg;
@@ -18,12 +18,24 @@ enum StatusCode uint8 {
     NewPooledTransactionHashesMsg;
     GetPooledTransactionMsg;
     PooledTransactionsMsg;
-    GetBlockByHeight;
+    SyncStatusReq;
+    SyncStatusMsg;
+    SyncGetBlocksMsg;
+    SyncBlocksMsg;
+    GetBufferedBlocksMsg;
+    BufferedBlocksMsg;
+}
+
+struct SyncStatusMsg table {
+    LatestHeight int64;
+    LatestHash [32]byte;
+    BufferedStartHeight int64;
+    BufferedEndHeight int64;
 }
 
 struct Message table {
     Code StatusCode;
     Size uint32;
     Payload []byte;
-    ReceiveAt uint32;
+    ReceiveAt int64;
 }

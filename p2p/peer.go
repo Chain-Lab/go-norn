@@ -130,7 +130,7 @@ func (p *Peer) readLoop(errc chan<- error) {
 		now := time.Now()
 
 		// todo: 修改编码为int64
-		msg.ReceiveAt = uint32(now.UnixMilli())
+		msg.ReceiveAt = now.UnixMilli()
 
 		//log.WithFields(log.Fields{
 		//	"code":   msg.Code,

@@ -11,6 +11,7 @@ import (
 	"time"
 )
 
+// buildTransaction 仅用于测试，也是一个构建交易的例子
 func buildTransaction(key *ecdsa.PrivateKey) *common.Transaction {
 	data := make([]byte, 32)
 	rand.Read(data)
@@ -18,8 +19,8 @@ func buildTransaction(key *ecdsa.PrivateKey) *common.Transaction {
 
 	txBody := common.TransactionBody{
 		Data:      data,
-		Timestamp: uint64(timestamp),
-		Expire:    uint64(timestamp + 3000),
+		Timestamp: timestamp,
+		Expire:    timestamp + 3000,
 	}
 
 	txBody.Public = [33]byte(crypto.PublicKey2Bytes(&key.PublicKey))

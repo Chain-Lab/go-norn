@@ -54,7 +54,7 @@ func main() {
 
 	chain := core.NewBlockchain(db)
 
-	var timestamps []uint64
+	var timestamps []int64
 	var txs []int
 
 	prevBlock, err := chain.GetBlockByHeight(0)
@@ -65,9 +65,9 @@ func main() {
 
 	//fmt.Printf(hex.EncodeToString(prevBlock.Header.BlockHash[:]))
 	for i := 1; i < height; i++ {
-		block, err := chain.GetBlockByHeight(i)
+		block, err := chain.GetBlockByHeight(int64(i))
 		if err != nil {
-			log.Errorln(err)
+			log.WithField("height", i).Errorln("Get block failed.")
 		}
 		timestamps = append(timestamps, block.Header.Timestamp-prevBlock.Header.Timestamp)
 		txs = append(txs, len(block.Transactions))

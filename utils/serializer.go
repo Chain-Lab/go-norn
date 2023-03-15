@@ -3,6 +3,7 @@ package utils
 import (
 	log "github.com/sirupsen/logrus"
 	"go-chronos/common"
+	"go-chronos/p2p"
 	karmem "karmem.org/golang"
 )
 
@@ -67,6 +68,27 @@ func SerializeBlockHeader(header *common.BlockHeader) ([]byte, error) {
 	_, err := header.WriteAsRoot(writer)
 	if err != nil {
 		log.WithField("error", err).Debugln("Transaction serialize failed.")
+		return nil, err
+	}
+
+	result := writer.Bytes()
+
+	return result, nil
+}
+
+func DeserializeStatusMsg(byteMsgData []byte) (*p2p.SyncStatusMsg, error) {
+	msg := new(p2p.SyncStatusMsg)
+	msg.ReadAsRoot(karmem.NewReader(byteMsgData))
+
+	return msg, nil
+}
+
+func SerializeStatusMsg(msg *p2p.SyncStatusMsg) ([]byte, error) {
+	writer := karmem.NewWriter(1024)
+
+	_, err := msg.WriteAsRoot(writer)
+	if err != nil {
+		log.WithField("error", err).Debugln("Message serialize failed.")
 		return nil, err
 	}
 

@@ -27,7 +27,8 @@ type PeerConfig struct {
 }
 
 type Peer struct {
-	peer *p2p.Peer
+	peer   *p2p.Peer
+	peerID peer.ID
 
 	knownBlocks     *lru.Cache
 	queuedBlocks    chan *common.Block
@@ -39,6 +40,8 @@ type Peer struct {
 	knownTxs    *lru.Cache
 	txBroadcast chan *common.Transaction
 	txAnnounce  chan common.Hash
+
+	syncBlock chan *int64
 
 	msgQueue chan *p2p.Message
 	// todo: 这里是传值还是需要传指针用于构建 channel？
@@ -70,6 +73,7 @@ func NewPeer(peerId peer.ID, s *network.Stream, config PeerConfig) (*Peer, error
 
 	p := &Peer{
 		peer:            pp,
+		peerID:          pp.Id(),
 		knownBlocks:     blockLru,
 		queuedBlocks:    make(chan *common.Block, maxQueuedBlocks),
 		queuedBlockAnns: make(chan common.Hash, maxQueuedBlockAnns),

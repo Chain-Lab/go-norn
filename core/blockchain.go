@@ -1,6 +1,7 @@
 package core
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	lru "github.com/hashicorp/golang-lru"
@@ -17,9 +18,13 @@ const (
 	maxBlockCache       = 1024
 	maxTransactionCache = 32768
 	maxBlockProcessList = 12
+	maxBlockChannel     = 128
 )
 
 type blockList []*common.Block
+
+// !! 为了避免潜在的数据不一致的情况，任何情况下不要对一个 block 实例进行数据的修改
+// 如果需要对区块进行校验或者哈希的修改，对数据进行深拷贝得到一份复制来进行处理
 
 type BlockChain struct {
 	db            *utils.LevelDB
@@ -30,15 +35,12 @@ type BlockChain struct {
 	txCache        *lru.Cache
 
 	latestBlock  *common.Block
-	latestHeight int
+	latestHeight int64
 	latestLock   sync.RWMutex
 
-	blockProcessList   []blockList
-	blockProcessHeight int
-	currentBlock       *common.Block
-	nextBlockMap       map[common.Hash]blockList
-	blockQueueSize     int
-	appendLock         sync.RWMutex
+	bufferChan chan *common.Block
+	buffer     *BlockBuffer
+	appendLock sync.RWMutex
 }
 
 func NewBlockchain(db *utils.LevelDB) *BlockChain {
@@ -61,39 +63,53 @@ func NewBlockchain(db *utils.LevelDB) *BlockChain {
 	}
 
 	chain := &BlockChain{
-		db:                 db,
-		dbWriterQueue:      make(chan *common.Block),
-		blockHeightMap:     blockHeightMap,
-		blockCache:         blockCache,
-		txCache:            txCache,
-		latestBlock:        nil,
-		latestHeight:       -1,
-		blockProcessList:   make([]blockList, 0, maxBlockProcessList),
-		blockProcessHeight: -1,
-		currentBlock:       nil,
-		nextBlockMap:       make(map[common.Hash]blockList),
+		db:            db,
+		dbWriterQueue: make(chan *common.Block),
+
+		blockHeightMap: blockHeightMap,
+		blockCache:     blockCache,
+		txCache:        txCache,
+
+		latestBlock:  nil,
+		latestHeight: -1,
+
+		bufferChan: make(chan *common.Block, maxBlockChannel),
 	}
 
+	// 初始化一下最新区块
+	latest, _ := chain.GetLatestBlock()
+
+	if latest != nil {
+		log.Traceln("Block database is not null, create buffer.")
+		chain.createBlockBuffer(latest)
+	}
+	go chain.BlockProcessRoutine()
 	return chain
+}
+
+// BlockProcessRoutine 接收处理 channel 中的区块
+func (bc *BlockChain) BlockProcessRoutine() {
+	for {
+		select {
+		case block := <-bc.bufferChan:
+			bc.InsertBlock(block)
+		}
+	}
 }
 
 // PackageNewBlock 打包新的区块，传入交易序列
 func (bc *BlockChain) PackageNewBlock(txs []common.Transaction) (*common.Block, error) {
-	latestBlock, err := bc.selectBlock(false)
-
-	if err != nil {
-		log.WithField("error", err).Debugln("Get latest block failed.")
-		return nil, err
-	}
+	log.Traceln("Start package new block.")
+	bestBlock := bc.buffer.GetPriorityLeaf()
 
 	merkleRoot := BuildMerkleTree(txs)
 	block := common.Block{
 		Header: common.BlockHeader{
-			Timestamp:     uint64(time.Now().UnixMilli()),
-			PrevBlockHash: latestBlock.Header.BlockHash,
+			Timestamp:     time.Now().UnixMilli(),
+			PrevBlockHash: bestBlock.Header.BlockHash,
 			BlockHash:     [32]byte{},
 			MerkleRoot:    [32]byte(merkleRoot),
-			Height:        latestBlock.Header.Height + 1,
+			Height:        bestBlock.Header.Height + 1,
 		},
 		Transactions: txs,
 	}
@@ -113,12 +129,13 @@ func (bc *BlockChain) PackageNewBlock(txs []common.Transaction) (*common.Block, 
 	return &block, nil
 }
 
+// NewGenesisBlock 创建创世区块
 func (bc *BlockChain) NewGenesisBlock() {
 	nullHash := common.Hash{}
 
 	genesisBlock := common.Block{
 		Header: common.BlockHeader{
-			Timestamp:     uint64(time.Now().UnixMilli()),
+			Timestamp:     time.Now().UnixMilli(),
 			PrevBlockHash: nullHash,
 			BlockHash:     [32]byte{},
 			MerkleRoot:    [32]byte(nullHash),
@@ -131,8 +148,6 @@ func (bc *BlockChain) NewGenesisBlock() {
 	bc.InsertBlock(&genesisBlock)
 }
 
-//todo：数据初始化
-
 func (bc *BlockChain) GetLatestBlock() (*common.Block, error) {
 	if bc.latestBlock != nil {
 		return bc.latestBlock, nil
@@ -141,7 +156,7 @@ func (bc *BlockChain) GetLatestBlock() (*common.Block, error) {
 	latestBlockHash, err := bc.db.Get([]byte("latest"))
 
 	if err != nil {
-		log.WithField("error", err).Errorln("Get latest index failed.")
+		log.WithField("error", err).Debugln("Get latest index failed.")
 		return nil, err
 	}
 
@@ -153,6 +168,11 @@ func (bc *BlockChain) GetLatestBlock() (*common.Block, error) {
 		log.WithField("error", err).Errorln("Get block failed.")
 		return nil, err
 	}
+
+	bc.latestLock.RLock()
+	bc.latestBlock = block
+	bc.latestHeight = block.Header.Height
+	bc.latestLock.RUnlock()
 
 	return block, nil
 }
@@ -181,14 +201,15 @@ func (bc *BlockChain) GetBlockByHash(hash *common.Hash) (*common.Block, error) {
 	return block, nil
 }
 
-func (bc *BlockChain) GetBlockByHeight(height int) (*common.Block, error) {
+// GetBlockByHeight 根据高度拉取区块，需要考虑一下同步时是否换用其他的函数？
+func (bc *BlockChain) GetBlockByHeight(height int64) (*common.Block, error) {
 	// 先判断一下高度
 	if height > bc.latestHeight && bc.latestHeight != -1 {
 		return nil, errors.New("Block height error.")
 	}
 
 	// 查询缓存里面是否有区块的信息
-	value, ok := bc.blockHeightMap.Get(uint64(height))
+	value, ok := bc.blockHeightMap.Get(height)
 	if ok {
 		blockHash := common.Hash(value.([32]byte))
 		block, err := bc.GetBlockByHash(&blockHash)
@@ -228,7 +249,7 @@ func (bc *BlockChain) GetBlockByHeight(height int) (*common.Block, error) {
 
 func (bc *BlockChain) writeBlockCache(block *common.Block) {
 	bc.blockHeightMap.Add(block.Header.Height, block.Header.BlockHash)
-	blockHash := hex.EncodeToString(block.Header.BlockHash[:])
+	blockHash := block.BlockHash()
 	bc.blockCache.Add(blockHash, block)
 }
 
@@ -244,13 +265,29 @@ func (bc *BlockChain) InsertBlock(block *common.Block) {
 	var err error
 	count := len(block.Transactions)
 
+	latestBlock, err := bc.GetLatestBlock()
+
+	if !block.IsGenesisBlock() {
+		if err != nil {
+			log.WithField("error", err).Debugln("Get latest block failed.")
+			return
+		}
+
+		if !isPrevBlock(latestBlock, block) {
+			log.Errorln("Block error, prev block hash not match.")
+			return
+		}
+	} else {
+		bc.createBlockBuffer(block)
+	}
+
 	bc.latestLock.RLock()
-	if int(block.Header.Height) <= bc.latestHeight {
+	if block.Header.Height <= bc.latestHeight {
 		bc.latestLock.RUnlock()
 		return
 	}
 	bc.latestBlock = block
-	bc.latestHeight = int(block.Header.Height)
+	bc.latestHeight = block.Header.Height
 	bc.latestLock.RUnlock()
 	bc.writeBlockCache(block)
 
@@ -273,7 +310,7 @@ func (bc *BlockChain) InsertBlock(block *common.Block) {
 
 	keys[1] = []byte("latest")
 	values[1] = block.Header.BlockHash[:]
-	keys[2] = utils.BlockHeight2DBKey(int(block.Header.Height))
+	keys[2] = utils.BlockHeight2DBKey(block.Header.Height)
 	values[2] = block.Header.BlockHash[:]
 
 	for idx := range block.Transactions {
@@ -298,77 +335,22 @@ func (bc *BlockChain) InsertBlock(block *common.Block) {
 	bc.db.BatchInsert(keys, values)
 }
 
-// databaseWriter 负责插入数据到数据库的协程
-func (bc *BlockChain) databaseWriter() {
-	for {
-		select {
-		case block := <-bc.dbWriterQueue:
-			bc.InsertBlock(block)
-			//
-			//if err != nil {
-			//	log.WithField("error", err).Errorln("Insert block to database failed")
-			//}
-		}
-	}
-}
+//// databaseWriter 负责插入数据到数据库的协程
+//func (bc *BlockChain) databaseWriter() {
+//	for {
+//		select {
+//		case block := <-bc.dbWriterQueue:
+//			bc.InsertBlock(block)
+//			//
+//			//if err != nil {
+//			//	log.WithField("error", err).Errorln("Insert block to database failed")
+//			//}
+//		}
+//	}
+//}
 
 func (bc *BlockChain) AppendBlockTask(block *common.Block) {
-	bc.appendLock.RLock()
-	defer bc.appendLock.RUnlock()
-
-	if int(block.Header.Height) <= bc.latestHeight {
-		return
-	}
-
-	blockHash := block.Header.BlockHash
-
-	prevBlockHash := block.Header.PrevBlockHash
-	blockHeight := int(block.Header.Height)
-	latestHeight := bc.latestHeight
-
-	// 这里是一个高度差
-	idx := blockHeight - latestHeight - 1
-	log.WithFields(log.Fields{
-		"hash":   "0x" + hex.EncodeToString(blockHash[:]),
-		"index":  idx,
-		"height": block.Header.Height,
-	}).Infoln("Append new block.")
-
-	if idx >= maxBlockProcessList {
-		bestBlock, err := bc.selectBlock(true)
-		if err != nil {
-			log.WithField("error", err).Debugln("Get best block failed.")
-			return
-		}
-
-		bc.cleanupSelectQueue()
-		idx--
-		go bc.InsertBlock(bestBlock)
-	}
-
-	log.Infof("Blcok process list length: %d", len(bc.blockProcessList))
-	if len(bc.blockProcessList) > idx {
-		bc.blockProcessList[idx] = append(bc.blockProcessList[idx], block)
-	} else {
-		length := idx - len(bc.blockProcessList) + 1
-
-		for i := 0; i < length; i++ {
-			bc.blockProcessList = append(bc.blockProcessList, blockList{})
-		}
-
-		bc.blockProcessList[idx] = append(bc.blockProcessList[idx], block)
-	}
-
-	list := bc.nextBlockMap[prevBlockHash]
-
-	if list == nil {
-		// 大坑， make 存在长度的时候需要预先设置好初始长度
-		list := make(blockList, 0, 16)
-		list = append(list, block)
-		bc.nextBlockMap[prevBlockHash] = list
-	} else {
-		bc.nextBlockMap[prevBlockHash] = append(bc.nextBlockMap[prevBlockHash], block)
-	}
+	bc.buffer.AppendBlock(block)
 }
 
 func (bc *BlockChain) GetTransactionByHash(hash common.Hash) (*common.Transaction, error) {
@@ -398,100 +380,24 @@ func (bc *BlockChain) GetTransactionByHash(hash common.Hash) (*common.Transactio
 	return transaction, nil
 }
 
-func (bc *BlockChain) Height() int {
+func (bc *BlockChain) Height() int64 {
 	bc.latestLock.RLock()
 	defer bc.latestLock.RUnlock()
 	return bc.latestHeight
 }
 
-func (bc *BlockChain) selectBlock(head bool) (*common.Block, error) {
-	bc.appendLock.RLock()
-	defer bc.appendLock.RUnlock()
-
-	if len(bc.blockProcessList) == 0 {
-		log.Infoln("Process list is empty, return latest block.")
-		return bc.GetLatestBlock()
-	}
-	list := bc.blockProcessList[0]
-
-	if len(list) == 0 {
-		log.Infoln("Process list[0] is empty, return latest block.")
-		return bc.GetLatestBlock()
-	}
-
-	current := list[0]
-
-	for idx := range list {
-		if len(list[idx].Transactions) > len(current.Transactions) {
-			current = list[idx]
-			continue
-		} else if len(list[idx].Transactions) < len(current.Transactions) {
-			continue
-		}
-
-		if list[idx].Header.Timestamp < current.Header.Timestamp {
-			current = list[idx]
-			continue
-		}
-	}
-
-	if head {
-		return current, nil
-	}
-
-	searchResult := bc.searchBestBlock(current.Header.BlockHash)
-
-	if searchResult != nil {
-		return searchResult, nil
-	} else {
-		return current, nil
-	}
+func (bc *BlockChain) BufferedHeight() int64 {
+	return bc.buffer.bufferedHeight
 }
 
-func (bc *BlockChain) searchBestBlock(hash common.Hash) *common.Block {
-	list := bc.nextBlockMap[hash]
-
-	if list == nil || len(list) <= 0 {
-		return nil
-	}
-	current := list[0]
-
-	for idx := range list {
-		if len(list[idx].Transactions) > len(current.Transactions) {
-			current = list[idx]
-			continue
-		} else if len(list[idx].Transactions) < len(current.Transactions) {
-			continue
-		}
-
-		if list[idx].Header.Timestamp < current.Header.Timestamp {
-			current = list[idx]
-			continue
-		}
-	}
-
-	nxt := bc.searchBestBlock(current.Header.BlockHash)
-
-	if nxt == nil {
-		return current
-	} else {
-		return nxt
-	}
+func isPrevBlock(prev *common.Block, block *common.Block) bool {
+	prevBlockHash := prev.Header.BlockHash[:]
+	blockPrevHash := block.Header.PrevBlockHash[:]
+	return bytes.Compare(prevBlockHash, blockPrevHash) == 0
 }
 
-func (bc *BlockChain) cleanupSelectQueue() {
-	bc.appendLock.RLock()
-	defer bc.appendLock.RUnlock()
-
-	var list blockList
-
-	if len(bc.blockProcessList) == 0 {
-		return
-	}
-
-	list, bc.blockProcessList = bc.blockProcessList[0], bc.blockProcessList[1:]
-
-	for idx := range list {
-		delete(bc.nextBlockMap, list[idx].Header.BlockHash)
-	}
+func (bc *BlockChain) createBlockBuffer(latest *common.Block) {
+	// todo: 需要处理报错
+	log.Traceln("Create new block buffer.")
+	bc.buffer, _ = NewBlockBuffer(latest, bc.bufferChan)
 }
