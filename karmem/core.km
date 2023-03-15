@@ -1,4 +1,4 @@
-karmem structs @packed(true) @golang.package(`structs`);
+karmem structs @packed(true) @golang.package(`core`);
 
 struct TransactionBody table {
     Hash [32]byte;
@@ -27,6 +27,4 @@ struct Block table {
     Transactions []Transaction;
 }
 
-struct Status table {
-    BlockHeight uint64;
-}
+struct BlockList inline

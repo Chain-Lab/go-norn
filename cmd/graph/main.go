@@ -67,7 +67,7 @@ func main() {
 	for i := 1; i < height; i++ {
 		block, err := chain.GetBlockByHeight(i)
 		if err != nil {
-			log.Errorln(err)
+			log.WithField("height", i).Errorln("Get block failed.")
 		}
 		timestamps = append(timestamps, block.Header.Timestamp-prevBlock.Header.Timestamp)
 		txs = append(txs, len(block.Transactions))

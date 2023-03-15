@@ -1,2 +1,0 @@
-karmem structs @packed(true) @golang.package(`structs`);
-

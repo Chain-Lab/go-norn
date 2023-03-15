@@ -11,6 +11,7 @@ import (
 	"time"
 )
 
+// buildTransaction 仅用于测试，也是一个构建交易的例子
 func buildTransaction(key *ecdsa.PrivateKey) *common.Transaction {
 	data := make([]byte, 32)
 	rand.Read(data)

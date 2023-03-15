@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	maxTxPackageCount = 20001
+	maxTxPackageCount = 5001
 )
 
 var (
@@ -41,7 +41,7 @@ func (pool *TxPool) Package() []common.Transaction {
 	defer pool.lock.RUnlock()
 
 	count := 0
-	result := make([]common.Transaction, 0, 3000)
+	result := make([]common.Transaction, 0)
 	log.Debugln("Start package txpool.")
 
 	// 初期测试，直接返回空切片

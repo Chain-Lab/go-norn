@@ -1,6 +1,7 @@
 package core
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	lru "github.com/hashicorp/golang-lru"
@@ -21,6 +22,9 @@ const (
 
 type blockList []*common.Block
 
+// !! 为了避免潜在的数据不一致的情况，任何情况下不要对一个 block 实例进行数据的修改
+// 如果需要对区块进行校验或者哈希的修改，对数据进行深拷贝得到一份复制来进行处理
+
 type BlockChain struct {
 	db            *utils.LevelDB
 	dbWriterQueue chan *common.Block
@@ -38,7 +42,9 @@ type BlockChain struct {
 	currentBlock       *common.Block
 	nextBlockMap       map[common.Hash]blockList
 	blockQueueSize     int
-	appendLock         sync.RWMutex
+
+	buffer     *BlockBuffer
+	appendLock sync.RWMutex
 }
 
 func NewBlockchain(db *utils.LevelDB) *BlockChain {
@@ -141,7 +147,7 @@ func (bc *BlockChain) GetLatestBlock() (*common.Block, error) {
 	latestBlockHash, err := bc.db.Get([]byte("latest"))
 
 	if err != nil {
-		log.WithField("error", err).Errorln("Get latest index failed.")
+		log.WithField("error", err).Debugln("Get latest index failed.")
 		return nil, err
 	}
 
@@ -243,6 +249,18 @@ func (bc *BlockChain) InsertBlock(block *common.Block) {
 	// todo: 这里作为 Public 函数只是为了测试
 	var err error
 	count := len(block.Transactions)
+
+	latestBlock, err := bc.GetLatestBlock()
+
+	if err != nil {
+		log.WithField("error", err).Debugln("Get latest block failed.")
+		return
+	}
+
+	if !isPrevBlock(latestBlock, block) {
+		log.Errorln("Block error, prev block hash not match.")
+		return
+	}
 
 	bc.latestLock.RLock()
 	if int(block.Header.Height) <= bc.latestHeight {
@@ -494,4 +512,10 @@ func (bc *BlockChain) cleanupSelectQueue() {
 	for idx := range list {
 		delete(bc.nextBlockMap, list[idx].Header.BlockHash)
 	}
+}
+
+func isPrevBlock(prev *common.Block, block *common.Block) bool {
+	prevBlockHash := prev.Header.BlockHash[:]
+	blockPrevHash := block.Header.PrevBlockHash[:]
+	return bytes.Compare(prevBlockHash, blockPrevHash) == 0
 }
