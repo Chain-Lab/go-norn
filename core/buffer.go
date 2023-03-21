@@ -17,6 +17,8 @@ import (
 const (
 	secondQueueInterval = time.Second * 5
 	maxBlockMark        = 5
+	maxKnownBlock       = 1024
+	maxQueueBlock       = 512
 )
 
 // BlockBuffer 维护一个树形结构的缓冲区，保存当前视图下的区块信息
@@ -30,14 +32,38 @@ type BlockBuffer struct {
 	selectedBlock    map[uint64]*common.Block // 每个高度在当前视图下的最优区块
 	knownBlocks      *lru.Cache               // 区块是否在最近处理过的缓存信息
 
-	latestBlockHash   string       // 最新区块哈希，需要注意初始化和维护
-	latestBlockHeight uint64       // 当前 db 中存储的最新区块的高度
-	bufferedHeight    uint64       // 缓存视图的最新高度
-	updateLock        sync.RWMutex // 视图更新的读写锁
+	latestBlockHash   string        // 最新区块哈希，需要注意初始化和维护
+	latestBlockHeight int64         // 当前 db 中存储的最新区块的高度
+	latestBlock       *common.Block // 当前 db 中存储的最新区块
+	bufferedHeight    int64         // 缓存视图的最新高度
+	updateLock        sync.RWMutex  // 视图更新的读写锁
 }
 
-func NewBlockBuffer() *BlockBuffer {
-	return nil
+func NewBlockBuffer(latest *common.Block) (*BlockBuffer, error) {
+	knownBlock, err := lru.New(maxKnownBlock)
+
+	if err != nil {
+		log.WithField("error", err).Debug("Create known block cache failed.")
+		return nil, err
+	}
+
+	buffer := &BlockBuffer{
+		blockChan:  make(chan *common.Block),
+		secondChan: make(chan *common.Block, maxQueueBlock),
+
+		blockProcessList: make(map[uint64]blockList),
+		blockMark:        make(map[string]uint8),
+		nextBlockMap:     make(map[string]blockList),
+		selectedBlock:    make(map[uint64]*common.Block),
+		knownBlocks:      knownBlock,
+
+		latestBlockHeight: int64(latest.Header.Height),
+		latestBlockHash:   latest.BlockHash(),
+		latestBlock:       latest,
+		bufferedHeight:    int64(latest.Header.Height),
+	}
+
+	return buffer, nil
 }
 
 // Run 是 BlockBuffer 的线程函数，它依次接收区块进行处理
@@ -48,26 +74,36 @@ func (b *BlockBuffer) Run() {
 			prevBlockHash := block.PrevBlockHash()
 			blockHash := block.BlockHash()
 
+			log.WithFields(log.Fields{
+				"Hash":     blockHash,
+				"PrevHash": prevBlockHash,
+				"Height":   block.Header.Height,
+			}).Trace("Receive block in channel.")
+
 			if b.knownBlocks.Contains(blockHash) {
 				break
 			}
 			b.knownBlocks.Add(blockHash, nil)
 
+			// todo: 这里对前一个区块是否在视图中的逻辑判断存在问题
 			b.updateLock.RLock()
 			list, ok := b.nextBlockMap[prevBlockHash]
 			if !ok {
-				// 前一个区块不在视图中，放到等待队列中
-				// 这里保证了 nextBlockMap 能形成树形结构
-				b.secondChan <- block
-				b.updateLock.RUnlock()
-				break
+				if prevBlockHash != b.latestBlockHash {
+					// 前一个区块不在视图中，放到等待队列中
+					// 这里保证了 nextBlockMap 能形成树形结构
+					b.secondChan <- block
+					b.updateLock.RUnlock()
+					break
+				}
+				list = make(blockList, 0, 15)
 			}
 
 			blockHeight := block.Header.Height
 			selected, ok := b.selectedBlock[blockHeight]
 			replaced := false
 
-			if !ok {
+			if selected == nil {
 				b.selectedBlock[blockHeight] = block
 			} else {
 				b.selectedBlock[blockHeight], replaced = compareBlock(selected, block)
@@ -78,10 +114,12 @@ func (b *BlockBuffer) Run() {
 			}
 
 			b.nextBlockMap[prevBlockHash] = append(list, block)
+			b.nextBlockMap[blockHash] = make(blockList, 0, 15)
 			processList, ok := b.blockProcessList[blockHeight]
 
 			if !ok {
-				b.bufferedHeight = blockHeight
+				log.WithField("height", blockHeight).Info("Extend buffer height.")
+				b.bufferedHeight = int64(blockHeight)
 				processList = make(blockList, 0, 15)
 			}
 
@@ -104,7 +142,7 @@ func (b *BlockBuffer) secondProcess() {
 			prevBlockHash := block.PrevBlockHash()
 			blockHeight := block.Header.Height
 
-			if block.Header.Height <= b.latestBlockHeight {
+			if int64(block.Header.Height) <= b.latestBlockHeight {
 				timer.Reset(secondQueueInterval)
 				break
 			}
@@ -114,7 +152,7 @@ func (b *BlockBuffer) secondProcess() {
 			if !ok {
 				// 区块的前一个哈希不在缓冲树中，也不是最新的区块哈希
 				if prevBlockHash != b.latestBlockHash {
-					log.Debug("Prev block not exists.")
+					log.WithField("height", blockHeight).Debugf("Prev block #%s not exists.", prevBlockHash)
 					// 这样增加值是否会存在问题？
 					b.blockMark[blockHash]++
 
@@ -128,6 +166,7 @@ func (b *BlockBuffer) secondProcess() {
 				}
 			}
 			b.nextBlockMap[prevBlockHash] = append(list, block)
+			b.nextBlockMap[blockHash] = make(blockList, 0, 15)
 
 			replaced := false
 			selected, ok := b.selectedBlock[blockHeight]
@@ -144,7 +183,7 @@ func (b *BlockBuffer) secondProcess() {
 			processList, ok := b.blockProcessList[blockHeight]
 
 			if !ok {
-				b.bufferedHeight = blockHeight
+				b.bufferedHeight = int64(blockHeight)
 				processList = make(blockList, 0, 15)
 			}
 
@@ -157,20 +196,23 @@ func (b *BlockBuffer) secondProcess() {
 }
 
 // PopSelectedBlock 推出头部的最优区块什么时候触发？
+// 应该来说是在 bufferedHeight - latestBlockHeight >= maxSize 的情况下触发？
+// 以及，收到其他节点发来的已选取区块时触发该逻辑，但是需要确定一下高度和哈希值
 func (b *BlockBuffer) PopSelectedBlock() *common.Block {
 	b.updateLock.RLock()
 	defer b.updateLock.RUnlock()
 	height := b.latestBlockHeight + 1
+	uHeight := uint64(height)
 
 	// 检查一下列表是否存在
-	_, ok := b.blockProcessList[height]
+	_, ok := b.blockProcessList[uHeight]
 
 	if !ok {
 		return nil
 	}
 
-	selectedBlock := b.selectedBlock[height]
-	b.deleteLayer(height)
+	selectedBlock := b.selectedBlock[uHeight]
+	b.deleteLayer(uHeight)
 
 	b.latestBlockHash = selectedBlock.BlockHash()
 	b.latestBlockHeight = height
@@ -183,33 +225,48 @@ func (b *BlockBuffer) AppendBlock(block *common.Block) {
 	b.blockChan <- block
 }
 
+// GetPriorityLeaf 获取当前视图下的最优树叶
+func (b *BlockBuffer) GetPriorityLeaf() *common.Block {
+	b.updateLock.RLock()
+	defer b.updateLock.RUnlock()
+	//block :=
+	for height := b.bufferedHeight; height >= b.latestBlockHeight; height-- {
+		uHeight := uint64(height)
+		if b.selectedBlock[uHeight] != nil {
+			return b.selectedBlock[uHeight]
+		}
+	}
+	return b.latestBlock
+}
+
 // updateTreeView 更新缓存树上的每个高度的最优区块
 func (b *BlockBuffer) updateTreeView(start uint64) {
 	prevBlock := b.selectedBlock[start]
 	prevBlockHash := prevBlock.BlockHash()
-	height := start
+	height := int64(start)
 
 	for {
 		if height > b.bufferedHeight {
 			break
 		}
 		height++
+		uHeight := uint64(height)
 
 		if prevBlock == nil {
-			b.selectedBlock[height] = nil
+			b.selectedBlock[uHeight] = nil
 			continue
 		}
 
 		list, ok := b.nextBlockMap[prevBlockHash]
 
 		if !ok {
-			b.selectedBlock[height] = nil
+			b.selectedBlock[uHeight] = nil
 			prevBlock = nil
 			continue
 		}
 
 		selected := b.selectBlockFromList(list)
-		b.selectedBlock[height] = selected
+		b.selectedBlock[uHeight] = selected
 		prevBlock = selected
 		prevBlockHash = selected.BlockHash()
 	}

@@ -23,7 +23,7 @@ func (b *Block) IsGenesisBlock() bool {
 	prevBlockHash := b.PrevBlockHash()
 
 	// todo: 这里还只是为了实现，后面需要改为高效的算法
-	if prevBlockHash == "00000000000000000000000000000000" {
+	if prevBlockHash == "0000000000000000000000000000000000000000000000000000000000000000" {
 		return true
 	}
 	return false
