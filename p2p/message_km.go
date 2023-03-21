@@ -7,7 +7,7 @@ import (
 
 var _ unsafe.Pointer
 
-var _Null = make([]byte, 32)
+var _Null = make([]byte, 64)
 var _NullReader = karmem.NewReader(_Null)
 
 type (
@@ -32,7 +32,12 @@ const (
 	StatusCodeNewPooledTransactionHashesMsg StatusCode = 14
 	StatusCodeGetPooledTransactionMsg       StatusCode = 15
 	StatusCodePooledTransactionsMsg         StatusCode = 16
-	StatusCodeGetBlockByHeightMsg           StatusCode = 17
+	StatusCodeSyncStatusReq                 StatusCode = 17
+	StatusCodeSyncStatusMsg                 StatusCode = 18
+	StatusCodeSyncGetBlocksMsg              StatusCode = 19
+	StatusCodeSyncBlocksMsg                 StatusCode = 20
+	StatusCodeGetBufferedBlocksMsg          StatusCode = 21
+	StatusCodeBufferedBlocksMsg             StatusCode = 22
 )
 
 type (
@@ -40,8 +45,70 @@ type (
 )
 
 const (
-	PacketIdentifierMessage = 14302180353067076632
+	PacketIdentifierSyncStatusMsg = 12064657818327214469
+	PacketIdentifierMessage       = 14302180353067076632
 )
+
+type SyncStatusMsg struct {
+	LatestHeight        uint64
+	LatestHash          [32]byte
+	BufferedStartHeight uint64
+	BufferedEndHeight   uint64
+}
+
+func NewSyncStatusMsg() SyncStatusMsg {
+	return SyncStatusMsg{}
+}
+
+func (x *SyncStatusMsg) PacketIdentifier() PacketIdentifier {
+	return PacketIdentifierSyncStatusMsg
+}
+
+func (x *SyncStatusMsg) Reset() {
+	x.Read((*SyncStatusMsgViewer)(unsafe.Pointer(&_Null)), _NullReader)
+}
+
+func (x *SyncStatusMsg) WriteAsRoot(writer *karmem.Writer) (offset uint, err error) {
+	return x.Write(writer, 0)
+}
+
+func (x *SyncStatusMsg) Write(writer *karmem.Writer, start uint) (offset uint, err error) {
+	offset = start
+	size := uint(64)
+	if offset == 0 {
+		offset, err = writer.Alloc(size)
+		if err != nil {
+			return 0, err
+		}
+	}
+	writer.Write4At(offset, uint32(60))
+	__LatestHeightOffset := offset + 4
+	writer.Write8At(__LatestHeightOffset, *(*uint64)(unsafe.Pointer(&x.LatestHeight)))
+	__LatestHashOffset := offset + 12
+	writer.WriteAt(__LatestHashOffset, (*[32]byte)(unsafe.Pointer(&x.LatestHash))[:])
+	__BufferedStartHeightOffset := offset + 44
+	writer.Write8At(__BufferedStartHeightOffset, *(*uint64)(unsafe.Pointer(&x.BufferedStartHeight)))
+	__BufferedEndHeightOffset := offset + 52
+	writer.Write8At(__BufferedEndHeightOffset, *(*uint64)(unsafe.Pointer(&x.BufferedEndHeight)))
+
+	return offset, nil
+}
+
+func (x *SyncStatusMsg) ReadAsRoot(reader *karmem.Reader) {
+	x.Read(NewSyncStatusMsgViewer(reader, 0), reader)
+}
+
+func (x *SyncStatusMsg) Read(viewer *SyncStatusMsgViewer, reader *karmem.Reader) {
+	x.LatestHeight = viewer.LatestHeight()
+	__LatestHashSlice := viewer.LatestHash()
+	__LatestHashLen := len(__LatestHashSlice)
+	copy(x.LatestHash[:], __LatestHashSlice)
+	for i := __LatestHashLen; i < len(x.LatestHash); i++ {
+		x.LatestHash[i] = 0
+	}
+	x.BufferedStartHeight = viewer.BufferedStartHeight()
+	x.BufferedEndHeight = viewer.BufferedEndHeight()
+}
 
 type Message struct {
 	Code      StatusCode
@@ -116,6 +183,52 @@ func (x *Message) Read(viewer *MessageViewer, reader *karmem.Reader) {
 		x.Payload[i] = 0
 	}
 	x.ReceiveAt = viewer.ReceiveAt()
+}
+
+type SyncStatusMsgViewer struct {
+	_data [64]byte
+}
+
+func NewSyncStatusMsgViewer(reader *karmem.Reader, offset uint32) (v *SyncStatusMsgViewer) {
+	if !reader.IsValidOffset(offset, 8) {
+		return (*SyncStatusMsgViewer)(unsafe.Pointer(&_Null))
+	}
+	v = (*SyncStatusMsgViewer)(unsafe.Add(reader.Pointer, offset))
+	if !reader.IsValidOffset(offset, v.size()) {
+		return (*SyncStatusMsgViewer)(unsafe.Pointer(&_Null))
+	}
+	return v
+}
+
+func (x *SyncStatusMsgViewer) size() uint32 {
+	return *(*uint32)(unsafe.Pointer(&x._data))
+}
+func (x *SyncStatusMsgViewer) LatestHeight() (v uint64) {
+	if 4+8 > x.size() {
+		return v
+	}
+	return *(*uint64)(unsafe.Add(unsafe.Pointer(&x._data), 4))
+}
+func (x *SyncStatusMsgViewer) LatestHash() (v []byte) {
+	if 12+32 > x.size() {
+		return []byte{}
+	}
+	slice := [3]uintptr{
+		uintptr(unsafe.Add(unsafe.Pointer(&x._data), 12)), 32, 32,
+	}
+	return *(*[]byte)(unsafe.Pointer(&slice))
+}
+func (x *SyncStatusMsgViewer) BufferedStartHeight() (v uint64) {
+	if 44+8 > x.size() {
+		return v
+	}
+	return *(*uint64)(unsafe.Add(unsafe.Pointer(&x._data), 44))
+}
+func (x *SyncStatusMsgViewer) BufferedEndHeight() (v uint64) {
+	if 52+8 > x.size() {
+		return v
+	}
+	return *(*uint64)(unsafe.Add(unsafe.Pointer(&x._data), 52))
 }
 
 type MessageViewer struct {

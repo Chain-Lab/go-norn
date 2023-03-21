@@ -18,10 +18,19 @@ enum StatusCode uint8 {
     NewPooledTransactionHashesMsg;
     GetPooledTransactionMsg;
     PooledTransactionsMsg;
+    SyncStatusReq;
+    SyncStatusMsg;
     SyncGetBlocksMsg;
     SyncBlocksMsg;
     GetBufferedBlocksMsg;
     BufferedBlocksMsg;
+}
+
+struct SyncStatusMsg table {
+    LatestHeight uint64;
+    LatestHash [32]byte;
+    BufferedStartHeight uint64;
+    BufferedEndHeight uint64;
 }
 
 struct Message table {

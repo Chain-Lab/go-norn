@@ -30,7 +30,7 @@ var handlerMap = map[p2p.StatusCode]msgHandler{
 	p2p.StatusCodeTransactionsMsg:               handleTransactionMsg,
 	p2p.StatusCodeNewPooledTransactionHashesMsg: handleNewPooledTransactionHashesMsg,
 	p2p.StatusCodeGetPooledTransactionMsg:       handleGetPooledTransactionMsg,
-	p2p.StatusCodeGetBlockByHeightMsg:           handleGetBlockByHeightMsg,
+	//p2p.StatusCodeGetBlockByHeightMsg:           handleGetBlockByHeightMsg,
 }
 
 var (
@@ -53,6 +53,8 @@ type Handler struct {
 
 	txPool *core.TxPool
 	chain  *core.BlockChain
+
+	blockSyncer *BlockSyncer
 }
 
 // HandleStream 用于在收到对端连接时候处理 stream, 在这里构建 peer 用于通信
@@ -257,4 +259,23 @@ func (h *Handler) markBlock(hash string) {
 
 func (h *Handler) markTransaction(hash string) {
 	h.knownTransaction.Add(hash, nil)
+}
+
+func (h *Handler) syncStatus() uint8 {
+	return h.blockSyncer.status
+}
+
+func (h *Handler) synced() bool {
+	return h.blockSyncer.status == synced
+}
+
+// StatusMessage 生成同步信息给对端
+func (h *Handler) StatusMessage() *p2p.SyncStatusMsg {
+	block, _ := h.chain.GetLatestBlock()
+	return &p2p.SyncStatusMsg{
+		LatestHeight:        block.Header.Height,
+		LatestHash:          block.Header.BlockHash,
+		BufferedStartHeight: 0,
+		BufferedEndHeight:   uint64(h.chain.BufferedHeight()),
+	}
 }

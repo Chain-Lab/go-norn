@@ -28,3 +28,13 @@ func respondGetBlockByHeight(block *common.Block, p *Peer) {
 
 	p.peer.Send(p2p.StatusCodeBlockBodiesMsg, bytesBlockData)
 }
+
+func respondGetSyncStatus(msg *p2p.SyncStatusMsg, p *Peer) {
+	byteStatusMsg, err := utils.SerializeStatusMsg(msg)
+
+	if err != nil {
+		return
+	}
+
+	p.peer.Send(p2p.StatusCodeSyncStatusReq, byteStatusMsg)
+}

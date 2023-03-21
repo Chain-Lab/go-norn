@@ -354,6 +354,10 @@ func (bc *BlockChain) Height() int {
 	return bc.latestHeight
 }
 
+func (bc *BlockChain) BufferedHeight() int64 {
+	return bc.buffer.bufferedHeight
+}
+
 func isPrevBlock(prev *common.Block, block *common.Block) bool {
 	prevBlockHash := prev.Header.BlockHash[:]
 	blockPrevHash := block.Header.PrevBlockHash[:]

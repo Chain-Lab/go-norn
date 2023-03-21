@@ -40,6 +40,8 @@ type Peer struct {
 	txBroadcast chan *common.Transaction
 	txAnnounce  chan common.Hash
 
+	syncBlock chan *uint64
+
 	msgQueue chan *p2p.Message
 	// todo: 这里是传值还是需要传指针用于构建 channel？
 	// todo： 还需要将区块、交易传出给上层结构处理的管道
