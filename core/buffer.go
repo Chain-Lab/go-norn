@@ -26,11 +26,11 @@ type BlockBuffer struct {
 	blockChan  chan *common.Block // 第一区块处理队列，收到即处理
 	secondChan chan *common.Block // 第二区块处理队列
 
-	blockProcessList map[uint64]blockList     // 每个高度下的区块列表
-	blockMark        map[string]uint8         // 第二队列处理区块的标记信息
-	nextBlockMap     map[string]blockList     // 每个区块哈希对应的下一个区块列表
-	selectedBlock    map[uint64]*common.Block // 每个高度在当前视图下的最优区块
-	knownBlocks      *lru.Cache               // 区块是否在最近处理过的缓存信息
+	blockProcessList map[int64]blockList     // 每个高度下的区块列表
+	blockMark        map[string]uint8        // 第二队列处理区块的标记信息
+	nextBlockMap     map[string]blockList    // 每个区块哈希对应的下一个区块列表
+	selectedBlock    map[int64]*common.Block // 每个高度在当前视图下的最优区块
+	knownBlocks      *lru.Cache              // 区块是否在最近处理过的缓存信息
 
 	latestBlockHash   string        // 最新区块哈希，需要注意初始化和维护
 	latestBlockHeight int64         // 当前 db 中存储的最新区块的高度
@@ -51,10 +51,10 @@ func NewBlockBuffer(latest *common.Block) (*BlockBuffer, error) {
 		blockChan:  make(chan *common.Block),
 		secondChan: make(chan *common.Block, maxQueueBlock),
 
-		blockProcessList: make(map[uint64]blockList),
+		blockProcessList: make(map[int64]blockList),
 		blockMark:        make(map[string]uint8),
 		nextBlockMap:     make(map[string]blockList),
-		selectedBlock:    make(map[uint64]*common.Block),
+		selectedBlock:    make(map[int64]*common.Block),
 		knownBlocks:      knownBlock,
 
 		latestBlockHeight: int64(latest.Header.Height),
@@ -202,17 +202,15 @@ func (b *BlockBuffer) PopSelectedBlock() *common.Block {
 	b.updateLock.RLock()
 	defer b.updateLock.RUnlock()
 	height := b.latestBlockHeight + 1
-	uHeight := uint64(height)
-
 	// 检查一下列表是否存在
-	_, ok := b.blockProcessList[uHeight]
+	_, ok := b.blockProcessList[height]
 
 	if !ok {
 		return nil
 	}
 
-	selectedBlock := b.selectedBlock[uHeight]
-	b.deleteLayer(uHeight)
+	selectedBlock := b.selectedBlock[height]
+	b.deleteLayer(height)
 
 	b.latestBlockHash = selectedBlock.BlockHash()
 	b.latestBlockHeight = height
@@ -231,16 +229,15 @@ func (b *BlockBuffer) GetPriorityLeaf() *common.Block {
 	defer b.updateLock.RUnlock()
 	//block :=
 	for height := b.bufferedHeight; height >= b.latestBlockHeight; height-- {
-		uHeight := uint64(height)
-		if b.selectedBlock[uHeight] != nil {
-			return b.selectedBlock[uHeight]
+		if b.selectedBlock[height] != nil {
+			return b.selectedBlock[height]
 		}
 	}
 	return b.latestBlock
 }
 
 // updateTreeView 更新缓存树上的每个高度的最优区块
-func (b *BlockBuffer) updateTreeView(start uint64) {
+func (b *BlockBuffer) updateTreeView(start int64) {
 	prevBlock := b.selectedBlock[start]
 	prevBlockHash := prevBlock.BlockHash()
 	height := int64(start)
@@ -250,29 +247,28 @@ func (b *BlockBuffer) updateTreeView(start uint64) {
 			break
 		}
 		height++
-		uHeight := uint64(height)
 
 		if prevBlock == nil {
-			b.selectedBlock[uHeight] = nil
+			b.selectedBlock[height] = nil
 			continue
 		}
 
 		list, ok := b.nextBlockMap[prevBlockHash]
 
 		if !ok {
-			b.selectedBlock[uHeight] = nil
+			b.selectedBlock[height] = nil
 			prevBlock = nil
 			continue
 		}
 
 		selected := b.selectBlockFromList(list)
-		b.selectedBlock[uHeight] = selected
+		b.selectedBlock[height] = selected
 		prevBlock = selected
 		prevBlockHash = selected.BlockHash()
 	}
 }
 
-func (b *BlockBuffer) deleteLayer(layer uint64) {
+func (b *BlockBuffer) deleteLayer(layer int64) {
 	list := b.blockProcessList[layer]
 
 	for idx := range list {
@@ -302,6 +298,7 @@ func (b *BlockBuffer) selectBlockFromList(list []*common.Block) *common.Block {
 }
 
 // compareBlock 对比区块优先级，后面考虑一下处理异常
+// todo： 将优先级策略写入到创世区块中
 func compareBlock(origin *common.Block, block *common.Block) (*common.Block, bool) {
 	if len(origin.Transactions) == len(block.Transactions) {
 		if origin.Header.Timestamp < block.Header.Timestamp {

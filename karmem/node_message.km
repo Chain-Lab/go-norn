@@ -1,14 +1,14 @@
 karmem structs @packed(true) @golang.package(`node`)
 
 struct SyncStatusMsg table {
-    LatestHeight uint64
+    LatestHeight int64
     LatestHash [32]byte
-    BufferedStartHeight uint64
-    BufferedEndHeight uint64
+    BufferedStartHeight int64
+    BufferedEndHeight int64
 }
 
 struct SyncGetBlockMsg table {
-    Height uint64
+    Height int64
 }
 
 struct SyncBlockMsg table {
@@ -17,7 +17,7 @@ struct SyncBlockMsg table {
 }
 
 struct GetBufferedBlockMsg table {
-    Height uint64
+    Height int64
 }
 
 struct BufferedBlockMsg table {

@@ -23,7 +23,7 @@ import (
 func testCreateBlock(prev *common.Block, txs []common.Transaction) *common.Block {
 	var prevBlockHash []byte
 	var strPrevHash string
-	var height uint64
+	var height int64
 	if prev == nil {
 		strPrevHash = "0000000000000000000000000000000000000000000000000000000000000000"
 	} else {
@@ -40,7 +40,7 @@ func testCreateBlock(prev *common.Block, txs []common.Transaction) *common.Block
 	merkleRoot := BuildMerkleTree(txs)
 	block := &common.Block{
 		Header: common.BlockHeader{
-			Timestamp:     uint64(time.Now().UnixMilli()),
+			Timestamp:     time.Now().UnixMilli(),
 			PrevBlockHash: [32]byte(prevBlockHash),
 			BlockHash:     [32]byte{},
 			MerkleRoot:    [32]byte(merkleRoot),

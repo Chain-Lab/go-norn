@@ -21,10 +21,10 @@ func requestStatusMsg(height int, p *Peer) {
 	p.peer.Send(p2p.StatusCodeStatusMsg, byteHeight)
 }
 
-func requestBlockWithHeight(height int, p *Peer) {
+func requestSyncGetBlock(height int, p *Peer) {
 	byteHeight := make([]byte, 8)
 
 	binary.LittleEndian.PutUint64(byteHeight, uint64(height))
 
-	p.peer.Send(p2p.StatusCodeGetBlockByHeightMsg, byteHeight)
+	p.peer.Send(p2p.StatusCodeSyncGetBlocksMsg, byteHeight)
 }

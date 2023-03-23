@@ -7,10 +7,12 @@
 package node
 
 import (
-	lru "github.com/hashicorp/golang-lru"
+	"github.com/libp2p/go-libp2p/core/peer"
+	"go-chronos/common"
 	"go-chronos/core"
 	"go-chronos/p2p"
 	"sync"
+	"time"
 )
 
 const (
@@ -26,6 +28,11 @@ const (
 	blockRequestedMark uint8 = 0x02 // 没有发送区块的请求
 )
 
+const (
+	checkInterval        = 1 * time.Second
+	requestBlockInterval = 3 * time.Second
+)
+
 type BlockSyncerConfig struct {
 	Chain *core.BlockChain
 }
@@ -33,14 +40,18 @@ type BlockSyncerConfig struct {
 type BlockSyncer struct {
 	peerSet []*Peer
 
-	knownHeight      uint64           // 目前已知节点中的最新高度
-	blockStatus      *lru.Cache       // 某个高度的区块状态
-	requestTimestamp map[uint64]int64 // 区块请求的时间戳
+	remoteHeight     int64               // 目前其他节点的最高高度
+	knownHeight      int64               // 目前已知节点中的最新高度
+	requestTimestamp map[int64]time.Time // 区块请求的时间戳
+	blockMap         map[int64]*common.Block
+	peerStatus       map[peer.ID]bool
+	peerReqTime      map[peer.ID]time.Time
 
-	chain     *core.BlockChain
-	status    uint8
-	statusMsg chan *p2p.SyncStatusMsg
-	lock      sync.RWMutex
+	chain          *core.BlockChain
+	status         uint8
+	statusMsg      chan *p2p.SyncStatusMsg
+	lock           sync.RWMutex
+	peerStatusLock sync.RWMutex
 }
 
 func NewBlockSyncer(config *BlockSyncerConfig) *BlockSyncer {
@@ -53,8 +64,25 @@ func NewBlockSyncer(config *BlockSyncerConfig) *BlockSyncer {
 	return &syncer
 }
 
-func Run() {
+// Run 同步线程，每秒触发检查是否有空闲的 peer，如果有，就由该 peer 去拉取区块
+func (bs *BlockSyncer) Run() {
+	ticker := time.NewTicker(checkInterval)
+	for {
+		select {
+		case <-ticker.C:
+			bs.peerStatusLock.RLock()
+			for idx := range bs.peerSet {
+				p := bs.peerSet[idx]
+				id := p.peerID
+				if bs.peerStatus[id] || time.Since(bs.peerReqTime[id]) < requestBlockInterval {
+					continue
+				}
 
+				requestSyncGetBlock()
+			}
+			bs.peerStatusLock.RUnlock()
+		}
+	}
 }
 
 func (bs *BlockSyncer) appendStatusMsg(msg *p2p.SyncStatusMsg) {
@@ -65,7 +93,41 @@ func (bs *BlockSyncer) statusMsgRoutine() {
 	for {
 		select {
 		case msg := <-bs.statusMsg:
-			
+
 		}
 	}
+}
+
+func (bs *BlockSyncer) selectBlockHeight() int64 {
+	bs.lock.RLock()
+	defer bs.lock.RUnlock()
+
+	for height := bs.knownHeight + 1; height <= bs.remoteHeight; height++ {
+		if bs.blockMap[height] == nil || time.Since(bs.requestTimestamp[height]) > requestBlockInterval {
+			return height
+		}
+	}
+
+	return -1
+}
+
+func (bs *BlockSyncer) insertBlock(height int64) {
+	block, ok := bs.blockMap[height]
+
+	if !ok {
+		return
+	}
+
+	bs.chain.InsertBlock(block)
+	bs.knownHeight = height
+
+	delete(bs.requestTimestamp, height)
+	delete(bs.blockMap, height)
+}
+
+func (bs *BlockSyncer) releasePeer(p *Peer) {
+	bs.peerStatusLock.RLock()
+	defer bs.peerStatusLock.RUnlock()
+
+	bs.peerStatus[p.peerID] = false
 }

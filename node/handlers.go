@@ -17,7 +17,7 @@ import (
 
 func handleStatusMsg(h *Handler, msg *p2p.Message, p *Peer) {
 	payload := msg.Payload
-	height := int(binary.LittleEndian.Uint64(payload))
+	height := int64(binary.LittleEndian.Uint64(payload))
 
 	log.Debugf("Remote height = %d.", height)
 	//if height > h.chain.Height() {
@@ -178,4 +178,24 @@ func handleSyncStatusMsg(h *Handler, msg *p2p.Message, p *Peer) {
 
 	statusMessage, _ := utils.DeserializeStatusMsg(payload)
 	h.blockSyncer.appendStatusMsg(statusMessage)
+}
+
+// handleSyncGetBlocksMsg 处理获取某个高度的区块
+func handleSyncGetBlocksMsg(h *Handler, msg *p2p.Message, p *Peer) {
+	if h.syncStatus() != synced {
+		return
+	}
+
+	// 从消息中直接转换得到需要的区块高度
+	payload := msg.Payload
+	height := int64(binary.LittleEndian.Uint64(payload))
+
+	// 从链上获取到区块
+	block, err := h.chain.GetBlockByHeight(height)
+	if err != nil {
+		log.WithField("error", err).Debugln("Get block with height failed.")
+		return
+	}
+
+	go respondSyncGetBlock(block, p)
 }

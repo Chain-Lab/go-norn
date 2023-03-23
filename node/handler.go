@@ -276,6 +276,6 @@ func (h *Handler) StatusMessage() *p2p.SyncStatusMsg {
 		LatestHeight:        block.Header.Height,
 		LatestHash:          block.Header.BlockHash,
 		BufferedStartHeight: 0,
-		BufferedEndHeight:   uint64(h.chain.BufferedHeight()),
+		BufferedEndHeight:   h.chain.BufferedHeight(),
 	}
 }

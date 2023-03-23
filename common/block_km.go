@@ -27,8 +27,8 @@ type TransactionBody struct {
 	Address   [20]byte
 	Public    [33]byte
 	Data      []byte
-	Expire    uint64
-	Timestamp uint64
+	Expire    int64
+	Timestamp int64
 }
 
 func NewTransactionBody() TransactionBody {
@@ -150,19 +150,19 @@ func NewTransaction() Transaction {
 	return Transaction{}
 }
 
-func (tx *Transaction) PacketIdentifier() PacketIdentifier {
+func (x *Transaction) PacketIdentifier() PacketIdentifier {
 	return PacketIdentifierTransaction
 }
 
-func (tx *Transaction) Reset() {
-	tx.Read((*TransactionViewer)(unsafe.Pointer(&_Null)), _NullReader)
+func (x *Transaction) Reset() {
+	x.Read((*TransactionViewer)(unsafe.Pointer(&_Null)), _NullReader)
 }
 
-func (tx *Transaction) WriteAsRoot(writer *karmem.Writer) (offset uint, err error) {
-	return tx.Write(writer, 0)
+func (x *Transaction) WriteAsRoot(writer *karmem.Writer) (offset uint, err error) {
+	return x.Write(writer, 0)
 }
 
-func (tx *Transaction) Write(writer *karmem.Writer, start uint) (offset uint, err error) {
+func (x *Transaction) Write(writer *karmem.Writer, start uint) (offset uint, err error) {
 	offset = start
 	size := uint(8)
 	if offset == 0 {
@@ -177,27 +177,27 @@ func (tx *Transaction) Write(writer *karmem.Writer, start uint) (offset uint, er
 		return 0, err
 	}
 	writer.Write4At(offset+0, uint32(__BodyOffset))
-	if _, err := tx.Body.Write(writer, __BodyOffset); err != nil {
+	if _, err := x.Body.Write(writer, __BodyOffset); err != nil {
 		return offset, err
 	}
 
 	return offset, nil
 }
 
-func (tx *Transaction) ReadAsRoot(reader *karmem.Reader) {
-	tx.Read(NewTransactionViewer(reader, 0), reader)
+func (x *Transaction) ReadAsRoot(reader *karmem.Reader) {
+	x.Read(NewTransactionViewer(reader, 0), reader)
 }
 
-func (tx *Transaction) Read(viewer *TransactionViewer, reader *karmem.Reader) {
-	tx.Body.Read(viewer.Body(reader), reader)
+func (x *Transaction) Read(viewer *TransactionViewer, reader *karmem.Reader) {
+	x.Body.Read(viewer.Body(reader), reader)
 }
 
 type BlockHeader struct {
-	Timestamp     uint64
+	Timestamp     int64
 	PrevBlockHash [32]byte
 	BlockHash     [32]byte
 	MerkleRoot    [32]byte
-	Height        uint64
+	Height        int64
 }
 
 func NewBlockHeader() BlockHeader {
@@ -420,17 +420,17 @@ func (x *TransactionBodyViewer) Data(reader *karmem.Reader) (v []byte) {
 	}
 	return *(*[]byte)(unsafe.Pointer(&slice))
 }
-func (x *TransactionBodyViewer) Expire() (v uint64) {
+func (x *TransactionBodyViewer) Expire() (v int64) {
 	if 113+8 > x.size() {
 		return v
 	}
-	return *(*uint64)(unsafe.Add(unsafe.Pointer(&x._data), 113))
+	return *(*int64)(unsafe.Add(unsafe.Pointer(&x._data), 113))
 }
-func (x *TransactionBodyViewer) Timestamp() (v uint64) {
+func (x *TransactionBodyViewer) Timestamp() (v int64) {
 	if 121+8 > x.size() {
 		return v
 	}
-	return *(*uint64)(unsafe.Add(unsafe.Pointer(&x._data), 121))
+	return *(*int64)(unsafe.Add(unsafe.Pointer(&x._data), 121))
 }
 
 type TransactionViewer struct {
@@ -471,11 +471,11 @@ func NewBlockHeaderViewer(reader *karmem.Reader, offset uint32) (v *BlockHeaderV
 func (x *BlockHeaderViewer) size() uint32 {
 	return *(*uint32)(unsafe.Pointer(&x._data))
 }
-func (x *BlockHeaderViewer) Timestamp() (v uint64) {
+func (x *BlockHeaderViewer) Timestamp() (v int64) {
 	if 4+8 > x.size() {
 		return v
 	}
-	return *(*uint64)(unsafe.Add(unsafe.Pointer(&x._data), 4))
+	return *(*int64)(unsafe.Add(unsafe.Pointer(&x._data), 4))
 }
 func (x *BlockHeaderViewer) PrevBlockHash() (v []byte) {
 	if 12+32 > x.size() {
@@ -504,11 +504,11 @@ func (x *BlockHeaderViewer) MerkleRoot() (v []byte) {
 	}
 	return *(*[]byte)(unsafe.Pointer(&slice))
 }
-func (x *BlockHeaderViewer) Height() (v uint64) {
+func (x *BlockHeaderViewer) Height() (v int64) {
 	if 108+8 > x.size() {
 		return v
 	}
-	return *(*uint64)(unsafe.Add(unsafe.Pointer(&x._data), 108))
+	return *(*int64)(unsafe.Add(unsafe.Pointer(&x._data), 108))
 }
 
 type BlockViewer struct {

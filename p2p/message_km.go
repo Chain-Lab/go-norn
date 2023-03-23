@@ -50,10 +50,10 @@ const (
 )
 
 type SyncStatusMsg struct {
-	LatestHeight        uint64
+	LatestHeight        int64
 	LatestHash          [32]byte
-	BufferedStartHeight uint64
-	BufferedEndHeight   uint64
+	BufferedStartHeight int64
+	BufferedEndHeight   int64
 }
 
 func NewSyncStatusMsg() SyncStatusMsg {
@@ -114,7 +114,7 @@ type Message struct {
 	Code      StatusCode
 	Size      uint32
 	Payload   []byte
-	ReceiveAt uint32
+	ReceiveAt int64
 }
 
 func NewMessage() Message {
@@ -142,7 +142,7 @@ func (x *Message) Write(writer *karmem.Writer, start uint) (offset uint, err err
 			return 0, err
 		}
 	}
-	writer.Write4At(offset, uint32(25))
+	writer.Write4At(offset, uint32(29))
 	__CodeOffset := offset + 4
 	writer.Write1At(__CodeOffset, *(*uint8)(unsafe.Pointer(&x.Code)))
 	__SizeOffset := offset + 5
@@ -160,7 +160,7 @@ func (x *Message) Write(writer *karmem.Writer, start uint) (offset uint, err err
 	__PayloadSlice[2] = __PayloadSize
 	writer.WriteAt(__PayloadOffset, *(*[]byte)(unsafe.Pointer(&__PayloadSlice)))
 	__ReceiveAtOffset := offset + 21
-	writer.Write4At(__ReceiveAtOffset, *(*uint32)(unsafe.Pointer(&x.ReceiveAt)))
+	writer.Write8At(__ReceiveAtOffset, *(*uint64)(unsafe.Pointer(&x.ReceiveAt)))
 
 	return offset, nil
 }
@@ -203,11 +203,11 @@ func NewSyncStatusMsgViewer(reader *karmem.Reader, offset uint32) (v *SyncStatus
 func (x *SyncStatusMsgViewer) size() uint32 {
 	return *(*uint32)(unsafe.Pointer(&x._data))
 }
-func (x *SyncStatusMsgViewer) LatestHeight() (v uint64) {
+func (x *SyncStatusMsgViewer) LatestHeight() (v int64) {
 	if 4+8 > x.size() {
 		return v
 	}
-	return *(*uint64)(unsafe.Add(unsafe.Pointer(&x._data), 4))
+	return *(*int64)(unsafe.Add(unsafe.Pointer(&x._data), 4))
 }
 func (x *SyncStatusMsgViewer) LatestHash() (v []byte) {
 	if 12+32 > x.size() {
@@ -218,17 +218,17 @@ func (x *SyncStatusMsgViewer) LatestHash() (v []byte) {
 	}
 	return *(*[]byte)(unsafe.Pointer(&slice))
 }
-func (x *SyncStatusMsgViewer) BufferedStartHeight() (v uint64) {
+func (x *SyncStatusMsgViewer) BufferedStartHeight() (v int64) {
 	if 44+8 > x.size() {
 		return v
 	}
-	return *(*uint64)(unsafe.Add(unsafe.Pointer(&x._data), 44))
+	return *(*int64)(unsafe.Add(unsafe.Pointer(&x._data), 44))
 }
-func (x *SyncStatusMsgViewer) BufferedEndHeight() (v uint64) {
+func (x *SyncStatusMsgViewer) BufferedEndHeight() (v int64) {
 	if 52+8 > x.size() {
 		return v
 	}
-	return *(*uint64)(unsafe.Add(unsafe.Pointer(&x._data), 52))
+	return *(*int64)(unsafe.Add(unsafe.Pointer(&x._data), 52))
 }
 
 type MessageViewer struct {
@@ -276,9 +276,9 @@ func (x *MessageViewer) Payload(reader *karmem.Reader) (v []byte) {
 	}
 	return *(*[]byte)(unsafe.Pointer(&slice))
 }
-func (x *MessageViewer) ReceiveAt() (v uint32) {
-	if 21+4 > x.size() {
+func (x *MessageViewer) ReceiveAt() (v int64) {
+	if 21+8 > x.size() {
 		return v
 	}
-	return *(*uint32)(unsafe.Add(unsafe.Pointer(&x._data), 21))
+	return *(*int64)(unsafe.Add(unsafe.Pointer(&x._data), 21))
 }

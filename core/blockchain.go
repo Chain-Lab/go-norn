@@ -34,7 +34,7 @@ type BlockChain struct {
 	txCache        *lru.Cache
 
 	latestBlock  *common.Block
-	latestHeight int
+	latestHeight int64
 	latestLock   sync.RWMutex
 
 	buffer     *BlockBuffer
@@ -82,7 +82,7 @@ func (bc *BlockChain) PackageNewBlock(txs []common.Transaction) (*common.Block, 
 	merkleRoot := BuildMerkleTree(txs)
 	block := common.Block{
 		Header: common.BlockHeader{
-			Timestamp:     uint64(time.Now().UnixMilli()),
+			Timestamp:     time.Now().UnixMilli(),
 			PrevBlockHash: bestBlock.Header.BlockHash,
 			BlockHash:     [32]byte{},
 			MerkleRoot:    [32]byte(merkleRoot),
@@ -111,7 +111,7 @@ func (bc *BlockChain) NewGenesisBlock() {
 
 	genesisBlock := common.Block{
 		Header: common.BlockHeader{
-			Timestamp:     uint64(time.Now().UnixMilli()),
+			Timestamp:     time.Now().UnixMilli(),
 			PrevBlockHash: nullHash,
 			BlockHash:     [32]byte{},
 			MerkleRoot:    [32]byte(nullHash),
@@ -174,14 +174,15 @@ func (bc *BlockChain) GetBlockByHash(hash *common.Hash) (*common.Block, error) {
 	return block, nil
 }
 
-func (bc *BlockChain) GetBlockByHeight(height int) (*common.Block, error) {
+// GetBlockByHeight 根据高度拉取区块，需要考虑一下同步时是否换用其他的函数？
+func (bc *BlockChain) GetBlockByHeight(height int64) (*common.Block, error) {
 	// 先判断一下高度
 	if height > bc.latestHeight && bc.latestHeight != -1 {
 		return nil, errors.New("Block height error.")
 	}
 
 	// 查询缓存里面是否有区块的信息
-	value, ok := bc.blockHeightMap.Get(uint64(height))
+	value, ok := bc.blockHeightMap.Get(height)
 	if ok {
 		blockHash := common.Hash(value.([32]byte))
 		block, err := bc.GetBlockByHash(&blockHash)

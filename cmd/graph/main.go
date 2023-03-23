@@ -54,7 +54,7 @@ func main() {
 
 	chain := core.NewBlockchain(db)
 
-	var timestamps []uint64
+	var timestamps []int64
 	var txs []int
 
 	prevBlock, err := chain.GetBlockByHeight(0)
