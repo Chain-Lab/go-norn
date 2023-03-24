@@ -18,6 +18,7 @@ const (
 	maxBlockCache       = 1024
 	maxTransactionCache = 32768
 	maxBlockProcessList = 12
+	maxBlockChannel     = 128
 )
 
 type blockList []*common.Block
@@ -37,6 +38,7 @@ type BlockChain struct {
 	latestHeight int64
 	latestLock   sync.RWMutex
 
+	bufferChan chan *common.Block
 	buffer     *BlockBuffer
 	appendLock sync.RWMutex
 }
@@ -70,13 +72,34 @@ func NewBlockchain(db *utils.LevelDB) *BlockChain {
 
 		latestBlock:  nil,
 		latestHeight: -1,
+
+		bufferChan: make(chan *common.Block, maxBlockChannel),
 	}
 
+	// 初始化一下最新区块
+	latest, _ := chain.GetLatestBlock()
+
+	if latest != nil {
+		log.Traceln("Block database is not null, create buffer.")
+		chain.createBlockBuffer(latest)
+	}
+	go chain.BlockProcessRoutine()
 	return chain
+}
+
+// BlockProcessRoutine 接收处理 channel 中的区块
+func (bc *BlockChain) BlockProcessRoutine() {
+	for {
+		select {
+		case block := <-bc.bufferChan:
+			bc.InsertBlock(block)
+		}
+	}
 }
 
 // PackageNewBlock 打包新的区块，传入交易序列
 func (bc *BlockChain) PackageNewBlock(txs []common.Transaction) (*common.Block, error) {
+	log.Traceln("Start package new block.")
 	bestBlock := bc.buffer.GetPriorityLeaf()
 
 	merkleRoot := BuildMerkleTree(txs)
@@ -106,6 +129,7 @@ func (bc *BlockChain) PackageNewBlock(txs []common.Transaction) (*common.Block, 
 	return &block, nil
 }
 
+// NewGenesisBlock 创建创世区块
 func (bc *BlockChain) NewGenesisBlock() {
 	nullHash := common.Hash{}
 
@@ -123,8 +147,6 @@ func (bc *BlockChain) NewGenesisBlock() {
 	//println(hex.EncodeToString(nullHash[:]))
 	bc.InsertBlock(&genesisBlock)
 }
-
-//todo：数据初始化
 
 func (bc *BlockChain) GetLatestBlock() (*common.Block, error) {
 	if bc.latestBlock != nil {
@@ -146,6 +168,11 @@ func (bc *BlockChain) GetLatestBlock() (*common.Block, error) {
 		log.WithField("error", err).Errorln("Get block failed.")
 		return nil, err
 	}
+
+	bc.latestLock.RLock()
+	bc.latestBlock = block
+	bc.latestHeight = block.Header.Height
+	bc.latestLock.RUnlock()
 
 	return block, nil
 }
@@ -222,7 +249,7 @@ func (bc *BlockChain) GetBlockByHeight(height int64) (*common.Block, error) {
 
 func (bc *BlockChain) writeBlockCache(block *common.Block) {
 	bc.blockHeightMap.Add(block.Header.Height, block.Header.BlockHash)
-	blockHash := hex.EncodeToString(block.Header.BlockHash[:])
+	blockHash := block.BlockHash()
 	bc.blockCache.Add(blockHash, block)
 }
 
@@ -240,23 +267,27 @@ func (bc *BlockChain) InsertBlock(block *common.Block) {
 
 	latestBlock, err := bc.GetLatestBlock()
 
-	if err != nil {
-		log.WithField("error", err).Debugln("Get latest block failed.")
-		return
-	}
+	if !block.IsGenesisBlock() {
+		if err != nil {
+			log.WithField("error", err).Debugln("Get latest block failed.")
+			return
+		}
 
-	if !isPrevBlock(latestBlock, block) {
-		log.Errorln("Block error, prev block hash not match.")
-		return
+		if !isPrevBlock(latestBlock, block) {
+			log.Errorln("Block error, prev block hash not match.")
+			return
+		}
+	} else {
+		bc.createBlockBuffer(block)
 	}
 
 	bc.latestLock.RLock()
-	if int(block.Header.Height) <= bc.latestHeight {
+	if block.Header.Height <= bc.latestHeight {
 		bc.latestLock.RUnlock()
 		return
 	}
 	bc.latestBlock = block
-	bc.latestHeight = int(block.Header.Height)
+	bc.latestHeight = block.Header.Height
 	bc.latestLock.RUnlock()
 	bc.writeBlockCache(block)
 
@@ -279,7 +310,7 @@ func (bc *BlockChain) InsertBlock(block *common.Block) {
 
 	keys[1] = []byte("latest")
 	values[1] = block.Header.BlockHash[:]
-	keys[2] = utils.BlockHeight2DBKey(int(block.Header.Height))
+	keys[2] = utils.BlockHeight2DBKey(block.Header.Height)
 	values[2] = block.Header.BlockHash[:]
 
 	for idx := range block.Transactions {
@@ -304,19 +335,19 @@ func (bc *BlockChain) InsertBlock(block *common.Block) {
 	bc.db.BatchInsert(keys, values)
 }
 
-// databaseWriter 负责插入数据到数据库的协程
-func (bc *BlockChain) databaseWriter() {
-	for {
-		select {
-		case block := <-bc.dbWriterQueue:
-			bc.InsertBlock(block)
-			//
-			//if err != nil {
-			//	log.WithField("error", err).Errorln("Insert block to database failed")
-			//}
-		}
-	}
-}
+//// databaseWriter 负责插入数据到数据库的协程
+//func (bc *BlockChain) databaseWriter() {
+//	for {
+//		select {
+//		case block := <-bc.dbWriterQueue:
+//			bc.InsertBlock(block)
+//			//
+//			//if err != nil {
+//			//	log.WithField("error", err).Errorln("Insert block to database failed")
+//			//}
+//		}
+//	}
+//}
 
 func (bc *BlockChain) AppendBlockTask(block *common.Block) {
 	bc.buffer.AppendBlock(block)
@@ -349,7 +380,7 @@ func (bc *BlockChain) GetTransactionByHash(hash common.Hash) (*common.Transactio
 	return transaction, nil
 }
 
-func (bc *BlockChain) Height() int {
+func (bc *BlockChain) Height() int64 {
 	bc.latestLock.RLock()
 	defer bc.latestLock.RUnlock()
 	return bc.latestHeight
@@ -363,4 +394,10 @@ func isPrevBlock(prev *common.Block, block *common.Block) bool {
 	prevBlockHash := prev.Header.BlockHash[:]
 	blockPrevHash := block.Header.PrevBlockHash[:]
 	return bytes.Compare(prevBlockHash, blockPrevHash) == 0
+}
+
+func (bc *BlockChain) createBlockBuffer(latest *common.Block) {
+	// todo: 需要处理报错
+	log.Traceln("Create new block buffer.")
+	bc.buffer, _ = NewBlockBuffer(latest, bc.bufferChan)
 }

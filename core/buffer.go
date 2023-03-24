@@ -19,12 +19,14 @@ const (
 	maxBlockMark        = 5
 	maxKnownBlock       = 1024
 	maxQueueBlock       = 512
+	maxBufferSize       = 6
 )
 
 // BlockBuffer 维护一个树形结构的缓冲区，保存当前视图下的区块信息
 type BlockBuffer struct {
 	blockChan  chan *common.Block // 第一区块处理队列，收到即处理
 	secondChan chan *common.Block // 第二区块处理队列
+	popChan    chan *common.Block // 推出队列
 
 	blockProcessList map[int64]blockList     // 每个高度下的区块列表
 	blockMark        map[string]uint8        // 第二队列处理区块的标记信息
@@ -39,7 +41,7 @@ type BlockBuffer struct {
 	updateLock        sync.RWMutex  // 视图更新的读写锁
 }
 
-func NewBlockBuffer(latest *common.Block) (*BlockBuffer, error) {
+func NewBlockBuffer(latest *common.Block, popChan chan *common.Block) (*BlockBuffer, error) {
 	knownBlock, err := lru.New(maxKnownBlock)
 
 	if err != nil {
@@ -50,6 +52,7 @@ func NewBlockBuffer(latest *common.Block) (*BlockBuffer, error) {
 	buffer := &BlockBuffer{
 		blockChan:  make(chan *common.Block),
 		secondChan: make(chan *common.Block, maxQueueBlock),
+		popChan:    popChan,
 
 		blockProcessList: make(map[int64]blockList),
 		blockMark:        make(map[string]uint8),
@@ -57,11 +60,14 @@ func NewBlockBuffer(latest *common.Block) (*BlockBuffer, error) {
 		selectedBlock:    make(map[int64]*common.Block),
 		knownBlocks:      knownBlock,
 
-		latestBlockHeight: int64(latest.Header.Height),
+		latestBlockHeight: latest.Header.Height,
 		latestBlockHash:   latest.BlockHash(),
 		latestBlock:       latest,
-		bufferedHeight:    int64(latest.Header.Height),
+		bufferedHeight:    latest.Header.Height,
 	}
+
+	go buffer.Run()
+	go buffer.secondProcess()
 
 	return buffer, nil
 }
@@ -108,7 +114,6 @@ func (b *BlockBuffer) Run() {
 			} else {
 				b.selectedBlock[blockHeight], replaced = compareBlock(selected, block)
 			}
-
 			if replaced {
 				b.updateTreeView(blockHeight)
 			}
@@ -119,8 +124,12 @@ func (b *BlockBuffer) Run() {
 
 			if !ok {
 				log.WithField("height", blockHeight).Info("Extend buffer height.")
-				b.bufferedHeight = int64(blockHeight)
+				b.bufferedHeight = blockHeight
 				processList = make(blockList, 0, 15)
+
+				if block.Header.Height-b.latestBlockHeight > maxBufferSize {
+					b.popChan <- b.PopSelectedBlock()
+				}
 			}
 
 			b.blockProcessList[blockHeight] = append(processList, block)
@@ -183,8 +192,12 @@ func (b *BlockBuffer) secondProcess() {
 			processList, ok := b.blockProcessList[blockHeight]
 
 			if !ok {
-				b.bufferedHeight = int64(blockHeight)
+				log.WithField("height", blockHeight).Info("Extend buffer height.")
+				b.bufferedHeight = blockHeight
 				processList = make(blockList, 0, 15)
+				if block.Header.Height-b.latestBlockHeight > maxBufferSize {
+					b.popChan <- b.PopSelectedBlock()
+				}
 			}
 
 			b.blockProcessList[blockHeight] = append(processList, block)
@@ -201,7 +214,9 @@ func (b *BlockBuffer) secondProcess() {
 func (b *BlockBuffer) PopSelectedBlock() *common.Block {
 	b.updateLock.RLock()
 	defer b.updateLock.RUnlock()
+
 	height := b.latestBlockHeight + 1
+	log.WithField("height", height).Traceln("Pop block from view.")
 	// 检查一下列表是否存在
 	_, ok := b.blockProcessList[height]
 
@@ -209,12 +224,12 @@ func (b *BlockBuffer) PopSelectedBlock() *common.Block {
 		return nil
 	}
 
-	selectedBlock := b.selectedBlock[height]
+	selected := b.selectedBlock[height]
 	b.deleteLayer(height)
 
-	b.latestBlockHash = selectedBlock.BlockHash()
+	b.latestBlockHash = selected.BlockHash()
 	b.latestBlockHeight = height
-	return selectedBlock
+	return selected
 }
 
 // AppendBlock 添加区块到该缓冲区处理队列
@@ -225,19 +240,28 @@ func (b *BlockBuffer) AppendBlock(block *common.Block) {
 
 // GetPriorityLeaf 获取当前视图下的最优树叶
 func (b *BlockBuffer) GetPriorityLeaf() *common.Block {
+	log.Traceln("Start get priority leaf.")
 	b.updateLock.RLock()
 	defer b.updateLock.RUnlock()
-	//block :=
-	for height := b.bufferedHeight; height >= b.latestBlockHeight; height-- {
+
+	log.WithFields(log.Fields{
+		"start": b.bufferedHeight,
+		"end":   b.latestBlockHeight,
+	}).Traceln("Start scan all selected.")
+
+	for height := b.bufferedHeight; height > b.latestBlockHeight; height-- {
 		if b.selectedBlock[height] != nil {
+			log.WithField("height", height).Trace("Return leaf block.")
 			return b.selectedBlock[height]
 		}
 	}
+	log.Traceln("All height is nil, return latest block.")
 	return b.latestBlock
 }
 
 // updateTreeView 更新缓存树上的每个高度的最优区块
 func (b *BlockBuffer) updateTreeView(start int64) {
+	log.Traceln("Start update buffer tree view.")
 	prevBlock := b.selectedBlock[start]
 	prevBlockHash := prevBlock.BlockHash()
 	height := int64(start)
@@ -274,10 +298,13 @@ func (b *BlockBuffer) deleteLayer(layer int64) {
 	for idx := range list {
 		block := list[idx]
 		blockHash := block.PrevBlockHash()
-		b.nextBlockMap[blockHash] = nil
+		_, ok := b.nextBlockMap[blockHash]
+		if ok {
+			delete(b.nextBlockMap, blockHash)
+		}
 	}
 
-	b.blockProcessList[layer] = nil
+	delete(b.blockProcessList, layer)
 }
 
 // selectBlockFromList 从区块列表中取出优先级最高的区块

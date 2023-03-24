@@ -123,7 +123,8 @@ func GetHandlerInst() *Handler {
 
 func (h *Handler) packageBlockRoutine() {
 	//ticker := time.NewTicker(1 * time.Second)
-	ticker := time.NewTicker(1 * time.Millisecond)
+	ticker := time.NewTicker(2 * time.Second)
+	//ticker := time.NewTicker(2 * time.Millisecond)
 
 	for {
 		select {
@@ -145,9 +146,9 @@ func (h *Handler) packageBlockRoutine() {
 				continue
 			}
 
-			log.Debugf("Package new block# 0x%s", hex.EncodeToString(newBlock.Header.BlockHash[:]))
 			h.chain.AppendBlockTask(newBlock)
 			h.blockBroadcastQueue <- newBlock
+			log.Debugf("Package new block# 0x%s", hex.EncodeToString(newBlock.Header.BlockHash[:]))
 		}
 	}
 }
@@ -167,6 +168,7 @@ func (h *Handler) NewPeer(peerId peer.ID, s *network.Stream) (*Peer, error) {
 	}
 
 	h.peerSet = append(h.peerSet, p)
+	h.blockSyncer.AddPeer(p)
 	return p, err
 }
 
@@ -233,9 +235,9 @@ func (h *Handler) getPeersWithoutBlock(blockHash common.Hash) []*Peer {
 	list := make([]*Peer, 0, len(h.peerSet))
 	strHash := hex.EncodeToString(blockHash[:])
 	for idx := range h.peerSet {
-		peer := h.peerSet[idx]
-		if !peer.KnownBlock(strHash) {
-			list = append(list, peer)
+		p := h.peerSet[idx]
+		if !p.KnownBlock(strHash) {
+			list = append(list, p)
 		}
 	}
 	return list
@@ -245,9 +247,9 @@ func (h *Handler) getPeersWithoutTransaction(txHash common.Hash) []*Peer {
 	list := make([]*Peer, 0, len(h.peerSet))
 	strHash := hex.EncodeToString(txHash[:])
 	for idx := range h.peerSet {
-		peer := h.peerSet[idx]
-		if !peer.KnownTransaction(strHash) {
-			list = append(list, peer)
+		p := h.peerSet[idx]
+		if !p.KnownTransaction(strHash) {
+			list = append(list, p)
 		}
 	}
 	return list

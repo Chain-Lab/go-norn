@@ -65,7 +65,7 @@ func main() {
 
 	//fmt.Printf(hex.EncodeToString(prevBlock.Header.BlockHash[:]))
 	for i := 1; i < height; i++ {
-		block, err := chain.GetBlockByHeight(i)
+		block, err := chain.GetBlockByHeight(int64(i))
 		if err != nil {
 			log.WithField("height", i).Errorln("Get block failed.")
 		}

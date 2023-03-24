@@ -61,6 +61,7 @@ func NewBlockSyncer(config *BlockSyncerConfig) *BlockSyncer {
 		chain:  config.Chain,
 		status: syncPaused,
 	}
+
 	return &syncer
 }
 
@@ -78,11 +79,26 @@ func (bs *BlockSyncer) Run() {
 					continue
 				}
 
-				requestSyncGetBlock()
+				height := bs.selectBlockHeight()
+
+				if height < 0 {
+					continue
+				}
+
+				go requestSyncGetBlock(height, p)
 			}
 			bs.peerStatusLock.RUnlock()
 		}
 	}
+}
+
+func (bs *BlockSyncer) AddPeer(p *Peer) {
+	bs.peerStatusLock.RLock()
+	defer bs.peerStatusLock.RUnlock()
+
+	bs.peerSet = append(bs.peerSet, p)
+	bs.peerStatus[p.peerID] = false
+	bs.peerReqTime[p.peerID] = time.Now()
 }
 
 func (bs *BlockSyncer) appendStatusMsg(msg *p2p.SyncStatusMsg) {
@@ -93,7 +109,10 @@ func (bs *BlockSyncer) statusMsgRoutine() {
 	for {
 		select {
 		case msg := <-bs.statusMsg:
-
+			height := msg.LatestHeight
+			bs.lock.RLock()
+			bs.remoteHeight = max(height, bs.remoteHeight)
+			bs.lock.RUnlock()
 		}
 	}
 }
@@ -104,6 +123,7 @@ func (bs *BlockSyncer) selectBlockHeight() int64 {
 
 	for height := bs.knownHeight + 1; height <= bs.remoteHeight; height++ {
 		if bs.blockMap[height] == nil || time.Since(bs.requestTimestamp[height]) > requestBlockInterval {
+			bs.requestTimestamp[height] = time.Now()
 			return height
 		}
 	}
@@ -130,4 +150,12 @@ func (bs *BlockSyncer) releasePeer(p *Peer) {
 	defer bs.peerStatusLock.RUnlock()
 
 	bs.peerStatus[p.peerID] = false
+}
+
+func max(h1 int64, h2 int64) int64 {
+	if h1 > h2 {
+		return h1
+	} else {
+		return h2
+	}
 }

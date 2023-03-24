@@ -1,3 +1,9 @@
+/**
+  @author: decision
+  @date: 2023/3/?
+  @note: VDF 计算协程，从 channel 中接收任务，计算后再放入 channel
+**/
+
 package node
 
 import (

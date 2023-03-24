@@ -22,6 +22,10 @@ func main() {
 		return
 	}
 
+	if trace {
+		log.SetLevel(log.TraceLevel)
+	}
+
 	if debug {
 		log.SetLevel(log.DebugLevel)
 	}

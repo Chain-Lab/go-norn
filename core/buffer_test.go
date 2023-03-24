@@ -116,9 +116,10 @@ func TestCreateGenesisBlock(t *testing.T) {
 }
 
 func TestBlockBuffer(t *testing.T) {
+	// upd(2023/3/23): 这里修改了推出区块的逻辑，测试代码未修改，可能无法通过测试
 	log.SetLevel(log.TraceLevel)
 	genesisBlock := testCreateBlock(nil, nil)
-	buffer, err := NewBlockBuffer(genesisBlock)
+	buffer, err := NewBlockBuffer(genesisBlock, nil)
 	go buffer.Run()
 	go buffer.secondProcess()
 
