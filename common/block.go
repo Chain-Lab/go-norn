@@ -20,10 +20,10 @@ func (b *Block) PrevBlockHash() string {
 
 // IsGenesisBlock 判断区块是否为创世区块，通过判断前一个区块的哈希值
 func (b *Block) IsGenesisBlock() bool {
-	prevBlockHash := b.PrevBlockHash()
+	blockHash := b.BlockHash()
 
 	// todo: 这里还只是为了实现，后面需要改为高效的算法
-	if prevBlockHash == "0000000000000000000000000000000000000000000000000000000000000000" {
+	if blockHash == "0000000000000000000000000000000000000000000000000000000000000000" {
 		return true
 	}
 	return false
