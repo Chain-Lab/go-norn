@@ -27,7 +27,7 @@ func handleStatusMsg(h *Handler, msg *p2p.Message, p *Peer) {
 }
 
 func handleNewBlockMsg(h *Handler, msg *p2p.Message, p *Peer) {
-	if h.syncStatus() != bufferSyncing || h.syncStatus() != synced {
+	if h.syncStatus() == blockSyncing || h.syncStatus() == syncPaused {
 		return
 	}
 
@@ -58,7 +58,7 @@ func handleNewBlockMsg(h *Handler, msg *p2p.Message, p *Peer) {
 }
 
 func handleNewBlockHashMsg(h *Handler, msg *p2p.Message, p *Peer) {
-	if h.syncStatus() != bufferSyncing || h.syncStatus() != synced {
+	if h.syncStatus() == blockSyncing || h.syncStatus() == syncPaused {
 		return
 	}
 
@@ -150,24 +150,6 @@ func handleGetPooledTransactionMsg(h *Handler, msg *p2p.Message, p *Peer) {
 	go respondGetPooledTransaction(tx, p)
 }
 
-//func handleGetBlockByHeightMsg(h *Handler, msg *p2p.Message, p *Peer) {
-//	if h.syncStatus() != synced {
-//		return
-//	}
-//
-//	payload := msg.Payload
-//	height := int(binary.LittleEndian.Uint64(payload))
-//
-//	block, err := h.chain.GetBlockByHeight(height)
-//	if err != nil {
-//		log.WithField("error", err).Debugln("Get block with height failed.")
-//		return
-//	}
-//
-//	//log.Infof("Send block to peer.")
-//	go respondGetBlockByHeight(block, p)
-//}
-
 func handleSyncStatusReq(h *Handler, msg *p2p.Message, p *Peer) {
 	message := h.StatusMessage()
 	go respondGetSyncStatus(message, p)
@@ -198,4 +180,15 @@ func handleSyncGetBlocksMsg(h *Handler, msg *p2p.Message, p *Peer) {
 	}
 
 	go respondSyncGetBlock(block, p)
+}
+
+func handleSyncBlockMsg(h *Handler, msg *p2p.Message, p *Peer) {
+	payload := msg.Payload
+	block, err := utils.DeserializeBlock(payload)
+
+	if err != nil {
+		log.WithField("error", err).Debugln("Block deserialize failed.")
+		return
+	}
+	h.appendBlockToSyncer(block)
 }

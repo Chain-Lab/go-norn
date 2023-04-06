@@ -19,7 +19,7 @@ const (
 	maxBlockMark        = 5
 	maxKnownBlock       = 1024
 	maxQueueBlock       = 512
-	maxBufferSize       = 6
+	maxBufferSize       = 12
 )
 
 // BlockBuffer 维护一个树形结构的缓冲区，保存当前视图下的区块信息

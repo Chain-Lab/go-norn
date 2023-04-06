@@ -30,7 +30,9 @@ var handlerMap = map[p2p.StatusCode]msgHandler{
 	p2p.StatusCodeTransactionsMsg:               handleTransactionMsg,
 	p2p.StatusCodeNewPooledTransactionHashesMsg: handleNewPooledTransactionHashesMsg,
 	p2p.StatusCodeGetPooledTransactionMsg:       handleGetPooledTransactionMsg,
-	//p2p.StatusCodeGetBlockByHeightMsg:           handleGetBlockByHeightMsg,
+	p2p.StatusCodeSyncStatusReq:                 handleSyncStatusReq,
+	p2p.StatusCodeSyncGetBlocksMsg:              handleSyncGetBlocksMsg,
+	p2p.StatusCodeSyncBlocksMsg:                 handleSyncBlockMsg,
 }
 
 var (
@@ -88,6 +90,11 @@ func NewHandler(config *HandlerConfig) (*Handler, error) {
 		return nil, err
 	}
 
+	blockSyncerConfig := &BlockSyncerConfig{
+		Chain: config.Chain,
+	}
+	syncer := NewBlockSyncer(blockSyncerConfig)
+
 	handler := &Handler{
 		// todo: 限制节点数量，Kad 应该限制了节点数量不超过20个
 		peerSet: make([]*Peer, 0, 40),
@@ -100,11 +107,13 @@ func NewHandler(config *HandlerConfig) (*Handler, error) {
 
 		txPool: config.TxPool,
 		chain:  config.Chain,
+
+		blockSyncer: syncer,
 	}
 
-	go handler.broadcastBlock()
-	go handler.broadcastTransaction()
-	go handler.packageBlockRoutine()
+	//go handler.broadcastBlock()
+	//go handler.broadcastTransaction()
+	//go handler.packageBlockRoutine()
 	handlerInst = handler
 
 	return handler, nil
@@ -129,6 +138,10 @@ func (h *Handler) packageBlockRoutine() {
 	for {
 		select {
 		case <-ticker.C:
+			if !h.synced() {
+				continue
+			}
+
 			//log.Debugln("Start package block.")
 			latest, _ := h.chain.GetLatestBlock()
 
@@ -241,6 +254,10 @@ func (h *Handler) getPeersWithoutBlock(blockHash common.Hash) []*Peer {
 		}
 	}
 	return list
+}
+
+func (h *Handler) appendBlockToSyncer(block *common.Block) {
+	h.blockSyncer.appendBlock(block)
 }
 
 func (h *Handler) getPeersWithoutTransaction(txHash common.Hash) []*Peer {

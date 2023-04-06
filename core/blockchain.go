@@ -132,7 +132,7 @@ func (bc *BlockChain) PackageNewBlock(txs []common.Transaction) (*common.Block, 
 // NewGenesisBlock 创建创世区块
 func (bc *BlockChain) NewGenesisBlock() {
 	nullHash := common.Hash{}
-
+	// todo: 创世区块应该是前一个区块的哈希为 0x0，这里需要修改
 	genesisBlock := common.Block{
 		Header: common.BlockHeader{
 			Timestamp:     time.Now().UnixMilli(),
@@ -334,20 +334,6 @@ func (bc *BlockChain) InsertBlock(block *common.Block) {
 
 	bc.db.BatchInsert(keys, values)
 }
-
-//// databaseWriter 负责插入数据到数据库的协程
-//func (bc *BlockChain) databaseWriter() {
-//	for {
-//		select {
-//		case block := <-bc.dbWriterQueue:
-//			bc.InsertBlock(block)
-//			//
-//			//if err != nil {
-//			//	log.WithField("error", err).Errorln("Insert block to database failed")
-//			//}
-//		}
-//	}
-//}
 
 func (bc *BlockChain) AppendBlockTask(block *common.Block) {
 	bc.buffer.AppendBlock(block)
