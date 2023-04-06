@@ -132,7 +132,7 @@ func (bc *BlockChain) PackageNewBlock(txs []common.Transaction) (*common.Block, 
 // NewGenesisBlock 创建创世区块
 func (bc *BlockChain) NewGenesisBlock() {
 	nullHash := common.Hash{}
-
+	// todo: 创世区块应该是前一个区块的哈希为 0x0，这里需要修改
 	genesisBlock := common.Block{
 		Header: common.BlockHeader{
 			Timestamp:     time.Now().UnixMilli(),
@@ -169,10 +169,10 @@ func (bc *BlockChain) GetLatestBlock() (*common.Block, error) {
 		return nil, err
 	}
 
-	bc.latestLock.RLock()
+	bc.latestLock.Lock()
 	bc.latestBlock = block
 	bc.latestHeight = block.Header.Height
-	bc.latestLock.RUnlock()
+	bc.latestLock.Unlock()
 
 	return block, nil
 }
@@ -265,8 +265,14 @@ func (bc *BlockChain) InsertBlock(block *common.Block) {
 	var err error
 	count := len(block.Transactions)
 
-	latestBlock, err := bc.GetLatestBlock()
+	blockHash := common.Hash(block.Header.BlockHash)
+	_, err = bc.GetBlockByHash(&blockHash)
+	if err == nil {
+		log.WithField("hash", block.BlockHash()).Warning("Block exists.")
+		return
+	}
 
+	latestBlock, err := bc.GetLatestBlock()
 	if !block.IsGenesisBlock() {
 		if err != nil {
 			log.WithField("error", err).Debugln("Get latest block failed.")
@@ -281,14 +287,14 @@ func (bc *BlockChain) InsertBlock(block *common.Block) {
 		bc.createBlockBuffer(block)
 	}
 
-	bc.latestLock.RLock()
+	bc.latestLock.Lock()
 	if block.Header.Height <= bc.latestHeight {
-		bc.latestLock.RUnlock()
+		bc.latestLock.Unlock()
 		return
 	}
 	bc.latestBlock = block
 	bc.latestHeight = block.Header.Height
-	bc.latestLock.RUnlock()
+	bc.latestLock.Unlock()
 	bc.writeBlockCache(block)
 
 	// todo: 把这里的魔数改成声明
@@ -335,22 +341,12 @@ func (bc *BlockChain) InsertBlock(block *common.Block) {
 	bc.db.BatchInsert(keys, values)
 }
 
-//// databaseWriter 负责插入数据到数据库的协程
-//func (bc *BlockChain) databaseWriter() {
-//	for {
-//		select {
-//		case block := <-bc.dbWriterQueue:
-//			bc.InsertBlock(block)
-//			//
-//			//if err != nil {
-//			//	log.WithField("error", err).Errorln("Insert block to database failed")
-//			//}
-//		}
-//	}
-//}
-
 func (bc *BlockChain) AppendBlockTask(block *common.Block) {
-	bc.buffer.AppendBlock(block)
+	if block.IsGenesisBlock() {
+		bc.InsertBlock(block)
+	} else {
+		bc.buffer.AppendBlock(block)
+	}
 }
 
 func (bc *BlockChain) GetTransactionByHash(hash common.Hash) (*common.Transaction, error) {
@@ -387,6 +383,9 @@ func (bc *BlockChain) Height() int64 {
 }
 
 func (bc *BlockChain) BufferedHeight() int64 {
+	if bc.buffer == nil {
+		return 0
+	}
 	return bc.buffer.bufferedHeight
 }
 

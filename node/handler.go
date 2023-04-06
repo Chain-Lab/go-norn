@@ -10,7 +10,7 @@ import (
 	"go-chronos/common"
 	"go-chronos/core"
 	"go-chronos/p2p"
-	"math"
+	"sync"
 	"time"
 )
 
@@ -30,7 +30,10 @@ var handlerMap = map[p2p.StatusCode]msgHandler{
 	p2p.StatusCodeTransactionsMsg:               handleTransactionMsg,
 	p2p.StatusCodeNewPooledTransactionHashesMsg: handleNewPooledTransactionHashesMsg,
 	p2p.StatusCodeGetPooledTransactionMsg:       handleGetPooledTransactionMsg,
-	//p2p.StatusCodeGetBlockByHeightMsg:           handleGetBlockByHeightMsg,
+	p2p.StatusCodeSyncStatusReq:                 handleSyncStatusReq,
+	p2p.StatusCodeSyncStatusMsg:                 handleSyncStatusMsg,
+	p2p.StatusCodeSyncGetBlocksMsg:              handleSyncGetBlocksMsg,
+	p2p.StatusCodeSyncBlocksMsg:                 handleSyncBlockMsg,
 }
 
 var (
@@ -54,7 +57,10 @@ type Handler struct {
 	txPool *core.TxPool
 	chain  *core.BlockChain
 
-	blockSyncer *BlockSyncer
+	blockSyncer  *BlockSyncer
+	startRoutine sync.Once
+
+	peerSetLock sync.RWMutex
 }
 
 // HandleStream 用于在收到对端连接时候处理 stream, 在这里构建 peer 用于通信
@@ -88,6 +94,11 @@ func NewHandler(config *HandlerConfig) (*Handler, error) {
 		return nil, err
 	}
 
+	blockSyncerConfig := &BlockSyncerConfig{
+		Chain: config.Chain,
+	}
+	syncer := NewBlockSyncer(blockSyncerConfig)
+
 	handler := &Handler{
 		// todo: 限制节点数量，Kad 应该限制了节点数量不超过20个
 		peerSet: make([]*Peer, 0, 40),
@@ -100,11 +111,12 @@ func NewHandler(config *HandlerConfig) (*Handler, error) {
 
 		txPool: config.TxPool,
 		chain:  config.Chain,
+
+		blockSyncer: syncer,
 	}
 
-	go handler.broadcastBlock()
-	go handler.broadcastTransaction()
 	go handler.packageBlockRoutine()
+	syncer.Start()
 	handlerInst = handler
 
 	return handler, nil
@@ -122,13 +134,15 @@ func GetHandlerInst() *Handler {
 }
 
 func (h *Handler) packageBlockRoutine() {
-	//ticker := time.NewTicker(1 * time.Second)
-	ticker := time.NewTicker(2 * time.Second)
-	//ticker := time.NewTicker(2 * time.Millisecond)
+	ticker := time.NewTicker(1 * time.Second)
 
 	for {
 		select {
 		case <-ticker.C:
+			if !h.synced() {
+				continue
+			}
+
 			//log.Debugln("Start package block.")
 			latest, _ := h.chain.GetLatestBlock()
 
@@ -167,6 +181,9 @@ func (h *Handler) NewPeer(peerId peer.ID, s *network.Stream) (*Peer, error) {
 		return nil, err
 	}
 
+	h.peerSetLock.Lock()
+	h.peerSetLock.Unlock()
+
 	h.peerSet = append(h.peerSet, p)
 	h.blockSyncer.AddPeer(p)
 	return p, err
@@ -196,7 +213,10 @@ func (h *Handler) broadcastBlock() {
 			peers := h.getPeersWithoutBlock(blockHash)
 
 			peersCount := len(peers)
-			countBroadcastBlock := int(math.Sqrt(float64(peersCount)))
+			//countBroadcastBlock := int(math.Sqrt(float64(peersCount)))
+			//todo: 这里是由于获取新区块的逻辑还没有，所以先全部广播
+			//  在后续完成对应的逻辑后，再修改这里的逻辑来降低广播的时间复杂度
+			countBroadcastBlock := peersCount
 			log.WithField("count", countBroadcastBlock).Debugln("Broadcast block.")
 
 			for idx := 0; idx < countBroadcastBlock; idx++ {
@@ -218,8 +238,12 @@ func (h *Handler) broadcastTransaction() {
 			peers := h.getPeersWithoutTransaction(txHash)
 
 			peersCount := len(peers)
-			countBroadcastBody := int(math.Sqrt(float64(peersCount)))
-			//log.WithField("count", countBroadcastBody).Debugln("Broadcast transaction.")
+
+			//todo: 这里是由于获取新区块的逻辑还没有，所以先全部广播
+			//  在后续完成对应的逻辑后，再修改这里的逻辑来降低广播的时间复杂度
+			//countBroadcastBody := int(math.Sqrt(float64(peersCount)))
+			countBroadcastBody := peersCount
+
 			for idx := 0; idx < countBroadcastBody; idx++ {
 				peers[idx].AsyncSendTransaction(tx)
 			}
@@ -232,27 +256,41 @@ func (h *Handler) broadcastTransaction() {
 }
 
 func (h *Handler) getPeersWithoutBlock(blockHash common.Hash) []*Peer {
+	h.peerSetLock.RLock()
+	defer h.peerSetLock.RUnlock()
+
 	list := make([]*Peer, 0, len(h.peerSet))
 	strHash := hex.EncodeToString(blockHash[:])
 	for idx := range h.peerSet {
 		p := h.peerSet[idx]
-		if !p.KnownBlock(strHash) {
+		if !p.KnownBlock(strHash) && !p.Stopped() {
 			list = append(list, p)
 		}
 	}
 	return list
 }
 
+func (h *Handler) appendBlockToSyncer(block *common.Block) {
+	h.blockSyncer.appendBlock(block)
+}
+
 func (h *Handler) getPeersWithoutTransaction(txHash common.Hash) []*Peer {
+	h.peerSetLock.RLock()
+	defer h.peerSetLock.RUnlock()
+
 	list := make([]*Peer, 0, len(h.peerSet))
 	strHash := hex.EncodeToString(txHash[:])
 	for idx := range h.peerSet {
 		p := h.peerSet[idx]
-		if !p.KnownTransaction(strHash) {
+		if !p.KnownTransaction(strHash) && !p.Stopped() {
 			list = append(list, p)
 		}
 	}
 	return list
+}
+
+func (h *Handler) SetSynced() {
+	h.blockSyncer.setSynced()
 }
 
 func (h *Handler) markBlock(hash string) {
@@ -268,16 +306,48 @@ func (h *Handler) syncStatus() uint8 {
 }
 
 func (h *Handler) synced() bool {
-	return h.blockSyncer.status == synced
+	status := h.blockSyncer.getStatus()
+	if status == synced {
+		h.startRoutine.Do(func() {
+			log.Traceln("Block sync finish!")
+			go h.broadcastBlock()
+			go h.broadcastTransaction()
+		})
+		return true
+	}
+	return false
 }
 
 // StatusMessage 生成同步信息给对端
 func (h *Handler) StatusMessage() *p2p.SyncStatusMsg {
-	block, _ := h.chain.GetLatestBlock()
+	block, err := h.chain.GetLatestBlock()
+
+	if err != nil {
+		return &p2p.SyncStatusMsg{
+			LatestHeight:        -1,
+			LatestHash:          [32]byte{},
+			BufferedStartHeight: 0,
+			BufferedEndHeight:   -1,
+		}
+	}
+
 	return &p2p.SyncStatusMsg{
 		LatestHeight:        block.Header.Height,
 		LatestHash:          block.Header.BlockHash,
 		BufferedStartHeight: 0,
 		BufferedEndHeight:   h.chain.BufferedHeight(),
+	}
+}
+
+// removePeerIfStopped 移除断开连接的 Peer
+// todo: 这里的方法感觉有点复杂，以后需要优化
+// todo: 这里不能在遍历的时候进行移除
+func (h *Handler) removePeerIfStopped(idx int) {
+	h.peerSetLock.Lock()
+	defer h.peerSetLock.Unlock()
+
+	p := h.peerSet[idx]
+	if p.Stopped() {
+		h.peerSet = append(h.peerSet[:idx], h.peerSet[idx+1:]...)
 	}
 }

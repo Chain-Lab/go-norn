@@ -14,6 +14,10 @@ import (
 	"time"
 )
 
+// 测试指令：
+// chronos -d ./data1 -g
+// chronos -d ./data2 -p
+
 func main() {
 	flag.Parse()
 
@@ -108,6 +112,8 @@ func main() {
 			case <-ticker.C:
 				log.Infof("Create genesis block.")
 				chain.NewGenesisBlock()
+
+				h.SetSynced()
 
 				if test {
 					go sendTransaction(h)

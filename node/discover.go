@@ -52,7 +52,7 @@ func Discover(ctx context.Context, h host.Host, dht *dht.IpfsDHT, rendezvous str
 						log.WithFields(log.Fields{
 							"peerID": p.ID,
 							"error":  err,
-						}).Errorln("Connect to node failed.")
+						}).Debugln("Connect to node failed.")
 						continue
 					}
 

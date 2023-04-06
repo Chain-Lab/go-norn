@@ -9,6 +9,10 @@ import (
 
 func (p *Peer) broadcastBlock() {
 	for {
+		if p.peer.Stopped() {
+			break
+		}
+
 		select {
 		case block := <-p.queuedBlocks:
 			byteBlockData, err := utils.SerializeBlock(block)
@@ -18,13 +22,17 @@ func (p *Peer) broadcastBlock() {
 				continue
 			}
 
-			p.peer.Send(p2p.StatusCodeBlockBodiesMsg, byteBlockData)
+			p.peer.Send(p2p.StatusCodeNewBlockMsg, byteBlockData)
 		}
 	}
 }
 
 func (p *Peer) broadcastBlockHash() {
 	for {
+		if p.peer.Stopped() {
+			break
+		}
+
 		select {
 		case blockHash := <-p.queuedBlockAnns:
 			p.peer.Send(p2p.StatusCodeNewBlockHashesMsg, blockHash[:])
@@ -34,6 +42,10 @@ func (p *Peer) broadcastBlockHash() {
 
 func (p *Peer) broadcastTransaction() {
 	for {
+		if p.peer.Stopped() {
+			break
+		}
+
 		select {
 		case tx := <-p.txBroadcast:
 			// todo: 对序列化的一个优化的地方，添加 sync.Pool，需要针对不同场景来设计
@@ -43,13 +55,6 @@ func (p *Peer) broadcastTransaction() {
 				log.WithField("error", err).Debugln("Serialize block failed.")
 				break
 			}
-			//log.WithFields(log.Fields{
-			//	"hash":      hex.EncodeToString(tx.Body.Hash[:]),
-			//	"expire":    tx.Body.Expire,
-			//	"data":      hex.EncodeToString(tx.Body.Data),
-			//	"payload":   hex.EncodeToString(byteTxData),
-			//	"timestamp": time.Now().Nanosecond(),
-			//}).Infoln("Send transaction.")
 			p.peer.Send(p2p.StatusCodeTransactionsMsg, byteTxData)
 		}
 	}
@@ -57,6 +62,10 @@ func (p *Peer) broadcastTransaction() {
 
 func (p *Peer) broadcastTxHash() {
 	for {
+		if p.peer.Stopped() {
+			break
+		}
+
 		select {
 		case txHash := <-p.txAnnounce:
 			p.peer.Send(p2p.StatusCodeNewPooledTransactionHashesMsg, txHash[:])
@@ -65,13 +74,17 @@ func (p *Peer) broadcastTxHash() {
 }
 
 func (p *Peer) sendStatus() {
-	ticker := time.NewTicker(5 * time.Second)
+	ticker := time.NewTicker(1 * time.Second)
 	for {
+		if p.peer.Stopped() {
+			break
+		}
+
 		select {
 		case <-ticker.C:
 			height := p.chain.Height()
 
-			requestStatusMsg(height, p)
+			requestSyncStatusMsg(height, p)
 		}
 	}
 }

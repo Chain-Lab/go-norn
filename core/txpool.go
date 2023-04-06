@@ -37,8 +37,8 @@ func NewTxPool() *TxPool {
 // Package 用于打包交易，这里返回的是 Transaction 的切片
 // todo： 需要具体观察打包交易时的效率问题
 func (pool *TxPool) Package() []common.Transaction {
-	pool.lock.RLock()
-	defer pool.lock.RUnlock()
+	pool.lock.Lock()
+	defer pool.lock.Unlock()
 
 	count := 0
 	result := make([]common.Transaction, 0)
@@ -79,8 +79,8 @@ func (pool *TxPool) Package() []common.Transaction {
 func (pool *TxPool) Add(transaction *common.Transaction) {
 	// todo: 还是需要和 Package 的锁相关联，保证 Package 能抢到锁
 	// todo: 在当前版本下先直接加锁打包
-	pool.lock.RLock()
-	defer pool.lock.RUnlock()
+	pool.lock.Lock()
+	defer pool.lock.Unlock()
 
 	txHash := hex.EncodeToString(transaction.Body.Hash[:])
 	pool.txs.Store(txHash, transaction)

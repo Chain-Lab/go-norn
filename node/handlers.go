@@ -27,7 +27,8 @@ func handleStatusMsg(h *Handler, msg *p2p.Message, p *Peer) {
 }
 
 func handleNewBlockMsg(h *Handler, msg *p2p.Message, p *Peer) {
-	if h.syncStatus() != bufferSyncing || h.syncStatus() != synced {
+	status := h.blockSyncer.getStatus()
+	if status == blockSyncing || status == syncPaused {
 		return
 	}
 
@@ -58,7 +59,8 @@ func handleNewBlockMsg(h *Handler, msg *p2p.Message, p *Peer) {
 }
 
 func handleNewBlockHashMsg(h *Handler, msg *p2p.Message, p *Peer) {
-	if h.syncStatus() != bufferSyncing || h.syncStatus() != synced {
+	status := h.blockSyncer.getStatus()
+	if status == blockSyncing || status == syncPaused {
 		return
 	}
 
@@ -72,8 +74,23 @@ func handleNewBlockHashMsg(h *Handler, msg *p2p.Message, p *Peer) {
 	go requestBlockWithHash(blockHash, p)
 }
 
+//func handleGetBlockBodiesMsg(h *Handler, msg *p2p.Message, p *Peer) {
+//	payload := msg.Payload
+//	blockHash := common.Hash(payload)
+//
+//	block, err := h.chain.GetBlockByHash(&blockHash)
+//	if err != nil {
+//		log.WithField("error", err).Debugln("Get block with by hash failed.")
+//		return
+//	}
+//
+//
+//}
+
 func handleBlockMsg(h *Handler, msg *p2p.Message, p *Peer) {
-	if h.syncStatus() != synced {
+	status := h.blockSyncer.getStatus()
+	log.WithField("status", status).Traceln("Receive block.")
+	if status != synced {
 		return
 	}
 
@@ -100,7 +117,8 @@ func handleBlockMsg(h *Handler, msg *p2p.Message, p *Peer) {
 }
 
 func handleTransactionMsg(h *Handler, msg *p2p.Message, p *Peer) {
-	if h.syncStatus() != synced {
+	status := h.blockSyncer.getStatus()
+	if status != synced {
 		return
 	}
 
@@ -125,7 +143,8 @@ func handleTransactionMsg(h *Handler, msg *p2p.Message, p *Peer) {
 }
 
 func handleNewPooledTransactionHashesMsg(h *Handler, msg *p2p.Message, p *Peer) {
-	if h.syncStatus() != synced {
+	status := h.blockSyncer.getStatus()
+	if status != synced {
 		return
 	}
 
@@ -138,7 +157,8 @@ func handleNewPooledTransactionHashesMsg(h *Handler, msg *p2p.Message, p *Peer) 
 }
 
 func handleGetPooledTransactionMsg(h *Handler, msg *p2p.Message, p *Peer) {
-	if h.syncStatus() != synced {
+	status := h.blockSyncer.getStatus()
+	if status != synced {
 		return
 	}
 
@@ -149,24 +169,6 @@ func handleGetPooledTransactionMsg(h *Handler, msg *p2p.Message, p *Peer) {
 
 	go respondGetPooledTransaction(tx, p)
 }
-
-//func handleGetBlockByHeightMsg(h *Handler, msg *p2p.Message, p *Peer) {
-//	if h.syncStatus() != synced {
-//		return
-//	}
-//
-//	payload := msg.Payload
-//	height := int(binary.LittleEndian.Uint64(payload))
-//
-//	block, err := h.chain.GetBlockByHeight(height)
-//	if err != nil {
-//		log.WithField("error", err).Debugln("Get block with height failed.")
-//		return
-//	}
-//
-//	//log.Infof("Send block to peer.")
-//	go respondGetBlockByHeight(block, p)
-//}
 
 func handleSyncStatusReq(h *Handler, msg *p2p.Message, p *Peer) {
 	message := h.StatusMessage()
@@ -182,7 +184,8 @@ func handleSyncStatusMsg(h *Handler, msg *p2p.Message, p *Peer) {
 
 // handleSyncGetBlocksMsg 处理获取某个高度的区块
 func handleSyncGetBlocksMsg(h *Handler, msg *p2p.Message, p *Peer) {
-	if h.syncStatus() != synced {
+	status := h.blockSyncer.getStatus()
+	if status != synced {
 		return
 	}
 
@@ -198,4 +201,15 @@ func handleSyncGetBlocksMsg(h *Handler, msg *p2p.Message, p *Peer) {
 	}
 
 	go respondSyncGetBlock(block, p)
+}
+
+func handleSyncBlockMsg(h *Handler, msg *p2p.Message, p *Peer) {
+	payload := msg.Payload
+	block, err := utils.DeserializeBlock(payload)
+
+	if err != nil {
+		log.WithField("error", err).Debugln("Block deserialize failed.")
+		return
+	}
+	h.appendBlockToSyncer(block)
 }
