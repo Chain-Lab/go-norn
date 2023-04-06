@@ -11,6 +11,7 @@ import (
 	"go-chronos/core"
 	"go-chronos/p2p"
 	"math"
+	"sync"
 	"time"
 )
 
@@ -31,6 +32,7 @@ var handlerMap = map[p2p.StatusCode]msgHandler{
 	p2p.StatusCodeNewPooledTransactionHashesMsg: handleNewPooledTransactionHashesMsg,
 	p2p.StatusCodeGetPooledTransactionMsg:       handleGetPooledTransactionMsg,
 	p2p.StatusCodeSyncStatusReq:                 handleSyncStatusReq,
+	p2p.StatusCodeSyncStatusMsg:                 handleSyncStatusMsg,
 	p2p.StatusCodeSyncGetBlocksMsg:              handleSyncGetBlocksMsg,
 	p2p.StatusCodeSyncBlocksMsg:                 handleSyncBlockMsg,
 }
@@ -56,7 +58,8 @@ type Handler struct {
 	txPool *core.TxPool
 	chain  *core.BlockChain
 
-	blockSyncer *BlockSyncer
+	blockSyncer  *BlockSyncer
+	startRoutine sync.Once
 }
 
 // HandleStream 用于在收到对端连接时候处理 stream, 在这里构建 peer 用于通信
@@ -111,9 +114,8 @@ func NewHandler(config *HandlerConfig) (*Handler, error) {
 		blockSyncer: syncer,
 	}
 
-	//go handler.broadcastBlock()
-	//go handler.broadcastTransaction()
-	//go handler.packageBlockRoutine()
+	go handler.packageBlockRoutine()
+	syncer.Start()
 	handlerInst = handler
 
 	return handler, nil
@@ -131,9 +133,7 @@ func GetHandlerInst() *Handler {
 }
 
 func (h *Handler) packageBlockRoutine() {
-	//ticker := time.NewTicker(1 * time.Second)
-	ticker := time.NewTicker(2 * time.Second)
-	//ticker := time.NewTicker(2 * time.Millisecond)
+	ticker := time.NewTicker(1 * time.Second)
 
 	for {
 		select {
@@ -285,12 +285,30 @@ func (h *Handler) syncStatus() uint8 {
 }
 
 func (h *Handler) synced() bool {
-	return h.blockSyncer.status == synced
+	status := h.blockSyncer.getStatus()
+	if status == synced {
+		h.startRoutine.Do(func() {
+			go h.broadcastBlock()
+			go h.broadcastTransaction()
+		})
+		return true
+	}
+	return false
 }
 
 // StatusMessage 生成同步信息给对端
 func (h *Handler) StatusMessage() *p2p.SyncStatusMsg {
-	block, _ := h.chain.GetLatestBlock()
+	block, err := h.chain.GetLatestBlock()
+
+	if err != nil {
+		return &p2p.SyncStatusMsg{
+			LatestHeight:        -1,
+			LatestHash:          [32]byte{},
+			BufferedStartHeight: 0,
+			BufferedEndHeight:   -1,
+		}
+	}
+
 	return &p2p.SyncStatusMsg{
 		LatestHeight:        block.Header.Height,
 		LatestHash:          block.Header.BlockHash,

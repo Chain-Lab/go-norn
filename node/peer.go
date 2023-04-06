@@ -143,7 +143,7 @@ func (p *Peer) Handle() {
 		select {
 		case msg := <-p.msgQueue:
 			if msg.Code != p2p.StatusCodeTransactionsMsg {
-				log.Infoln("Receive code ", msg.Code)
+				log.Debugln("Receive code ", msg.Code)
 			}
 			handle := handlerMap[msg.Code]
 

@@ -14,6 +14,10 @@ import (
 	"time"
 )
 
+// 测试指令：
+// chronos -d ./data1 -g
+// chronos -d ./data2 -p
+
 func main() {
 	flag.Parse()
 

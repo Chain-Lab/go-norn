@@ -27,7 +27,8 @@ func handleStatusMsg(h *Handler, msg *p2p.Message, p *Peer) {
 }
 
 func handleNewBlockMsg(h *Handler, msg *p2p.Message, p *Peer) {
-	if h.syncStatus() == blockSyncing || h.syncStatus() == syncPaused {
+	status := h.blockSyncer.getStatus()
+	if status == blockSyncing || status == syncPaused {
 		return
 	}
 
@@ -58,7 +59,8 @@ func handleNewBlockMsg(h *Handler, msg *p2p.Message, p *Peer) {
 }
 
 func handleNewBlockHashMsg(h *Handler, msg *p2p.Message, p *Peer) {
-	if h.syncStatus() == blockSyncing || h.syncStatus() == syncPaused {
+	status := h.blockSyncer.getStatus()
+	if status == blockSyncing || status == syncPaused {
 		return
 	}
 
@@ -73,7 +75,8 @@ func handleNewBlockHashMsg(h *Handler, msg *p2p.Message, p *Peer) {
 }
 
 func handleBlockMsg(h *Handler, msg *p2p.Message, p *Peer) {
-	if h.syncStatus() != synced {
+	status := h.blockSyncer.getStatus()
+	if status != synced {
 		return
 	}
 
@@ -100,7 +103,8 @@ func handleBlockMsg(h *Handler, msg *p2p.Message, p *Peer) {
 }
 
 func handleTransactionMsg(h *Handler, msg *p2p.Message, p *Peer) {
-	if h.syncStatus() != synced {
+	status := h.blockSyncer.getStatus()
+	if status != synced {
 		return
 	}
 
@@ -125,7 +129,8 @@ func handleTransactionMsg(h *Handler, msg *p2p.Message, p *Peer) {
 }
 
 func handleNewPooledTransactionHashesMsg(h *Handler, msg *p2p.Message, p *Peer) {
-	if h.syncStatus() != synced {
+	status := h.blockSyncer.getStatus()
+	if status != synced {
 		return
 	}
 
@@ -138,7 +143,8 @@ func handleNewPooledTransactionHashesMsg(h *Handler, msg *p2p.Message, p *Peer) 
 }
 
 func handleGetPooledTransactionMsg(h *Handler, msg *p2p.Message, p *Peer) {
-	if h.syncStatus() != synced {
+	status := h.blockSyncer.getStatus()
+	if status != synced {
 		return
 	}
 
@@ -164,7 +170,8 @@ func handleSyncStatusMsg(h *Handler, msg *p2p.Message, p *Peer) {
 
 // handleSyncGetBlocksMsg 处理获取某个高度的区块
 func handleSyncGetBlocksMsg(h *Handler, msg *p2p.Message, p *Peer) {
-	if h.syncStatus() != synced {
+	status := h.blockSyncer.getStatus()
+	if status != synced {
 		return
 	}
 

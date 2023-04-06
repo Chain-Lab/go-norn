@@ -169,10 +169,10 @@ func (bc *BlockChain) GetLatestBlock() (*common.Block, error) {
 		return nil, err
 	}
 
-	bc.latestLock.RLock()
+	bc.latestLock.Lock()
 	bc.latestBlock = block
 	bc.latestHeight = block.Header.Height
-	bc.latestLock.RUnlock()
+	bc.latestLock.Unlock()
 
 	return block, nil
 }
@@ -281,14 +281,14 @@ func (bc *BlockChain) InsertBlock(block *common.Block) {
 		bc.createBlockBuffer(block)
 	}
 
-	bc.latestLock.RLock()
+	bc.latestLock.Lock()
 	if block.Header.Height <= bc.latestHeight {
-		bc.latestLock.RUnlock()
+		bc.latestLock.Unlock()
 		return
 	}
 	bc.latestBlock = block
 	bc.latestHeight = block.Header.Height
-	bc.latestLock.RUnlock()
+	bc.latestLock.Unlock()
 	bc.writeBlockCache(block)
 
 	// todo: 把这里的魔数改成声明
@@ -373,6 +373,9 @@ func (bc *BlockChain) Height() int64 {
 }
 
 func (bc *BlockChain) BufferedHeight() int64 {
+	if bc.buffer == nil {
+		return 0
+	}
 	return bc.buffer.bufferedHeight
 }
 

@@ -65,13 +65,13 @@ func (p *Peer) broadcastTxHash() {
 }
 
 func (p *Peer) sendStatus() {
-	ticker := time.NewTicker(5 * time.Second)
+	ticker := time.NewTicker(1 * time.Second)
 	for {
 		select {
 		case <-ticker.C:
 			height := p.chain.Height()
 
-			requestStatusMsg(height, p)
+			requestSyncStatusMsg(height, p)
 		}
 	}
 }

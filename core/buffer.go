@@ -92,14 +92,14 @@ func (b *BlockBuffer) Run() {
 			b.knownBlocks.Add(blockHash, nil)
 
 			// todo: 这里对前一个区块是否在视图中的逻辑判断存在问题
-			b.updateLock.RLock()
+			b.updateLock.Lock()
 			list, ok := b.nextBlockMap[prevBlockHash]
 			if !ok {
 				if prevBlockHash != b.latestBlockHash {
 					// 前一个区块不在视图中，放到等待队列中
 					// 这里保证了 nextBlockMap 能形成树形结构
 					b.secondChan <- block
-					b.updateLock.RUnlock()
+					b.updateLock.Unlock()
 					break
 				}
 				list = make(blockList, 0, 15)
@@ -133,7 +133,7 @@ func (b *BlockBuffer) Run() {
 			}
 
 			b.blockProcessList[blockHeight] = append(processList, block)
-			b.updateLock.RUnlock()
+			b.updateLock.Unlock()
 		}
 	}
 }
@@ -156,7 +156,7 @@ func (b *BlockBuffer) secondProcess() {
 				break
 			}
 
-			b.updateLock.RLock()
+			b.updateLock.Lock()
 			list, ok := b.nextBlockMap[prevBlockHash]
 			if !ok {
 				// 区块的前一个哈希不在缓冲树中，也不是最新的区块哈希
@@ -201,7 +201,7 @@ func (b *BlockBuffer) secondProcess() {
 			}
 
 			b.blockProcessList[blockHeight] = append(processList, block)
-			b.updateLock.RUnlock()
+			b.updateLock.Unlock()
 
 			timer.Reset(secondQueueInterval)
 		}
@@ -212,8 +212,8 @@ func (b *BlockBuffer) secondProcess() {
 // 应该来说是在 bufferedHeight - latestBlockHeight >= maxSize 的情况下触发？
 // 以及，收到其他节点发来的已选取区块时触发该逻辑，但是需要确定一下高度和哈希值
 func (b *BlockBuffer) PopSelectedBlock() *common.Block {
-	b.updateLock.RLock()
-	defer b.updateLock.RUnlock()
+	b.updateLock.Lock()
+	defer b.updateLock.Unlock()
 
 	height := b.latestBlockHeight + 1
 	log.WithField("height", height).Traceln("Pop block from view.")
