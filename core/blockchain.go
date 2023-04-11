@@ -265,8 +265,14 @@ func (bc *BlockChain) InsertBlock(block *common.Block) {
 	var err error
 	count := len(block.Transactions)
 
-	latestBlock, err := bc.GetLatestBlock()
+	blockHash := common.Hash(block.Header.BlockHash)
+	_, err = bc.GetBlockByHash(&blockHash)
+	if err == nil {
+		log.WithField("hash", block.BlockHash()).Warning("Block exists.")
+		return
+	}
 
+	latestBlock, err := bc.GetLatestBlock()
 	if !block.IsGenesisBlock() {
 		if err != nil {
 			log.WithField("error", err).Debugln("Get latest block failed.")
@@ -336,7 +342,11 @@ func (bc *BlockChain) InsertBlock(block *common.Block) {
 }
 
 func (bc *BlockChain) AppendBlockTask(block *common.Block) {
-	bc.buffer.AppendBlock(block)
+	if block.IsGenesisBlock() {
+		bc.InsertBlock(block)
+	} else {
+		bc.buffer.AppendBlock(block)
+	}
 }
 
 func (bc *BlockChain) GetTransactionByHash(hash common.Hash) (*common.Transaction, error) {

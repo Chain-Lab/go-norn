@@ -76,6 +76,7 @@ func handleNewBlockHashMsg(h *Handler, msg *p2p.Message, p *Peer) {
 
 func handleBlockMsg(h *Handler, msg *p2p.Message, p *Peer) {
 	status := h.blockSyncer.getStatus()
+	log.WithField("status", status).Traceln("Receive block.")
 	if status != synced {
 		return
 	}

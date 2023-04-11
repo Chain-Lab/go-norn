@@ -18,7 +18,7 @@ func (p *Peer) broadcastBlock() {
 				continue
 			}
 
-			p.peer.Send(p2p.StatusCodeBlockBodiesMsg, byteBlockData)
+			p.peer.Send(p2p.StatusCodeNewBlockMsg, byteBlockData)
 		}
 	}
 }

@@ -113,6 +113,8 @@ func main() {
 				log.Infof("Create genesis block.")
 				chain.NewGenesisBlock()
 
+				h.SetSynced()
+
 				if test {
 					go sendTransaction(h)
 				}

@@ -36,5 +36,5 @@ func respondGetSyncStatus(msg *p2p.SyncStatusMsg, p *Peer) {
 		return
 	}
 
-	p.peer.Send(p2p.StatusCodeSyncStatusReq, byteStatusMsg)
+	p.peer.Send(p2p.StatusCodeSyncStatusMsg, byteStatusMsg)
 }

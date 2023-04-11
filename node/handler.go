@@ -133,7 +133,7 @@ func GetHandlerInst() *Handler {
 }
 
 func (h *Handler) packageBlockRoutine() {
-	ticker := time.NewTicker(1 * time.Second)
+	ticker := time.NewTicker(2 * time.Second)
 
 	for {
 		select {
@@ -272,6 +272,10 @@ func (h *Handler) getPeersWithoutTransaction(txHash common.Hash) []*Peer {
 	return list
 }
 
+func (h *Handler) SetSynced() {
+	h.blockSyncer.setSynced()
+}
+
 func (h *Handler) markBlock(hash string) {
 	h.knownBlock.Add(hash, nil)
 }
@@ -288,6 +292,7 @@ func (h *Handler) synced() bool {
 	status := h.blockSyncer.getStatus()
 	if status == synced {
 		h.startRoutine.Do(func() {
+			log.Traceln("Block sync finish!")
 			go h.broadcastBlock()
 			go h.broadcastTransaction()
 		})

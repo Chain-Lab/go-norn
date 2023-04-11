@@ -143,15 +143,18 @@ func (b *BlockBuffer) Run() {
 func (b *BlockBuffer) secondProcess() {
 	// 第二队列处理在第一队列中前一个区块不在缓冲区和链上的区块
 	timer := time.NewTimer(secondQueueInterval)
+	var block *common.Block = nil
 	for {
 		select {
 		case <-timer.C:
-			block := <-b.secondChan
+			if block == nil {
+				block = <-b.secondChan
+			}
 			blockHash := block.BlockHash()
 			prevBlockHash := block.PrevBlockHash()
 			blockHeight := block.Header.Height
 
-			if int64(block.Header.Height) <= b.latestBlockHeight {
+			if block.Header.Height <= b.latestBlockHeight {
 				timer.Reset(secondQueueInterval)
 				break
 			}
@@ -165,10 +168,11 @@ func (b *BlockBuffer) secondProcess() {
 					// 这样增加值是否会存在问题？
 					b.blockMark[blockHash]++
 
-					if b.blockMark[blockHash] < maxBlockMark {
-						b.secondChan <- block
+					if b.blockMark[blockHash] >= maxBlockMark {
+						block = nil
 					}
 					timer.Reset(secondQueueInterval)
+					b.updateLock.Unlock()
 					break
 				} else {
 					list = make(blockList, 0, 15)
@@ -201,6 +205,7 @@ func (b *BlockBuffer) secondProcess() {
 			}
 
 			b.blockProcessList[blockHeight] = append(processList, block)
+			block = nil
 			b.updateLock.Unlock()
 
 			timer.Reset(secondQueueInterval)
@@ -212,11 +217,12 @@ func (b *BlockBuffer) secondProcess() {
 // 应该来说是在 bufferedHeight - latestBlockHeight >= maxSize 的情况下触发？
 // 以及，收到其他节点发来的已选取区块时触发该逻辑，但是需要确定一下高度和哈希值
 func (b *BlockBuffer) PopSelectedBlock() *common.Block {
-	b.updateLock.Lock()
-	defer b.updateLock.Unlock()
+	// 只在两个 routine 中使用，所以不用上锁
+	//b.updateLock.Lock()
+	//defer b.updateLock.Unlock()
 
 	height := b.latestBlockHeight + 1
-	log.WithField("height", height).Traceln("Pop block from view.")
+	log.WithField("height", height).Info("Pop block from view.")
 	// 检查一下列表是否存在
 	_, ok := b.blockProcessList[height]
 
@@ -262,6 +268,8 @@ func (b *BlockBuffer) GetPriorityLeaf() *common.Block {
 // updateTreeView 更新缓存树上的每个高度的最优区块
 func (b *BlockBuffer) updateTreeView(start int64) {
 	log.Traceln("Start update buffer tree view.")
+
+	// 从高度 start 开始往后更新
 	prevBlock := b.selectedBlock[start]
 	prevBlockHash := prevBlock.BlockHash()
 	height := int64(start)
@@ -277,9 +285,9 @@ func (b *BlockBuffer) updateTreeView(start int64) {
 			continue
 		}
 
-		list, ok := b.nextBlockMap[prevBlockHash]
+		list, _ := b.nextBlockMap[prevBlockHash]
 
-		if !ok {
+		if list == nil || len(list) == 0 {
 			b.selectedBlock[height] = nil
 			prevBlock = nil
 			continue
@@ -309,7 +317,8 @@ func (b *BlockBuffer) deleteLayer(layer int64) {
 
 // selectBlockFromList 从区块列表中取出优先级最高的区块
 func (b *BlockBuffer) selectBlockFromList(list []*common.Block) *common.Block {
-	if list == nil {
+	if list == nil || len(list) == 0 {
+		log.Errorln("Block list is empty or null.")
 		return nil
 	}
 

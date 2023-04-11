@@ -33,21 +33,9 @@ type Peer struct {
 
 	wLock sync.RWMutex
 	rLock sync.RWMutex
+
+	stopped bool
 }
-
-func GetPeerContext() context.Context {
-	contextOnce.Do(func() {
-		peerContext = context.Background()
-	})
-
-	return peerContext
-}
-
-//func newPeer() *Peer {
-//	p := Peer{
-//		wg:
-//	}
-//}
 
 func NewPeer(id peer.ID, s *network.Stream, msgQueue chan *Message) (*Peer, error) {
 	p := Peer{
@@ -56,11 +44,16 @@ func NewPeer(id peer.ID, s *network.Stream, msgQueue chan *Message) (*Peer, erro
 		rw:        bufio.NewReadWriter(bufio.NewReader(*s), bufio.NewWriter(*s)),
 		msgQueue:  msgQueue,
 		sendQueue: make(chan *Message),
+		stopped:   false,
 	}
 
 	go p.Run()
 
 	return &p, nil
+}
+
+func (p *Peer) Stopped() bool {
+	return p.stopped
 }
 
 func (p *Peer) Run() {
@@ -88,6 +81,10 @@ func (p *Peer) pingLoop() {
 	log.Infoln("Start ping loop.")
 
 	for {
+		if p.stopped {
+			break
+		}
+
 		select {
 		case <-ping.C:
 			log.Debugln("Send ping to peer.")
@@ -102,6 +99,10 @@ func (p *Peer) readLoop(errc chan<- error) {
 	//var messagePool = sync.Pool{New: func() any { return new(Message) }}
 	defer p.wg.Done()
 	for {
+		if p.stopped {
+			break
+		}
+
 		log.Traceln("New read loop.")
 		dataBytes, err := p.rw.ReadBytes(0xff)
 
@@ -180,6 +181,10 @@ func (p *Peer) Send(msgCode StatusCode, payload []byte) {
 func (p *Peer) writeLoop() {
 	log.Infoln("Start write loop.")
 	for {
+		if p.stopped {
+			break
+		}
+
 		select {
 		case msg := <-p.sendQueue:
 			//msgWriter := writerPool.Get().(*karmem.Writer)
@@ -209,22 +214,13 @@ func (p *Peer) writeLoop() {
 						"length": length,
 						"code":   msg.Code,
 					}).Errorln("Send data to peer errored.")
+				p.stopped = true
 				//log.Debugf("Data bytes: %v", msgBytes)
 				break
 			}
 
 			// 这里必须强制 Flush， 否则短消息收不到
 			p.rw.Flush()
-
-			//log.WithFields(log.Fields{
-			//	"length":    length,
-			//	"code":      msg.Code,
-			//	"data":      hex.EncodeToString(msgBytes),
-			//	"timestamp": time.Now().Nanosecond(),
-			//}).Infoln("Send message to peer.")
-
-			//msgWriter.Reset()
-			//writerPool.Put(msgWriter)
 		}
 	}
 }
