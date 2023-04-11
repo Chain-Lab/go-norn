@@ -34,7 +34,7 @@ const (
 )
 
 const (
-	checkInterval        = 100 * time.Millisecond
+	checkInterval        = 50 * time.Millisecond
 	requestBlockInterval = 3 * time.Second
 )
 
@@ -98,9 +98,15 @@ func (bs *BlockSyncer) run() {
 	for {
 		select {
 		case <-ticker.C:
-			bs.peerStatusLock.RLock()
+			bs.peerStatusLock.Lock()
 			for idx := range bs.peerSet {
 				p := bs.peerSet[idx]
+
+				// todo: 这里目前不考虑大量节点的情况， 后续需要对这部分内存进行回收
+				if p.Stopped() {
+					continue
+				}
+
 				id := p.peerID
 				if time.Since(bs.peerReqTime[id]) < requestBlockInterval {
 					log.Traceln("Peer just send msg, loop continue.")
@@ -115,7 +121,7 @@ func (bs *BlockSyncer) run() {
 
 				go requestSyncGetBlock(height, p)
 			}
-			bs.peerStatusLock.RUnlock()
+			bs.peerStatusLock.Unlock()
 		}
 
 		// 关闭，不再主动拉取
@@ -148,7 +154,10 @@ func (bs *BlockSyncer) statusMsgRoutine() {
 			}
 
 			if bs.remoteHeight == bs.knownHeight {
-				log.Infoln("Reach remote block height.")
+				log.WithFields(log.Fields{
+					"remote": bs.remoteHeight,
+					"local":  bs.knownHeight,
+				}).Infoln("Reach remote block height.")
 				bs.status = bufferSyncing
 			}
 

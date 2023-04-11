@@ -215,7 +215,7 @@ func (p *Peer) writeLoop() {
 						"code":   msg.Code,
 					}).Errorln("Send data to peer errored.")
 				p.stopped = true
-				//log.Debugf("Data bytes: %v", msgBytes)
+				log.Warning("Peer closed.")
 				break
 			}
 

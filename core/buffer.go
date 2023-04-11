@@ -15,11 +15,12 @@ import (
 )
 
 const (
-	secondQueueInterval = time.Second * 5
-	maxBlockMark        = 5
-	maxKnownBlock       = 1024
-	maxQueueBlock       = 512
-	maxBufferSize       = 12
+	secondQueueInterval = 100 * time.Millisecond
+	// todo: 前期测试使用，后面需要修改限制条件
+	maxBlockMark  = 200
+	maxKnownBlock = 1024
+	maxQueueBlock = 512
+	maxBufferSize = 12
 )
 
 // BlockBuffer 维护一个树形结构的缓冲区，保存当前视图下的区块信息
@@ -123,7 +124,7 @@ func (b *BlockBuffer) Run() {
 			processList, ok := b.blockProcessList[blockHeight]
 
 			if !ok {
-				log.WithField("height", blockHeight).Info("Extend buffer height.")
+				log.WithField("height", blockHeight).Info("Extend buffer height by main queue.")
 				b.bufferedHeight = blockHeight
 				processList = make(blockList, 0, 15)
 
@@ -142,6 +143,7 @@ func (b *BlockBuffer) Run() {
 // 如果超过多次无法处理或者过期，就丢弃该区块
 func (b *BlockBuffer) secondProcess() {
 	// 第二队列处理在第一队列中前一个区块不在缓冲区和链上的区块
+	// 第二队列处理存在的一个问题：在同步的时候区块有可能长时间不能连接上一个区块，会导致同步出现问题
 	timer := time.NewTimer(secondQueueInterval)
 	var block *common.Block = nil
 	for {
@@ -160,11 +162,11 @@ func (b *BlockBuffer) secondProcess() {
 			}
 
 			b.updateLock.Lock()
-			list, ok := b.nextBlockMap[prevBlockHash]
-			if !ok {
+			list, _ := b.nextBlockMap[prevBlockHash]
+			if list == nil {
 				// 区块的前一个哈希不在缓冲树中，也不是最新的区块哈希
 				if prevBlockHash != b.latestBlockHash {
-					log.WithField("height", blockHeight).Debugf("Prev block #%s not exists.", prevBlockHash)
+					log.WithField("height", blockHeight).Infof("Prev block #%s not exists.", prevBlockHash)
 					// 这样增加值是否会存在问题？
 					b.blockMark[blockHash]++
 
@@ -182,8 +184,8 @@ func (b *BlockBuffer) secondProcess() {
 			b.nextBlockMap[blockHash] = make(blockList, 0, 15)
 
 			replaced := false
-			selected, ok := b.selectedBlock[blockHeight]
-			if !ok {
+			selected, _ := b.selectedBlock[blockHeight]
+			if selected == nil {
 				b.selectedBlock[blockHeight] = block
 			} else {
 				b.selectedBlock[blockHeight], replaced = compareBlock(selected, block)
@@ -193,10 +195,11 @@ func (b *BlockBuffer) secondProcess() {
 				b.updateTreeView(blockHeight)
 			}
 
-			processList, ok := b.blockProcessList[blockHeight]
+			// 一个坑，满足 ok=true 不一定保证数据不是 nil
+			processList, _ := b.blockProcessList[blockHeight]
 
-			if !ok {
-				log.WithField("height", blockHeight).Info("Extend buffer height.")
+			if processList == nil {
+				log.WithField("height", blockHeight).Info("Extend buffer height by second queue.")
 				b.bufferedHeight = blockHeight
 				processList = make(blockList, 0, 15)
 				if block.Header.Height-b.latestBlockHeight > maxBufferSize {

@@ -10,7 +10,6 @@ import (
 	"go-chronos/common"
 	"go-chronos/core"
 	"go-chronos/p2p"
-	"math"
 	"sync"
 	"time"
 )
@@ -60,6 +59,8 @@ type Handler struct {
 
 	blockSyncer  *BlockSyncer
 	startRoutine sync.Once
+
+	peerSetLock sync.RWMutex
 }
 
 // HandleStream 用于在收到对端连接时候处理 stream, 在这里构建 peer 用于通信
@@ -133,7 +134,7 @@ func GetHandlerInst() *Handler {
 }
 
 func (h *Handler) packageBlockRoutine() {
-	ticker := time.NewTicker(2 * time.Second)
+	ticker := time.NewTicker(1 * time.Second)
 
 	for {
 		select {
@@ -180,6 +181,9 @@ func (h *Handler) NewPeer(peerId peer.ID, s *network.Stream) (*Peer, error) {
 		return nil, err
 	}
 
+	h.peerSetLock.Lock()
+	h.peerSetLock.Unlock()
+
 	h.peerSet = append(h.peerSet, p)
 	h.blockSyncer.AddPeer(p)
 	return p, err
@@ -209,7 +213,10 @@ func (h *Handler) broadcastBlock() {
 			peers := h.getPeersWithoutBlock(blockHash)
 
 			peersCount := len(peers)
-			countBroadcastBlock := int(math.Sqrt(float64(peersCount)))
+			//countBroadcastBlock := int(math.Sqrt(float64(peersCount)))
+			//todo: 这里是由于获取新区块的逻辑还没有，所以先全部广播
+			//  在后续完成对应的逻辑后，再修改这里的逻辑来降低广播的时间复杂度
+			countBroadcastBlock := peersCount
 			log.WithField("count", countBroadcastBlock).Debugln("Broadcast block.")
 
 			for idx := 0; idx < countBroadcastBlock; idx++ {
@@ -231,8 +238,12 @@ func (h *Handler) broadcastTransaction() {
 			peers := h.getPeersWithoutTransaction(txHash)
 
 			peersCount := len(peers)
-			countBroadcastBody := int(math.Sqrt(float64(peersCount)))
-			//log.WithField("count", countBroadcastBody).Debugln("Broadcast transaction.")
+
+			//todo: 这里是由于获取新区块的逻辑还没有，所以先全部广播
+			//  在后续完成对应的逻辑后，再修改这里的逻辑来降低广播的时间复杂度
+			//countBroadcastBody := int(math.Sqrt(float64(peersCount)))
+			countBroadcastBody := peersCount
+
 			for idx := 0; idx < countBroadcastBody; idx++ {
 				peers[idx].AsyncSendTransaction(tx)
 			}
@@ -245,11 +256,14 @@ func (h *Handler) broadcastTransaction() {
 }
 
 func (h *Handler) getPeersWithoutBlock(blockHash common.Hash) []*Peer {
+	h.peerSetLock.RLock()
+	defer h.peerSetLock.RUnlock()
+
 	list := make([]*Peer, 0, len(h.peerSet))
 	strHash := hex.EncodeToString(blockHash[:])
 	for idx := range h.peerSet {
 		p := h.peerSet[idx]
-		if !p.KnownBlock(strHash) {
+		if !p.KnownBlock(strHash) && !p.Stopped() {
 			list = append(list, p)
 		}
 	}
@@ -261,11 +275,14 @@ func (h *Handler) appendBlockToSyncer(block *common.Block) {
 }
 
 func (h *Handler) getPeersWithoutTransaction(txHash common.Hash) []*Peer {
+	h.peerSetLock.RLock()
+	defer h.peerSetLock.RUnlock()
+
 	list := make([]*Peer, 0, len(h.peerSet))
 	strHash := hex.EncodeToString(txHash[:])
 	for idx := range h.peerSet {
 		p := h.peerSet[idx]
-		if !p.KnownTransaction(strHash) {
+		if !p.KnownTransaction(strHash) && !p.Stopped() {
 			list = append(list, p)
 		}
 	}
@@ -319,5 +336,18 @@ func (h *Handler) StatusMessage() *p2p.SyncStatusMsg {
 		LatestHash:          block.Header.BlockHash,
 		BufferedStartHeight: 0,
 		BufferedEndHeight:   h.chain.BufferedHeight(),
+	}
+}
+
+// removePeerIfStopped 移除断开连接的 Peer
+// todo: 这里的方法感觉有点复杂，以后需要优化
+// todo: 这里不能在遍历的时候进行移除
+func (h *Handler) removePeerIfStopped(idx int) {
+	h.peerSetLock.Lock()
+	defer h.peerSetLock.Unlock()
+
+	p := h.peerSet[idx]
+	if p.Stopped() {
+		h.peerSet = append(h.peerSet[:idx], h.peerSet[idx+1:]...)
 	}
 }

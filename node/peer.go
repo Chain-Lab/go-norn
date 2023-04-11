@@ -138,8 +138,16 @@ func (p *Peer) AsyncSendTxHash(txHash common.Hash) {
 	p.txAnnounce <- txHash
 }
 
+func (p *Peer) Stopped() bool {
+	return p.peer.Stopped()
+}
+
 func (p *Peer) Handle() {
 	for {
+		if p.peer.Stopped() {
+			break
+		}
+
 		select {
 		case msg := <-p.msgQueue:
 			if msg.Code != p2p.StatusCodeTransactionsMsg {
