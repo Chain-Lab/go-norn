@@ -124,7 +124,7 @@ func (b *BlockBuffer) Run() {
 			processList, ok := b.blockProcessList[blockHeight]
 
 			if !ok {
-				log.WithField("height", blockHeight).Info("Extend buffer height by main queue.")
+				log.WithField("height", blockHeight).Debugln("Extend buffer height by main queue.")
 				b.bufferedHeight = blockHeight
 				processList = make(blockList, 0, 15)
 
@@ -199,7 +199,7 @@ func (b *BlockBuffer) secondProcess() {
 			processList, _ := b.blockProcessList[blockHeight]
 
 			if processList == nil {
-				log.WithField("height", blockHeight).Info("Extend buffer height by second queue.")
+				log.WithField("height", blockHeight).Debugln("Extend buffer height by second queue.")
 				b.bufferedHeight = blockHeight
 				processList = make(blockList, 0, 15)
 				if block.Header.Height-b.latestBlockHeight > maxBufferSize {

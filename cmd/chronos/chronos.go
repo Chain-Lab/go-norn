@@ -114,12 +114,12 @@ func main() {
 				chain.NewGenesisBlock()
 
 				h.SetSynced()
-
-				if test {
-					go sendTransaction(h)
-				}
 			}
 		}()
+	}
+
+	if test {
+		go sendTransaction(h)
 	}
 
 	select {}

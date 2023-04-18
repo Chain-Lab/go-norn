@@ -139,7 +139,7 @@ func (h *Handler) packageBlockRoutine() {
 	for {
 		select {
 		case <-ticker.C:
-			if !h.synced() {
+			if !h.Synced() {
 				continue
 			}
 
@@ -152,7 +152,7 @@ func (h *Handler) packageBlockRoutine() {
 			}
 
 			txs := h.txPool.Package()
-			log.Debugf("Package %d txs.", len(txs))
+			log.Infof("Package %d txs.", len(txs))
 			newBlock, err := h.chain.PackageNewBlock(txs)
 
 			if err != nil {
@@ -231,6 +231,7 @@ func (h *Handler) broadcastBlock() {
 }
 
 func (h *Handler) broadcastTransaction() {
+	//log.Infof("Start broadcast.")
 	for {
 		select {
 		case tx := <-h.txBroadcastQueue:
@@ -305,7 +306,7 @@ func (h *Handler) syncStatus() uint8 {
 	return h.blockSyncer.status
 }
 
-func (h *Handler) synced() bool {
+func (h *Handler) Synced() bool {
 	status := h.blockSyncer.getStatus()
 	if status == synced {
 		h.startRoutine.Do(func() {
