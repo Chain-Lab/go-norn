@@ -11,7 +11,10 @@ import (
 	log "github.com/sirupsen/logrus"
 	"go-chronos/common"
 	"go-chronos/core"
+	"go-chronos/crypto"
 	"go-chronos/p2p"
+	"go-chronos/utils"
+	"math/big"
 	"sync"
 	"time"
 )
@@ -154,15 +157,32 @@ func (bs *BlockSyncer) statusMsgRoutine() {
 			}
 
 			if bs.remoteHeight == bs.knownHeight {
-				log.WithFields(log.Fields{
-					"remote": bs.remoteHeight,
-					"local":  bs.knownHeight,
-				}).Infoln("Reach remote block height.")
+				//log.WithFields(log.Fields{
+				//	"remote": bs.remoteHeight,
+				//	"local":  bs.knownHeight,
+				//}).Infoln("Reach remote block height.")
 				bs.status = bufferSyncing
 			}
 
 			if bs.knownHeight == bs.targetHeight {
 				log.Infoln("Reach target block height.")
+				// 非创世区块节点在这里才到达同步完成的状态
+				go func() {
+					// todo: 处理报错
+					block, _ := bs.chain.GetLatestBlock()
+					bytesParams := block.Header.Params
+					params, _ := utils.DeserializeGeneralParams(bytesParams)
+
+					seed := new(big.Int)
+					pi := new(big.Int)
+
+					seed.SetBytes(params.Result)
+					pi.SetBytes(params.Proof)
+
+					calculator := crypto.GetCalculatorInstance()
+					calculator.AppendNewSeed(seed, pi)
+				}()
+
 				bs.status = synced
 			}
 

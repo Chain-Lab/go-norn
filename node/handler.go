@@ -1,6 +1,7 @@
 package node
 
 import (
+	"crypto/elliptic"
 	"encoding/hex"
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/libp2p/go-libp2p/core/network"
@@ -9,6 +10,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"go-chronos/common"
 	"go-chronos/core"
+	"go-chronos/crypto"
 	"go-chronos/p2p"
 	"sync"
 	"time"
@@ -139,7 +141,8 @@ func (h *Handler) packageBlockRoutine() {
 	for {
 		select {
 		case <-ticker.C:
-			if !h.synced() {
+			if !h.Synced() {
+				//log.Infoln("Waiting for node synced.")
 				continue
 			}
 
@@ -147,13 +150,31 @@ func (h *Handler) packageBlockRoutine() {
 			latest, _ := h.chain.GetLatestBlock()
 
 			if latest == nil {
-				log.Debugln("Waiting for genesis block.")
+				log.Infoln("Waiting for genesis block.")
 				continue
 			}
 
+			calc := crypto.GetCalculatorInstance()
+			seed, pi := calc.GetSeedParams()
+
+			consensus, err := crypto.VRFCheckLocalConsensus(seed.Bytes())
+			if !consensus || err != nil {
+				log.Infoln("Local is not consensus node.")
+				continue
+			}
+
+			randNumber, s, t, err := crypto.VRFCalculate(elliptic.P256(), seed.Bytes())
+			params := common.GeneralParams{
+				Result:       seed.Bytes(),
+				Proof:        pi.Bytes(),
+				RandomNumber: [33]byte(randNumber),
+				S:            s.Bytes(),
+				T:            t.Bytes(),
+			}
+
 			txs := h.txPool.Package()
-			log.Debugf("Package %d txs.", len(txs))
-			newBlock, err := h.chain.PackageNewBlock(txs)
+			//log.Infof("Package %d txs.", len(txs))
+			newBlock, err := h.chain.PackageNewBlock(txs, &params)
 
 			if err != nil {
 				log.WithField("error", err).Debugln("Package new block failed.")
@@ -217,7 +238,7 @@ func (h *Handler) broadcastBlock() {
 			//todo: 这里是由于获取新区块的逻辑还没有，所以先全部广播
 			//  在后续完成对应的逻辑后，再修改这里的逻辑来降低广播的时间复杂度
 			countBroadcastBlock := peersCount
-			log.WithField("count", countBroadcastBlock).Debugln("Broadcast block.")
+			log.WithField("count", countBroadcastBlock).Infoln("Broadcast block.")
 
 			for idx := 0; idx < countBroadcastBlock; idx++ {
 				peers[idx].AsyncSendNewBlock(block)
@@ -231,6 +252,7 @@ func (h *Handler) broadcastBlock() {
 }
 
 func (h *Handler) broadcastTransaction() {
+	//log.Infof("Start broadcast.")
 	for {
 		select {
 		case tx := <-h.txBroadcastQueue:
@@ -305,7 +327,7 @@ func (h *Handler) syncStatus() uint8 {
 	return h.blockSyncer.status
 }
 
-func (h *Handler) synced() bool {
+func (h *Handler) Synced() bool {
 	status := h.blockSyncer.getStatus()
 	if status == synced {
 		h.startRoutine.Do(func() {

@@ -4,12 +4,15 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
+	"github.com/gookit/config/v2"
 	lru "github.com/hashicorp/golang-lru"
 	log "github.com/sirupsen/logrus"
 	"github.com/syndtr/goleveldb/leveldb/errors"
 	"go-chronos/common"
+	"go-chronos/crypto"
 	"go-chronos/utils"
 	karmem "karmem.org/golang"
+	"math/big"
 	"sync"
 	"time"
 )
@@ -38,9 +41,10 @@ type BlockChain struct {
 	latestHeight int64
 	latestLock   sync.RWMutex
 
-	bufferChan chan *common.Block
-	buffer     *BlockBuffer
-	appendLock sync.RWMutex
+	bufferChan    chan *common.Block
+	buffer        *BlockBuffer
+	appendLock    sync.RWMutex
+	genesisParams *common.GenesisParams
 }
 
 func NewBlockchain(db *utils.LevelDB) *BlockChain {
@@ -82,6 +86,10 @@ func NewBlockchain(db *utils.LevelDB) *BlockChain {
 	if latest != nil {
 		log.Traceln("Block database is not null, create buffer.")
 		chain.createBlockBuffer(latest)
+
+		// 加载创世区块参数
+		genesis, _ := chain.GetBlockByHeight(0)
+		chain.genesisInitialization(genesis)
 	}
 	go chain.BlockProcessRoutine()
 	return chain
@@ -98,9 +106,22 @@ func (bc *BlockChain) BlockProcessRoutine() {
 }
 
 // PackageNewBlock 打包新的区块，传入交易序列
-func (bc *BlockChain) PackageNewBlock(txs []common.Transaction) (*common.Block, error) {
+func (bc *BlockChain) PackageNewBlock(txs []common.Transaction, params *common.GeneralParams) (*common.Block, error) {
 	log.Traceln("Start package new block.")
+	paramsBytes, err := utils.SerializeGeneralParams(params)
+
+	if err != nil {
+		log.WithField("error", err).Errorln("Serialize params failed while package block.")
+		return nil, err
+	}
+
 	bestBlock := bc.buffer.GetPriorityLeaf()
+	publicKey, err := hex.DecodeString(config.String("consensus.pub"))
+
+	if err != nil {
+		log.Errorln("Get public key from config failed.")
+		return nil, err
+	}
 
 	merkleRoot := BuildMerkleTree(txs)
 	block := common.Block{
@@ -110,6 +131,8 @@ func (bc *BlockChain) PackageNewBlock(txs []common.Transaction) (*common.Block, 
 			BlockHash:     [32]byte{},
 			MerkleRoot:    [32]byte(merkleRoot),
 			Height:        bestBlock.Header.Height + 1,
+			PublicKey:     [33]byte(publicKey),
+			Params:        paramsBytes,
 		},
 		Transactions: txs,
 	}
@@ -131,6 +154,30 @@ func (bc *BlockChain) PackageNewBlock(txs []common.Transaction) (*common.Block, 
 
 // NewGenesisBlock 创建创世区块
 func (bc *BlockChain) NewGenesisBlock() {
+	// 获取本地高度为 0 的区块，检查创世区块是否存在
+	block, _ := bc.GetBlockByHeight(0)
+
+	if block != nil {
+		log.Errorln("Genesis block already exists.")
+		return
+	}
+
+	// 生成创世区块内的 VDF 参数
+	genesisParams, err := crypto.GenerateGenesisParams()
+
+	if err != nil {
+		log.WithField("error", err).Errorln("Generate genesis params failed.")
+		return
+	}
+
+	// 对参数进行序列化为字节数组
+	genesisParamsBytes, err := utils.SerializeGenesisParams(genesisParams)
+
+	if err != nil {
+		log.WithField("error", err).Errorln("Genesis params serialize error.")
+		return
+	}
+
 	nullHash := common.Hash{}
 	// todo: 创世区块应该是前一个区块的哈希为 0x0，这里需要修改
 	genesisBlock := common.Block{
@@ -140,11 +187,11 @@ func (bc *BlockChain) NewGenesisBlock() {
 			BlockHash:     [32]byte{},
 			MerkleRoot:    [32]byte(nullHash),
 			Height:        0,
+			Params:        genesisParamsBytes,
 		},
 		Transactions: []common.Transaction{},
 	}
 
-	//println(hex.EncodeToString(nullHash[:]))
 	bc.InsertBlock(&genesisBlock)
 }
 
@@ -266,6 +313,8 @@ func (bc *BlockChain) InsertBlock(block *common.Block) {
 	count := len(block.Transactions)
 
 	blockHash := common.Hash(block.Header.BlockHash)
+
+	// 获取对应哈希的区块，如果区块存在，说明链上已经存在该区块
 	_, err = bc.GetBlockByHash(&blockHash)
 	if err == nil {
 		log.WithField("hash", block.BlockHash()).Warning("Block exists.")
@@ -285,6 +334,7 @@ func (bc *BlockChain) InsertBlock(block *common.Block) {
 		}
 	} else {
 		bc.createBlockBuffer(block)
+		bc.genesisInitialization(block)
 	}
 
 	bc.latestLock.Lock()
@@ -339,14 +389,33 @@ func (bc *BlockChain) InsertBlock(block *common.Block) {
 	}
 
 	bc.db.BatchInsert(keys, values)
+	seed := new(big.Int)
+	proof := new(big.Int)
+
+	// todo: 异常处理
+	if block.Header.Height == 0 {
+		params, _ := utils.DeserializeGenesisParams(block.Header.Params)
+		// todo: 将编码转换的过程放入到VRF代码中
+		seed.SetBytes(params.Seed[:])
+		proof.SetInt64(0)
+	} else {
+		params, _ := utils.DeserializeGeneralParams(block.Header.Params)
+		// todo: 将编码转换的过程放入到VRF代码中
+		seed.SetBytes(params.Result)
+		proof.SetBytes(params.Proof)
+	}
+	calculator := crypto.GetCalculatorInstance()
+	calculator.AppendNewSeed(seed, proof)
 }
 
 func (bc *BlockChain) AppendBlockTask(block *common.Block) {
 	if block.IsGenesisBlock() {
 		bc.InsertBlock(block)
-	} else {
-		bc.buffer.AppendBlock(block)
+		return
 	}
+
+	log.Infoln("Append block to buffer.")
+	bc.buffer.AppendBlock(block)
 }
 
 func (bc *BlockChain) GetTransactionByHash(hash common.Hash) (*common.Transaction, error) {
@@ -399,4 +468,22 @@ func (bc *BlockChain) createBlockBuffer(latest *common.Block) {
 	// todo: 需要处理报错
 	log.Traceln("Create new block buffer.")
 	bc.buffer, _ = NewBlockBuffer(latest, bc.bufferChan)
+}
+
+func (bc *BlockChain) genesisInitialization(block *common.Block) {
+	if block != nil {
+		// todo: 错误处理
+		// 对区块中的参数进行反序列化
+		genesisParams, _ := utils.DeserializeGenesisParams(block.Header.Params)
+		bc.genesisParams = genesisParams
+
+		pp := new(big.Int)
+		order := new(big.Int)
+		// 设置大整数的值
+		pp.SetBytes(genesisParams.VerifyParam[:])
+		order.SetBytes(genesisParams.Order[:])
+
+		// 初始化
+		crypto.CalculatorInitialization(pp, order, genesisParams.TimeParam)
+	}
 }

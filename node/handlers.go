@@ -11,8 +11,10 @@ import (
 	"encoding/hex"
 	log "github.com/sirupsen/logrus"
 	"go-chronos/common"
+	"go-chronos/crypto"
 	"go-chronos/p2p"
 	"go-chronos/utils"
+	"math/big"
 )
 
 func handleStatusMsg(h *Handler, msg *p2p.Message, p *Peer) {
@@ -26,6 +28,7 @@ func handleStatusMsg(h *Handler, msg *p2p.Message, p *Peer) {
 	//}
 }
 
+// handleNewBlockMsg 接收对端节点的新区块
 func handleNewBlockMsg(h *Handler, msg *p2p.Message, p *Peer) {
 	status := h.blockSyncer.getStatus()
 	if status == blockSyncing || status == syncPaused {
@@ -51,11 +54,15 @@ func handleNewBlockMsg(h *Handler, msg *p2p.Message, p *Peer) {
 
 	if block.Header.Height == 0 {
 		go h.chain.InsertBlock(block)
-	} else {
-		h.chain.AppendBlockTask(block)
+		return
 	}
 
-	h.blockBroadcastQueue <- block
+	if verifyBlockVRF(block) {
+		h.chain.AppendBlockTask(block)
+		h.blockBroadcastQueue <- block
+	} else {
+		log.Warning("Block VRF verify failed.")
+	}
 }
 
 func handleNewBlockHashMsg(h *Handler, msg *p2p.Message, p *Peer) {
@@ -73,19 +80,6 @@ func handleNewBlockHashMsg(h *Handler, msg *p2p.Message, p *Peer) {
 
 	go requestBlockWithHash(blockHash, p)
 }
-
-//func handleGetBlockBodiesMsg(h *Handler, msg *p2p.Message, p *Peer) {
-//	payload := msg.Payload
-//	blockHash := common.Hash(payload)
-//
-//	block, err := h.chain.GetBlockByHash(&blockHash)
-//	if err != nil {
-//		log.WithField("error", err).Debugln("Get block with by hash failed.")
-//		return
-//	}
-//
-//
-//}
 
 func handleBlockMsg(h *Handler, msg *p2p.Message, p *Peer) {
 	status := h.blockSyncer.getStatus()
@@ -111,7 +105,10 @@ func handleBlockMsg(h *Handler, msg *p2p.Message, p *Peer) {
 
 	if block.Header.Height == 0 {
 		go h.chain.InsertBlock(block)
-	} else {
+		return
+	}
+
+	if verifyBlockVRF(block) {
 		h.chain.AppendBlockTask(block)
 	}
 }
@@ -212,4 +209,32 @@ func handleSyncBlockMsg(h *Handler, msg *p2p.Message, p *Peer) {
 		return
 	}
 	h.appendBlockToSyncer(block)
+}
+
+func verifyBlockVRF(block *common.Block) bool {
+	//println(hex.EncodeToString(block.Header.PublicKey[:]))
+	bytesParams := block.Header.Params
+	params, err := utils.DeserializeGeneralParams(bytesParams)
+
+	// todo: 如果这里的数据不全，导致反序列化出错可能会使得这个区块无法正常添加
+	if err != nil {
+		log.WithField("error", err).Warning("Deserialize params failed.")
+		return false
+	}
+
+	s := new(big.Int)
+	t := new(big.Int)
+	publicKey := crypto.Bytes2PublicKey(block.Header.PublicKey[:])
+
+	s.SetBytes(params.S)
+	t.SetBytes(params.T)
+
+	verified, err := crypto.VRFCheckRemoteConsensus(publicKey, params.Result, s, t, params.RandomNumber[:])
+
+	if err != nil || !verified {
+		log.Debugln("Verify VRF failed.")
+		return false
+	}
+
+	return true
 }

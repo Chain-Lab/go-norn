@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+option go_package="rpc/pb";
+
+service Transaction {
+  rpc SubmitTransaction(SubmitTransactionReq) returns (SubmitTransactionRsp);
+}
+
+// 生成 .go 文件指令：protoc --go_out=. transaction.proto
+// 参考文档：https://grpc.io/docs/languages/go/quickstart/
+
+enum SubmitTransactionStatus {
+  Default = 0;
+  SUCCESS = 100;
+  SIGNATURE_FAILED = -101;            // 签名校验错误
+  DECODE_FAILED = -102;               // 解码失败
+  DESERIALIZE_FAILED = -103;          // 反序列化失败
+  FORMAT_ERROR = -104;                // 交易格式错误，字段校验失败
+  TRANSACTION_EXISTS = -105;          // 交易已存在
+}
+
+message SubmitTransactionReq{
+  // base16 编码，传输效率？
+  optional string signedTransaction = 1;
+}
+
+message SubmitTransactionRsp {
+  optional SubmitTransactionStatus status = 1;
+  optional string error = 2;
+}

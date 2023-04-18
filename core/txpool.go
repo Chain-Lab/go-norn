@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	maxTxPackageCount = 5001
+	maxTxPackageCount = 8001
 )
 
 var (
@@ -25,13 +25,16 @@ type TxPool struct {
 	lock   sync.RWMutex
 }
 
-func NewTxPool() *TxPool {
-	return &TxPool{
-		//txQueue: make([]*common.Hash, 0, 8192),
-		txQueue: make([]string, 0, 8192),
-		//txs:     sync.Map{},
-		//txs: make(map[common.Hash]*common.Transaction),
-	}
+func GetTxPoolInst() *TxPool {
+	txOnce.Do(func() {
+		txPoolInst = &TxPool{
+			//txQueue: make([]*common.Hash, 0, 8192),
+			txQueue: make([]string, 0, 8192),
+			//txs:     sync.Map{},
+			//txs: make(map[common.Hash]*common.Transaction),
+		}
+	})
+	return txPoolInst
 }
 
 // Package 用于打包交易，这里返回的是 Transaction 的切片
@@ -58,10 +61,10 @@ func (pool *TxPool) Package() []common.Transaction {
 		}
 
 		tx := value.(*common.Transaction)
-		if !tx.Verify() {
-			log.Errorln("Verify failed.")
-			continue
-		}
+		//if !tx.Verify() {
+		//	log.Errorln("Verify failed.")
+		//	continue
+		//}
 		// todo： 这里是传值还是传指针？
 		result = append(result, *tx)
 		count++

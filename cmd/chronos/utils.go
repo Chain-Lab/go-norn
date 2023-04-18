@@ -61,8 +61,9 @@ func NewKDHT(ctx context.Context, host host.Host, bootstrapPeers []multiaddr.Mul
 }
 
 func sendTransaction(h *node.Handler) {
+	//log.Infof("Start send transactions.")
 	prv, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	//ticket := time.NewTicker(50 * time.Millisecond)
+	//ticket := time.NewTicker(1 * time.Millisecond)
 
 	for {
 		//select {
