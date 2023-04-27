@@ -4,7 +4,7 @@
   @note: VDF 计算协程，从 channel 中接收任务，计算后再放入 channel
 **/
 
-package node
+package crypto
 
 import (
 	"crypto/rand"
