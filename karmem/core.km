@@ -14,12 +14,26 @@ struct Transaction inline {
     Body TransactionBody;
 }
 
+struct GenesisParams table {
+
+}
+
+struct GeneralParams table {
+    Result []byte;
+    Proof []byte;
+    RandomNumber [33]byte
+    s []byte;
+    t []byte;
+}
+
 struct BlockHeader table {
     Timestamp int64;
     PrevBlockHash [32]byte;
     BlockHash [32]byte;
     MerkleRoot [32]byte;
     Height int64;
+    PublicKey [33]byte;
+    Params []bytes;
 }
 
 struct Block table {
