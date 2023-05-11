@@ -35,7 +35,6 @@ func GenerateParams() (*big.Int, *big.Int, error) {
 
 	p, err := rand.Prime(r, 512)
 	if err != nil {
-
 		return nil, nil, err
 	}
 
