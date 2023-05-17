@@ -9,6 +9,12 @@ package crypto
 import (
 	"crypto/rand"
 	"math/big"
+	"sync"
+)
+
+var (
+	calculatorOnce sync.Once
+	calculatorInst *Calculator
 )
 
 type Calculator struct {
@@ -24,8 +30,21 @@ type Calculator struct {
 	changed bool
 }
 
-func NewCalculator() (*Calculator, error) {
-	return nil, nil
+func GetCalculatorInstance() *Calculator {
+	calculatorOnce.Do(func() {
+		calculatorInst = newCalculator()
+	})
+	return calculatorInst
+}
+
+// todo: 传入参数进行初始化
+func newCalculator() *Calculator {
+	return nil
+}
+
+// ReplaceCalculate 在计算运行时修改此时的运行参数
+func (c *Calculator) ReplaceCalculate() {
+
 }
 
 // GenerateParams 用于生成计算参数，返回 order(n), proof_param
