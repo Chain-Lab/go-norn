@@ -74,19 +74,6 @@ func handleNewBlockHashMsg(h *Handler, msg *p2p.Message, p *Peer) {
 	go requestBlockWithHash(blockHash, p)
 }
 
-//func handleGetBlockBodiesMsg(h *Handler, msg *p2p.Message, p *Peer) {
-//	payload := msg.Payload
-//	blockHash := common.Hash(payload)
-//
-//	block, err := h.chain.GetBlockByHash(&blockHash)
-//	if err != nil {
-//		log.WithField("error", err).Debugln("Get block with by hash failed.")
-//		return
-//	}
-//
-//
-//}
-
 func handleBlockMsg(h *Handler, msg *p2p.Message, p *Peer) {
 	status := h.blockSyncer.getStatus()
 	log.WithField("status", status).Traceln("Receive block.")

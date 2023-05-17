@@ -8,6 +8,8 @@ package crypto
 
 import (
 	"crypto/rand"
+	log "github.com/sirupsen/logrus"
+	"go-chronos/common"
 	"math/big"
 	"sync"
 )
@@ -25,26 +27,48 @@ type Calculator struct {
 	// 这三个参数区块存储在创世区块上
 	proofParam *big.Int
 	order      *big.Int
-	timeParam  int
+	timeParam  int64
+
+	seed *big.Int
 
 	changed bool
 }
 
+// GetCalculatorInstance 所有的对 VDF 计算类的操作必须从这里获取实例
 func GetCalculatorInstance() *Calculator {
-	calculatorOnce.Do(func() {
-		calculatorInst = newCalculator()
-	})
+	if calculatorInst == nil {
+		log.Fatal("Calculator not init.")
+		return nil
+	}
 	return calculatorInst
 }
 
-// todo: 传入参数进行初始化
-func newCalculator() *Calculator {
-	return nil
+func CalculatorInitialization(pp *big.Int, order *big.Int, t int64) {
+	calculatorOnce.Do(func() {
+		calculatorInst = &Calculator{
+			seedChannel:   make(chan *big.Int),
+			resultChannel: make(chan *big.Int),
+			proofChannel:  make(chan *big.Int),
+
+			proofParam: pp,
+			order:      order,
+			timeParam:  t,
+
+			changed: false,
+		}
+
+		go calculatorInst.run()
+	})
 }
 
-// ReplaceCalculate 在计算运行时修改此时的运行参数
-func (c *Calculator) ReplaceCalculate() {
+// AppendNewSeed 在计算运行时修改此时的运行参数
+func (c *Calculator) AppendNewSeed(seed *big.Int) {
+	if c.seed.Cmp(seed) == 0 {
+		return
+	}
 
+	c.seedChannel <- seed
+	c.changed = true
 }
 
 // GenerateParams 用于生成计算参数，返回 order(n), proof_param
@@ -72,10 +96,11 @@ func GenerateParams() (*big.Int, *big.Int, error) {
 	return n, pp, nil
 }
 
-func (c *Calculator) Run() {
+func (c *Calculator) run() {
 	for {
 		select {
 		case seed := <-c.seedChannel:
+			c.seed = seed
 			pi, result := c.calculate(seed)
 
 			if pi != nil {
@@ -99,7 +124,7 @@ func (c *Calculator) calculate(seed *big.Int) (*big.Int, *big.Int) {
 	// result = g^(2^t)
 	// 注： 这里如果直接计算 m^a mod n 的时间复杂度是接近 O(t) 的
 	// 所以在 t 足够大的情况下是可以抵御攻击的
-	for round := 0; round < c.timeParam; round++ {
+	for round := int64(0); round < c.timeParam; round++ {
 		if c.changed {
 			return nil, nil
 		}
@@ -140,4 +165,26 @@ func (c *Calculator) Verify(seed *big.Int, pi *big.Int, result *big.Int) bool {
 	h = h.Mod(h, c.order)
 
 	return result.Cmp(h) == 0
+}
+
+func GenerateGenesisParams() (*common.GenesisParams, error) {
+	genesisParams := new(common.GenesisParams)
+	order, pp, err := GenerateParams()
+
+	if err != nil {
+		return nil, err
+	}
+
+	seed, err := rand.Prime(rand.Reader, 256)
+
+	if err != nil {
+		return nil, err
+	}
+
+	genesisParams.Order = [256]byte(order.Bytes())
+	genesisParams.TimeParam = 10000000
+	genesisParams.VerifyParam = [32]byte(pp.Bytes())
+	genesisParams.Seed = [32]byte(seed.Bytes())
+
+	return genesisParams, nil
 }

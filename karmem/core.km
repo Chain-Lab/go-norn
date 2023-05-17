@@ -16,7 +16,7 @@ struct Transaction inline {
 
 struct GenesisParams table {
     Order [256]byte;
-    TimeParam [32]byte;
+    TimeParam int64;
     Seed [32]byte;
     VerifyParam [32]byte;
 }

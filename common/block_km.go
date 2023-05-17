@@ -7,7 +7,7 @@ import (
 
 var _ unsafe.Pointer
 
-var _Null = make([]byte, 360)
+var _Null = make([]byte, 336)
 var _NullReader = karmem.NewReader(_Null)
 
 type (
@@ -196,7 +196,7 @@ func (x *Transaction) Read(viewer *TransactionViewer, reader *karmem.Reader) {
 
 type GenesisParams struct {
 	Order       [256]byte
-	TimeParam   [32]byte
+	TimeParam   int64
 	Seed        [32]byte
 	VerifyParam [32]byte
 }
@@ -219,21 +219,21 @@ func (x *GenesisParams) WriteAsRoot(writer *karmem.Writer) (offset uint, err err
 
 func (x *GenesisParams) Write(writer *karmem.Writer, start uint) (offset uint, err error) {
 	offset = start
-	size := uint(360)
+	size := uint(336)
 	if offset == 0 {
 		offset, err = writer.Alloc(size)
 		if err != nil {
 			return 0, err
 		}
 	}
-	writer.Write4At(offset, uint32(356))
+	writer.Write4At(offset, uint32(332))
 	__OrderOffset := offset + 4
 	writer.WriteAt(__OrderOffset, (*[256]byte)(unsafe.Pointer(&x.Order))[:])
 	__TimeParamOffset := offset + 260
-	writer.WriteAt(__TimeParamOffset, (*[32]byte)(unsafe.Pointer(&x.TimeParam))[:])
-	__SeedOffset := offset + 292
+	writer.Write8At(__TimeParamOffset, *(*uint64)(unsafe.Pointer(&x.TimeParam)))
+	__SeedOffset := offset + 268
 	writer.WriteAt(__SeedOffset, (*[32]byte)(unsafe.Pointer(&x.Seed))[:])
-	__VerifyParamOffset := offset + 324
+	__VerifyParamOffset := offset + 300
 	writer.WriteAt(__VerifyParamOffset, (*[32]byte)(unsafe.Pointer(&x.VerifyParam))[:])
 
 	return offset, nil
@@ -250,12 +250,7 @@ func (x *GenesisParams) Read(viewer *GenesisParamsViewer, reader *karmem.Reader)
 	for i := __OrderLen; i < len(x.Order); i++ {
 		x.Order[i] = 0
 	}
-	__TimeParamSlice := viewer.TimeParam()
-	__TimeParamLen := len(__TimeParamSlice)
-	copy(x.TimeParam[:], __TimeParamSlice)
-	for i := __TimeParamLen; i < len(x.TimeParam); i++ {
-		x.TimeParam[i] = 0
-	}
+	x.TimeParam = viewer.TimeParam()
 	__SeedSlice := viewer.Seed()
 	__SeedLen := len(__SeedSlice)
 	copy(x.Seed[:], __SeedSlice)
@@ -705,7 +700,7 @@ func (x *TransactionViewer) Body(reader *karmem.Reader) (v *TransactionBodyViewe
 }
 
 type GenesisParamsViewer struct {
-	_data [360]byte
+	_data [336]byte
 }
 
 func NewGenesisParamsViewer(reader *karmem.Reader, offset uint32) (v *GenesisParamsViewer) {
@@ -731,30 +726,27 @@ func (x *GenesisParamsViewer) Order() (v []byte) {
 	}
 	return *(*[]byte)(unsafe.Pointer(&slice))
 }
-func (x *GenesisParamsViewer) TimeParam() (v []byte) {
-	if 260+32 > x.size() {
-		return []byte{}
+func (x *GenesisParamsViewer) TimeParam() (v int64) {
+	if 260+8 > x.size() {
+		return v
 	}
-	slice := [3]uintptr{
-		uintptr(unsafe.Add(unsafe.Pointer(&x._data), 260)), 32, 32,
-	}
-	return *(*[]byte)(unsafe.Pointer(&slice))
+	return *(*int64)(unsafe.Add(unsafe.Pointer(&x._data), 260))
 }
 func (x *GenesisParamsViewer) Seed() (v []byte) {
-	if 292+32 > x.size() {
+	if 268+32 > x.size() {
 		return []byte{}
 	}
 	slice := [3]uintptr{
-		uintptr(unsafe.Add(unsafe.Pointer(&x._data), 292)), 32, 32,
+		uintptr(unsafe.Add(unsafe.Pointer(&x._data), 268)), 32, 32,
 	}
 	return *(*[]byte)(unsafe.Pointer(&slice))
 }
 func (x *GenesisParamsViewer) VerifyParam() (v []byte) {
-	if 324+32 > x.size() {
+	if 300+32 > x.size() {
 		return []byte{}
 	}
 	slice := [3]uintptr{
-		uintptr(unsafe.Add(unsafe.Pointer(&x._data), 324)), 32, 32,
+		uintptr(unsafe.Add(unsafe.Pointer(&x._data), 300)), 32, 32,
 	}
 	return *(*[]byte)(unsafe.Pointer(&slice))
 }

@@ -163,6 +163,7 @@ func (bs *BlockSyncer) statusMsgRoutine() {
 
 			if bs.knownHeight == bs.targetHeight {
 				log.Infoln("Reach target block height.")
+				// 非创世区块节点在这里才到达同步完成的状态
 				bs.status = synced
 			}
 

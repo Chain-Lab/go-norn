@@ -12,18 +12,8 @@ import (
 //	writePool = sync.Pool{New: func() any { return karmem.NewWriter(1024) }}
 //)
 
-func DeserializeBlock(byteBlockData []byte) (*common.Block, error) {
-	block := new(common.Block)
-	block.ReadAsRoot(karmem.NewReader(byteBlockData))
-
-	return block, nil
-}
-
 func SerializeBlock(block *common.Block) ([]byte, error) {
-	//writer := writePool.Get().(*karmem.Writer)
-	writer := karmem.NewWriter(1024)
-	//defer writePool.Put(writer)
-	//defer writer.Reset()
+	writer := karmem.NewWriter(KARMEM_CAP)
 
 	_, err := block.WriteAsRoot(writer)
 	if err != nil {
@@ -36,15 +26,8 @@ func SerializeBlock(block *common.Block) ([]byte, error) {
 	return result, nil
 }
 
-func DeserializeTransaction(byteTxData []byte) (*common.Transaction, error) {
-	transaction := new(common.Transaction)
-	transaction.ReadAsRoot(karmem.NewReader(byteTxData))
-
-	return transaction, nil
-}
-
 func SerializeTransaction(transaction *common.Transaction) ([]byte, error) {
-	writer := karmem.NewWriter(1024)
+	writer := karmem.NewWriter(KARMEM_CAP)
 
 	_, err := transaction.WriteAsRoot(writer)
 	if err != nil {
@@ -53,17 +36,12 @@ func SerializeTransaction(transaction *common.Transaction) ([]byte, error) {
 	}
 
 	result := writer.Bytes()
-	//writer.Reset()
-	//writePool.Put(writer)
 
 	return result, nil
 }
 
 func SerializeBlockHeader(header *common.BlockHeader) ([]byte, error) {
-	//writer := writePool.Get().(*karmem.Writer)
-	writer := karmem.NewWriter(1024)
-	//defer writePool.Put(writer)
-	//defer writer.Reset()
+	writer := karmem.NewWriter(KARMEM_CAP)
 
 	_, err := header.WriteAsRoot(writer)
 	if err != nil {
@@ -76,15 +54,8 @@ func SerializeBlockHeader(header *common.BlockHeader) ([]byte, error) {
 	return result, nil
 }
 
-func DeserializeStatusMsg(byteMsgData []byte) (*p2p.SyncStatusMsg, error) {
-	msg := new(p2p.SyncStatusMsg)
-	msg.ReadAsRoot(karmem.NewReader(byteMsgData))
-
-	return msg, nil
-}
-
 func SerializeStatusMsg(msg *p2p.SyncStatusMsg) ([]byte, error) {
-	writer := karmem.NewWriter(1024)
+	writer := karmem.NewWriter(KARMEM_CAP)
 
 	_, err := msg.WriteAsRoot(writer)
 	if err != nil {
@@ -94,5 +65,31 @@ func SerializeStatusMsg(msg *p2p.SyncStatusMsg) ([]byte, error) {
 
 	result := writer.Bytes()
 
+	return result, nil
+}
+
+func SerializeGenesisParams(p *common.GenesisParams) ([]byte, error) {
+	writer := karmem.NewWriter(KARMEM_CAP)
+
+	_, err := p.WriteAsRoot(writer)
+	if err != nil {
+		log.WithField("error", err).Debugln("Genesis serialize failed.")
+		return nil, err
+	}
+
+	result := writer.Bytes()
+	return result, nil
+}
+
+func SerializeGeneralParams(p *common.GeneralParams) ([]byte, error) {
+	writer := karmem.NewWriter(KARMEM_CAP)
+
+	_, err := p.WriteAsRoot(writer)
+	if err != nil {
+		log.WithField("error", err).Debugln("General serialize failed.")
+		return nil, err
+	}
+
+	result := writer.Bytes()
 	return result, nil
 }

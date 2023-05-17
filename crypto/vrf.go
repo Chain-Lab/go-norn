@@ -51,6 +51,13 @@ func VRFCalculate(curve elliptic.Curve, prv *ecdsa.PrivateKey, msg []byte) ([]by
 	return rBytes, s, t, nil
 }
 
+// VRFCheckConsensus 检查当前节点是否是一个共识节点
+func VRFCheckConsensus(vdfOutput []byte, prv *ecdsa.PrivateKey) {
+	rBytes, _, _, _ := VRFCalculate(elliptic.P256(), prv, vdfOutput)
+	r := new(big.Int)
+	r.SetBytes(rBytes)
+}
+
 func VRFVerify(curve elliptic.Curve, key *ecdsa.PublicKey, msg []byte, s *big.Int, t *big.Int, value []byte) (bool, error) {
 	N := curve.Params().N
 	xR, yR := elliptic.UnmarshalCompressed(curve, value) // random number -> point V

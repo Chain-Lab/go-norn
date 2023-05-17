@@ -8,8 +8,10 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/syndtr/goleveldb/leveldb/errors"
 	"go-chronos/common"
+	"go-chronos/crypto"
 	"go-chronos/utils"
 	karmem "karmem.org/golang"
+	"math/big"
 	"sync"
 	"time"
 )
@@ -38,9 +40,10 @@ type BlockChain struct {
 	latestHeight int64
 	latestLock   sync.RWMutex
 
-	bufferChan chan *common.Block
-	buffer     *BlockBuffer
-	appendLock sync.RWMutex
+	bufferChan    chan *common.Block
+	buffer        *BlockBuffer
+	appendLock    sync.RWMutex
+	genesisParams *common.GenesisParams
 }
 
 func NewBlockchain(db *utils.LevelDB) *BlockChain {
@@ -82,6 +85,14 @@ func NewBlockchain(db *utils.LevelDB) *BlockChain {
 	if latest != nil {
 		log.Traceln("Block database is not null, create buffer.")
 		chain.createBlockBuffer(latest)
+
+		// 加载创世区块参数
+		genesis, _ := chain.GetBlockByHeight(0)
+		if genesis != nil {
+			// todo: 错误处理
+			genesisParams, _ := utils.DeserializeGenesisParams(genesis.Header.Params)
+			chain.genesisParams = genesisParams
+		}
 	}
 	go chain.BlockProcessRoutine()
 	return chain
@@ -131,6 +142,28 @@ func (bc *BlockChain) PackageNewBlock(txs []common.Transaction) (*common.Block, 
 
 // NewGenesisBlock 创建创世区块
 func (bc *BlockChain) NewGenesisBlock() {
+	// 获取本地高度为 0 的区块，检查创世区块是否存在
+	block, _ := bc.GetBlockByHeight(0)
+
+	if block != nil {
+		log.Errorln("Genesis block already exists.")
+		return
+	}
+
+	genesisParams, err := crypto.GenerateGenesisParams()
+
+	if err != nil {
+		log.WithField("error", err).Errorln("Generate genesis params failed.")
+		return
+	}
+
+	genesisParamsBytes, err := utils.SerializeGenesisParams(genesisParams)
+
+	if err != nil {
+		log.WithField("error", err).Errorln("Genesis params serialize error.")
+		return
+	}
+
 	nullHash := common.Hash{}
 	// todo: 创世区块应该是前一个区块的哈希为 0x0，这里需要修改
 	genesisBlock := common.Block{
@@ -140,11 +173,11 @@ func (bc *BlockChain) NewGenesisBlock() {
 			BlockHash:     [32]byte{},
 			MerkleRoot:    [32]byte(nullHash),
 			Height:        0,
+			Params:        genesisParamsBytes,
 		},
 		Transactions: []common.Transaction{},
 	}
 
-	//println(hex.EncodeToString(nullHash[:]))
 	bc.InsertBlock(&genesisBlock)
 }
 
@@ -339,6 +372,15 @@ func (bc *BlockChain) InsertBlock(block *common.Block) {
 	}
 
 	bc.db.BatchInsert(keys, values)
+
+	// todo: 异常处理
+	params, _ := utils.DeserializeGeneralParams(block.Header.Params)
+	calculator := crypto.GetCalculatorInstance()
+
+	// todo: 将编码转换的过程放入到VRF代码中
+	seed := new(big.Int)
+	seed.SetBytes(params.Result)
+	calculator.AppendNewSeed(seed)
 }
 
 func (bc *BlockChain) AppendBlockTask(block *common.Block) {

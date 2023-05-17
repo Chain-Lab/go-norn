@@ -113,6 +113,9 @@ func main() {
 				log.Infof("Create genesis block.")
 				chain.NewGenesisBlock()
 
+				// 创建创世区块时默认已经完成同步
+				// todo：这里存在一个问题，如果在未同步时添加创世区块选项，会默认设置完成同步
+				//  所以还需要检查创世区块的创建状态
 				h.SetSynced()
 			}
 		}()
