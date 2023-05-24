@@ -33,9 +33,13 @@ require (
 	github.com/google/gopacket v1.1.19 // indirect
 	github.com/google/pprof v0.0.0-20221203041831-ce31453925ec // indirect
 	github.com/google/uuid v1.3.0 // indirect
+	github.com/gookit/color v1.5.2 // indirect
+	github.com/gookit/config/v2 v2.2.1 // indirect
+	github.com/gookit/goutil v0.6.6 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/huin/goupnp v1.0.3 // indirect
+	github.com/imdario/mergo v0.3.13 // indirect
 	github.com/ipfs/go-cid v0.3.2 // indirect
 	github.com/ipfs/go-datastore v0.6.0 // indirect
 	github.com/ipfs/go-ipfs-util v0.0.2 // indirect
@@ -61,12 +65,13 @@ require (
 	github.com/libp2p/go-reuseport v0.2.0 // indirect
 	github.com/libp2p/go-yamux/v4 v4.0.0 // indirect
 	github.com/marten-seemann/tcp v0.0.0-20210406111302-dfbc87cc63fd // indirect
-	github.com/mattn/go-isatty v0.0.16 // indirect
+	github.com/mattn/go-isatty v0.0.17 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
 	github.com/miekg/dns v1.1.50 // indirect
 	github.com/mikioh/tcpinfo v0.0.0-20190314235526-30a79bb1804b // indirect
 	github.com/mikioh/tcpopt v0.0.0-20190314235656-172688c1accc // indirect
 	github.com/minio/sha256-simd v1.0.0 // indirect
+	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/mr-tron/base58 v1.2.0 // indirect
 	github.com/multiformats/go-base32 v0.1.0 // indirect
 	github.com/multiformats/go-base36 v0.2.0 // indirect
@@ -97,6 +102,7 @@ require (
 	github.com/raulk/go-watchdog v1.3.0 // indirect
 	github.com/spaolacci/murmur3 v1.1.0 // indirect
 	github.com/whyrusleeping/go-keyspace v0.0.0-20160322163242-5b898ac5add1 // indirect
+	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
 	go.opencensus.io v0.24.0 // indirect
 	go.uber.org/atomic v1.10.0 // indirect
 	go.uber.org/dig v1.15.0 // indirect
@@ -108,8 +114,9 @@ require (
 	golang.org/x/mod v0.7.0 // indirect
 	golang.org/x/net v0.4.0 // indirect
 	golang.org/x/sync v0.1.0 // indirect
-	golang.org/x/sys v0.3.0 // indirect
-	golang.org/x/text v0.5.0 // indirect
+	golang.org/x/sys v0.5.0 // indirect
+	golang.org/x/term v0.5.0 // indirect
+	golang.org/x/text v0.7.0 // indirect
 	golang.org/x/tools v0.3.0 // indirect
 	google.golang.org/protobuf v1.28.1 // indirect
 	lukechampine.com/blake3 v1.1.7 // indirect

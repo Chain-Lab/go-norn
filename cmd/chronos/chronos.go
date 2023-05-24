@@ -34,6 +34,7 @@ func main() {
 		log.SetLevel(log.DebugLevel)
 	}
 
+	core.LoadConfig()
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 

@@ -10,8 +10,17 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
+	"github.com/gookit/config/v2"
 	log "github.com/sirupsen/logrus"
 	"math/big"
+)
+
+const (
+	CONSENSUS_FLOOR = 0.5
+)
+
+var (
+	tt260 = BigPow(2, 260)
 )
 
 func VRFCalculate(curve elliptic.Curve, prv *ecdsa.PrivateKey, msg []byte) ([]byte, *big.Int, *big.Int, error) {
@@ -51,11 +60,43 @@ func VRFCalculate(curve elliptic.Curve, prv *ecdsa.PrivateKey, msg []byte) ([]by
 	return rBytes, s, t, nil
 }
 
-// VRFCheckConsensus 检查当前节点是否是一个共识节点
-func VRFCheckConsensus(vdfOutput []byte, prv *ecdsa.PrivateKey) {
-	rBytes, _, _, _ := VRFCalculate(elliptic.P256(), prv, vdfOutput)
+// VRFCheckOutputConsensus 检查一个 VRF 的输出是否满足共识
+func VRFCheckOutputConsensus(randomOutput []byte) bool {
 	r := new(big.Int)
-	r.SetBytes(rBytes)
+	r.SetBytes(randomOutput)
+
+	base := new(big.Int)
+	base.SetInt64(1000)
+	r = r.Mul(r, base)
+	r = r.Div(r, tt260)
+
+	prob := float64(r.Int64()) / 1000.0
+	return prob > CONSENSUS_FLOOR
+}
+
+// VRFCheckConsensus 检查当前节点是否是一个共识节点
+func VRFCheckConsensus(vdfOutput []byte) (bool, error) {
+	prvHex := config.String("prv")
+	prv, err := decodePrivateKeyFromHexString(prvHex)
+	if err != nil {
+		log.WithField("error", err).Fatalln("Load private key failed.")
+		return false, err
+	}
+
+	rBytes, _, _, _ := VRFCalculate(elliptic.P256(), prv, vdfOutput)
+
+	return VRFCheckOutputConsensus(rBytes), nil
+}
+
+// VRFCheckRemoteConsensus 检查一个其他节点的输出是否满足共识条件
+func VRFCheckRemoteConsensus(curve elliptic.Curve, key *ecdsa.PublicKey, vdfMsg []byte, s *big.Int, t *big.Int, value []byte) (bool, error) {
+	verified, err := VRFVerify(elliptic.P256(), key, vdfMsg, s, t, value)
+	if !verified || err != nil {
+		// 验证过程中出错， 认为验证失败
+		return false, nil
+	}
+
+	return VRFCheckOutputConsensus(value), nil
 }
 
 func VRFVerify(curve elliptic.Curve, key *ecdsa.PublicKey, msg []byte, s *big.Int, t *big.Int, value []byte) (bool, error) {
