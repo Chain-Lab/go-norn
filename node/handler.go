@@ -1,6 +1,7 @@
 package node
 
 import (
+	"crypto/elliptic"
 	"encoding/hex"
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/libp2p/go-libp2p/core/network"
@@ -9,6 +10,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"go-chronos/common"
 	"go-chronos/core"
+	"go-chronos/crypto"
 	"go-chronos/p2p"
 	"sync"
 	"time"
@@ -151,9 +153,27 @@ func (h *Handler) packageBlockRoutine() {
 				continue
 			}
 
+			calc := crypto.GetCalculatorInstance()
+			seed, pi := calc.GetSeedParams()
+
+			consensus, err := crypto.VRFCheckLocalConsensus(seed.Bytes())
+			if !consensus || err != nil {
+				log.Debugln("Local is not consensus node.")
+				continue
+			}
+
+			randNumber, s, t, err := crypto.VRFCalculate(elliptic.P256(), seed.Bytes())
+			params := common.GeneralParams{
+				Result:       seed.Bytes(),
+				Proof:        pi.Bytes(),
+				RandomNumber: [33]byte(randNumber),
+				S:            s.Bytes(),
+				T:            t.Bytes(),
+			}
+
 			txs := h.txPool.Package()
 			log.Infof("Package %d txs.", len(txs))
-			newBlock, err := h.chain.PackageNewBlock(txs)
+			newBlock, err := h.chain.PackageNewBlock(txs, &params)
 
 			if err != nil {
 				log.WithField("error", err).Debugln("Package new block failed.")

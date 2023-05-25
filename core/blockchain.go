@@ -109,8 +109,15 @@ func (bc *BlockChain) BlockProcessRoutine() {
 }
 
 // PackageNewBlock 打包新的区块，传入交易序列
-func (bc *BlockChain) PackageNewBlock(txs []common.Transaction) (*common.Block, error) {
+func (bc *BlockChain) PackageNewBlock(txs []common.Transaction, params *common.GeneralParams) (*common.Block, error) {
 	log.Traceln("Start package new block.")
+	paramsBytes, err := utils.SerializeGeneralParams(params)
+
+	if err != nil {
+		log.WithField("error", err).Errorln("Serialize params failed while package block.")
+		return nil, err
+	}
+
 	bestBlock := bc.buffer.GetPriorityLeaf()
 
 	merkleRoot := BuildMerkleTree(txs)
@@ -121,6 +128,7 @@ func (bc *BlockChain) PackageNewBlock(txs []common.Transaction) (*common.Block, 
 			BlockHash:     [32]byte{},
 			MerkleRoot:    [32]byte(merkleRoot),
 			Height:        bestBlock.Header.Height + 1,
+			Params:        paramsBytes,
 		},
 		Transactions: txs,
 	}
@@ -372,15 +380,23 @@ func (bc *BlockChain) InsertBlock(block *common.Block) {
 	}
 
 	bc.db.BatchInsert(keys, values)
+	seed := new(big.Int)
+	proof := new(big.Int)
 
 	// todo: 异常处理
-	params, _ := utils.DeserializeGeneralParams(block.Header.Params)
+	if block.Header.Height == 0 {
+		params, _ := utils.DeserializeGenesisParams(block.Header.Params)
+		// todo: 将编码转换的过程放入到VRF代码中
+		seed.SetBytes(params.Seed[:])
+		proof.SetInt64(0)
+	} else {
+		params, _ := utils.DeserializeGeneralParams(block.Header.Params)
+		// todo: 将编码转换的过程放入到VRF代码中
+		seed.SetBytes(params.Result)
+		proof.SetBytes(params.Proof)
+	}
 	calculator := crypto.GetCalculatorInstance()
-
-	// todo: 将编码转换的过程放入到VRF代码中
-	seed := new(big.Int)
-	seed.SetBytes(params.Result)
-	calculator.AppendNewSeed(seed)
+	calculator.AppendNewSeed(seed, proof)
 }
 
 func (bc *BlockChain) AppendBlockTask(block *common.Block) {

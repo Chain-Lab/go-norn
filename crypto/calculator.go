@@ -20,7 +20,10 @@ var (
 )
 
 type Calculator struct {
-	seedChannel   chan *big.Int
+	// 接收传入的新参数
+	seedChannel      chan *big.Int
+	prevProofChannel chan *big.Int
+	// 传出计算结果
 	resultChannel chan *big.Int
 	proofChannel  chan *big.Int
 
@@ -29,9 +32,11 @@ type Calculator struct {
 	order      *big.Int
 	timeParam  int64
 
-	seed *big.Int
+	seed  *big.Int
+	proof *big.Int
 
-	changed bool
+	changed    bool
+	changeLock sync.RWMutex
 }
 
 // GetCalculatorInstance 所有的对 VDF 计算类的操作必须从这里获取实例
@@ -46,9 +51,10 @@ func GetCalculatorInstance() *Calculator {
 func CalculatorInitialization(pp *big.Int, order *big.Int, t int64) {
 	calculatorOnce.Do(func() {
 		calculatorInst = &Calculator{
-			seedChannel:   make(chan *big.Int),
-			resultChannel: make(chan *big.Int),
-			proofChannel:  make(chan *big.Int),
+			seedChannel:      make(chan *big.Int),
+			prevProofChannel: make(chan *big.Int),
+			resultChannel:    make(chan *big.Int),
+			proofChannel:     make(chan *big.Int),
 
 			proofParam: pp,
 			order:      order,
@@ -61,13 +67,40 @@ func CalculatorInitialization(pp *big.Int, order *big.Int, t int64) {
 	})
 }
 
+// GetSeedParams 读取计算信息，如果channel中有数据则优先获取
+func (c *Calculator) GetSeedParams() (*big.Int, *big.Int) {
+	seed := new(big.Int)
+	proof := new(big.Int)
+
+	if len(c.resultChannel) != 0 {
+		seed = <-c.resultChannel
+		proof = <-c.proofChannel
+		return seed, proof
+	}
+
+	c.changeLock.RLock()
+	seed.Set(c.seed)
+	seed.Set(c.proof)
+	c.changeLock.RUnlock()
+
+	return seed, proof
+}
+
 // AppendNewSeed 在计算运行时修改此时的运行参数
-func (c *Calculator) AppendNewSeed(seed *big.Int) {
+func (c *Calculator) AppendNewSeed(seed *big.Int, proof *big.Int) {
+	c.changeLock.RLock()
+
+	// 检查如果当前的 seed 没有变化就直接返回
 	if c.seed.Cmp(seed) == 0 {
+		c.changeLock.RUnlock()
+
 		return
 	}
 
+	c.changeLock.RUnlock()
+
 	c.seedChannel <- seed
+	c.prevProofChannel <- proof
 	c.changed = true
 }
 
@@ -100,7 +133,12 @@ func (c *Calculator) run() {
 	for {
 		select {
 		case seed := <-c.seedChannel:
+			c.changeLock.Lock()
+
 			c.seed = seed
+			c.proof = <-c.prevProofChannel
+
+			c.changeLock.Unlock()
 			pi, result := c.calculate(seed)
 
 			if pi != nil {

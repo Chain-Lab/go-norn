@@ -23,8 +23,14 @@ var (
 	tt260 = BigPow(2, 260)
 )
 
-func VRFCalculate(curve elliptic.Curve, prv *ecdsa.PrivateKey, msg []byte) ([]byte, *big.Int, *big.Int, error) {
+func VRFCalculate(curve elliptic.Curve, msg []byte) ([]byte, *big.Int, *big.Int, error) {
 	N := curve.Params().N
+	prvHex := config.String("prv")
+	prv, err := decodePrivateKeyFromHexString(prvHex)
+	if err != nil {
+		log.WithField("error", err).Fatalln("Load private key failed.")
+		return nil, nil, nil, err
+	}
 
 	// todo: 消息需要哈希一下，避免由于输入消息过短出现安全问题
 	xM, yM := curve.ScalarBaseMult(msg)
@@ -74,16 +80,9 @@ func VRFCheckOutputConsensus(randomOutput []byte) bool {
 	return prob > CONSENSUS_FLOOR
 }
 
-// VRFCheckConsensus 检查当前节点是否是一个共识节点
-func VRFCheckConsensus(vdfOutput []byte) (bool, error) {
-	prvHex := config.String("prv")
-	prv, err := decodePrivateKeyFromHexString(prvHex)
-	if err != nil {
-		log.WithField("error", err).Fatalln("Load private key failed.")
-		return false, err
-	}
-
-	rBytes, _, _, _ := VRFCalculate(elliptic.P256(), prv, vdfOutput)
+// VRFCheckLocalConsensus 检查当前节点是否是一个共识节点
+func VRFCheckLocalConsensus(vdfOutput []byte) (bool, error) {
+	rBytes, _, _, _ := VRFCalculate(elliptic.P256(), vdfOutput)
 
 	return VRFCheckOutputConsensus(rBytes), nil
 }
