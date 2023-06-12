@@ -52,18 +52,23 @@ func GetCalculatorInstance() *Calculator {
 func CalculatorInitialization(pp *big.Int, order *big.Int, t int64) {
 	calculatorOnce.Do(func() {
 		calculatorInst = &Calculator{
+			// 传递消息的管道，外界 -> calculator
 			seedChannel:      make(chan *big.Int),
 			prevProofChannel: make(chan *big.Int),
-			resultChannel:    make(chan *big.Int),
-			proofChannel:     make(chan *big.Int),
+			// 传递消息的管道， calculator -> 外界
+			resultChannel: make(chan *big.Int),
+			proofChannel:  make(chan *big.Int),
 
+			// 证明参数，阶数，时间参数
 			proofParam: pp,
 			order:      order,
 			timeParam:  t,
 
+			// 当前阶段的输出和证明
 			seed:  big.NewInt(0),
 			proof: big.NewInt(0),
 
+			// 输入是否出现变化（是否需要直接进入下一轮）
 			changed: false,
 		}
 
@@ -124,6 +129,7 @@ func GenerateParams() (*big.Int, *big.Int, error) {
 		return nil, nil, err
 	}
 
+	// n = p * q
 	n = n.Mul(p, q)
 	pp, err := rand.Prime(r, 256)
 
@@ -199,9 +205,13 @@ func (c *Calculator) Verify(seed *big.Int, pi *big.Int, result *big.Int) bool {
 	// todo: 写一下 calculate 和 verify 实现的公式的过程
 	r := big.NewInt(2)
 	t := big.NewInt(int64(c.timeParam))
+
+	// r = r^t mod pp
 	r = r.Exp(r, t, c.proofParam)
 
+	// h = pi^pp
 	h := pi.Exp(pi, c.proofParam, c.order)
+	// s = seed
 	s := seed.Exp(seed, r, c.order)
 
 	h = h.Mul(h, s)
@@ -210,8 +220,10 @@ func (c *Calculator) Verify(seed *big.Int, pi *big.Int, result *big.Int) bool {
 	return result.Cmp(h) == 0
 }
 
+// GenerateGenesisParams 打包 VDF 计算参数
 func GenerateGenesisParams() (*common.GenesisParams, error) {
 	genesisParams := new(common.GenesisParams)
+	// 获取参数：群的阶数以及证明参数
 	order, pp, err := GenerateParams()
 
 	if err != nil {

@@ -162,6 +162,7 @@ func (bc *BlockChain) NewGenesisBlock() {
 		return
 	}
 
+	// 生成创世区块内的 VDF 参数
 	genesisParams, err := crypto.GenerateGenesisParams()
 
 	if err != nil {
@@ -169,6 +170,7 @@ func (bc *BlockChain) NewGenesisBlock() {
 		return
 	}
 
+	// 对参数进行序列化为字节数组
 	genesisParamsBytes, err := utils.SerializeGenesisParams(genesisParams)
 
 	if err != nil {
@@ -471,15 +473,17 @@ func (bc *BlockChain) createBlockBuffer(latest *common.Block) {
 func (bc *BlockChain) genesisInitialization(block *common.Block) {
 	if block != nil {
 		// todo: 错误处理
+		// 对区块中的参数进行反序列化
 		genesisParams, _ := utils.DeserializeGenesisParams(block.Header.Params)
 		bc.genesisParams = genesisParams
 
 		pp := new(big.Int)
 		order := new(big.Int)
-
+		// 设置大整数的值
 		pp.SetBytes(genesisParams.VerifyParam[:])
 		order.SetBytes(genesisParams.Order[:])
 
+		// 初始化
 		crypto.CalculatorInitialization(pp, order, genesisParams.TimeParam)
 	}
 }
