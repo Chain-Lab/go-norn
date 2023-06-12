@@ -17,6 +17,7 @@ import (
 var (
 	calculatorOnce sync.Once
 	calculatorInst *Calculator
+	zero           *big.Int = big.NewInt(0)
 )
 
 type Calculator struct {
@@ -60,6 +61,9 @@ func CalculatorInitialization(pp *big.Int, order *big.Int, t int64) {
 			order:      order,
 			timeParam:  t,
 
+			seed:  big.NewInt(0),
+			proof: big.NewInt(0),
+
 			changed: false,
 		}
 
@@ -80,7 +84,7 @@ func (c *Calculator) GetSeedParams() (*big.Int, *big.Int) {
 
 	c.changeLock.RLock()
 	seed.Set(c.seed)
-	seed.Set(c.proof)
+	proof.Set(c.proof)
 	c.changeLock.RUnlock()
 
 	return seed, proof
@@ -101,6 +105,7 @@ func (c *Calculator) AppendNewSeed(seed *big.Int, proof *big.Int) {
 
 	c.seedChannel <- seed
 	c.prevProofChannel <- proof
+	log.Infoln("VDF seed updated.")
 	c.changed = true
 }
 
@@ -219,7 +224,7 @@ func GenerateGenesisParams() (*common.GenesisParams, error) {
 		return nil, err
 	}
 
-	genesisParams.Order = [256]byte(order.Bytes())
+	genesisParams.Order = [128]byte(order.Bytes())
 	genesisParams.TimeParam = 10000000
 	genesisParams.VerifyParam = [32]byte(pp.Bytes())
 	genesisParams.Seed = [32]byte(seed.Bytes())

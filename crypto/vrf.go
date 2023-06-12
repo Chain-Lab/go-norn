@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	CONSENSUS_FLOOR = 0.5
+	CONSENSUS_FLOOR = 0.0 // 共识要求的最低概率
 )
 
 var (
@@ -88,7 +88,7 @@ func VRFCheckLocalConsensus(vdfOutput []byte) (bool, error) {
 }
 
 // VRFCheckRemoteConsensus 检查一个其他节点的输出是否满足共识条件
-func VRFCheckRemoteConsensus(curve elliptic.Curve, key *ecdsa.PublicKey, vdfMsg []byte, s *big.Int, t *big.Int, value []byte) (bool, error) {
+func VRFCheckRemoteConsensus(key *ecdsa.PublicKey, vdfMsg []byte, s *big.Int, t *big.Int, value []byte) (bool, error) {
 	verified, err := VRFVerify(elliptic.P256(), key, vdfMsg, s, t, value)
 	if !verified || err != nil {
 		// 验证过程中出错， 认为验证失败

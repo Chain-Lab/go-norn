@@ -142,6 +142,7 @@ func (h *Handler) packageBlockRoutine() {
 		select {
 		case <-ticker.C:
 			if !h.Synced() {
+				//log.Infoln("Waiting for node synced.")
 				continue
 			}
 
@@ -149,7 +150,7 @@ func (h *Handler) packageBlockRoutine() {
 			latest, _ := h.chain.GetLatestBlock()
 
 			if latest == nil {
-				log.Debugln("Waiting for genesis block.")
+				log.Infoln("Waiting for genesis block.")
 				continue
 			}
 
@@ -158,7 +159,7 @@ func (h *Handler) packageBlockRoutine() {
 
 			consensus, err := crypto.VRFCheckLocalConsensus(seed.Bytes())
 			if !consensus || err != nil {
-				log.Debugln("Local is not consensus node.")
+				log.Infoln("Local is not consensus node.")
 				continue
 			}
 
@@ -172,7 +173,7 @@ func (h *Handler) packageBlockRoutine() {
 			}
 
 			txs := h.txPool.Package()
-			log.Infof("Package %d txs.", len(txs))
+			//log.Infof("Package %d txs.", len(txs))
 			newBlock, err := h.chain.PackageNewBlock(txs, &params)
 
 			if err != nil {
@@ -237,7 +238,7 @@ func (h *Handler) broadcastBlock() {
 			//todo: 这里是由于获取新区块的逻辑还没有，所以先全部广播
 			//  在后续完成对应的逻辑后，再修改这里的逻辑来降低广播的时间复杂度
 			countBroadcastBlock := peersCount
-			log.WithField("count", countBroadcastBlock).Debugln("Broadcast block.")
+			log.WithField("count", countBroadcastBlock).Infoln("Broadcast block.")
 
 			for idx := 0; idx < countBroadcastBlock; idx++ {
 				peers[idx].AsyncSendNewBlock(block)

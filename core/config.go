@@ -18,8 +18,8 @@ func LoadConfig() {
 
 	config.AddDriver(yaml.Driver)
 
-	err := config.LoadFiles("./config.yaml")
+	err := config.LoadFiles("./config.yml")
 	if err != nil {
-		log.WithField("error", err)
+		log.WithField("error", err).Errorln("Load config file failed.")
 	}
 }

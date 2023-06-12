@@ -15,8 +15,8 @@ import (
 )
 
 // 测试指令：
-// chronos -d ./data1 -g
-// chronos -d ./data2 -p
+// ./chronos -d ./data1 -g
+// ./chronos -d ./data2 -p 23212 -b /ip4/127.0.0.1/tcp/31258/p2p/12D3KooWJtvSD3yzu1XpKxr3eKutgjJXgky266AdnUJSg25ZXuVr
 
 func main() {
 	flag.Parse()

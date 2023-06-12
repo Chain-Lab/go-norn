@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
+	"github.com/gookit/config/v2"
 	lru "github.com/hashicorp/golang-lru"
 	log "github.com/sirupsen/logrus"
 	"github.com/syndtr/goleveldb/leveldb/errors"
@@ -88,11 +89,7 @@ func NewBlockchain(db *utils.LevelDB) *BlockChain {
 
 		// 加载创世区块参数
 		genesis, _ := chain.GetBlockByHeight(0)
-		if genesis != nil {
-			// todo: 错误处理
-			genesisParams, _ := utils.DeserializeGenesisParams(genesis.Header.Params)
-			chain.genesisParams = genesisParams
-		}
+		chain.genesisInitialization(genesis)
 	}
 	go chain.BlockProcessRoutine()
 	return chain
@@ -119,6 +116,12 @@ func (bc *BlockChain) PackageNewBlock(txs []common.Transaction, params *common.G
 	}
 
 	bestBlock := bc.buffer.GetPriorityLeaf()
+	publicKey, err := hex.DecodeString(config.String("pub"))
+
+	if err != nil {
+		log.Errorln("Get public key from config failed.")
+		return nil, err
+	}
 
 	merkleRoot := BuildMerkleTree(txs)
 	block := common.Block{
@@ -128,6 +131,7 @@ func (bc *BlockChain) PackageNewBlock(txs []common.Transaction, params *common.G
 			BlockHash:     [32]byte{},
 			MerkleRoot:    [32]byte(merkleRoot),
 			Height:        bestBlock.Header.Height + 1,
+			PublicKey:     [33]byte(publicKey),
 			Params:        paramsBytes,
 		},
 		Transactions: txs,
@@ -307,6 +311,8 @@ func (bc *BlockChain) InsertBlock(block *common.Block) {
 	count := len(block.Transactions)
 
 	blockHash := common.Hash(block.Header.BlockHash)
+
+	// 获取对应哈希的区块，如果区块存在，说明链上已经存在该区块
 	_, err = bc.GetBlockByHash(&blockHash)
 	if err == nil {
 		log.WithField("hash", block.BlockHash()).Warning("Block exists.")
@@ -326,6 +332,7 @@ func (bc *BlockChain) InsertBlock(block *common.Block) {
 		}
 	} else {
 		bc.createBlockBuffer(block)
+		bc.genesisInitialization(block)
 	}
 
 	bc.latestLock.Lock()
@@ -402,9 +409,11 @@ func (bc *BlockChain) InsertBlock(block *common.Block) {
 func (bc *BlockChain) AppendBlockTask(block *common.Block) {
 	if block.IsGenesisBlock() {
 		bc.InsertBlock(block)
-	} else {
-		bc.buffer.AppendBlock(block)
+		return
 	}
+
+	log.Infoln("Append block to buffer.")
+	bc.buffer.AppendBlock(block)
 }
 
 func (bc *BlockChain) GetTransactionByHash(hash common.Hash) (*common.Transaction, error) {
@@ -457,4 +466,20 @@ func (bc *BlockChain) createBlockBuffer(latest *common.Block) {
 	// todo: 需要处理报错
 	log.Traceln("Create new block buffer.")
 	bc.buffer, _ = NewBlockBuffer(latest, bc.bufferChan)
+}
+
+func (bc *BlockChain) genesisInitialization(block *common.Block) {
+	if block != nil {
+		// todo: 错误处理
+		genesisParams, _ := utils.DeserializeGenesisParams(block.Header.Params)
+		bc.genesisParams = genesisParams
+
+		pp := new(big.Int)
+		order := new(big.Int)
+
+		pp.SetBytes(genesisParams.VerifyParam[:])
+		order.SetBytes(genesisParams.Order[:])
+
+		crypto.CalculatorInitialization(pp, order, genesisParams.TimeParam)
+	}
 }
