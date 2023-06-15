@@ -15,10 +15,10 @@ func TestCalculator(t *testing.T) {
 	calculator := Calculator{
 		order:      n,
 		proofParam: pp,
-		timeParam:  200,
+		timeParam:  1000,
 	}
 
-	msg, err := rand.Prime(rand.Reader, 256)
+	msg, err := rand.Prime(rand.Reader, 3)
 
 	if err != nil {
 		t.Fatal(err)

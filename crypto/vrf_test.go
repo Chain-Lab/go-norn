@@ -20,7 +20,7 @@ func TestVRFCalculateAndVerify(t *testing.T) {
 	}
 
 	msg := []byte("test-vrf")
-	randomNumber, s, t1, err := VRFCalculate(elliptic.P256(), prv, msg)
+	randomNumber, s, t1, err := VRFCalculate(elliptic.P256(), msg)
 	if err != nil {
 		t.Fatal(err)
 	}

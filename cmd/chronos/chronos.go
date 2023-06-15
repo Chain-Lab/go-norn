@@ -11,6 +11,10 @@ import (
 	"go-chronos/core"
 	"go-chronos/node"
 	"go-chronos/utils"
+	_ "net/http/pprof"
+	"os"
+	"os/signal"
+	"runtime/pprof"
 	"time"
 )
 
@@ -20,6 +24,14 @@ import (
 
 func main() {
 	flag.Parse()
+
+	var f *os.File
+	if pp {
+		f, _ := os.OpenFile("cpu.profile", os.O_CREATE|os.O_RDWR, 0644)
+		//defer f.Close()
+		pprof.StartCPUProfile(f)
+		//defer pprof.StopCPUProfile()
+	}
 
 	if help {
 		flag.Usage()
@@ -78,7 +90,8 @@ func main() {
 	}
 
 	host.SetStreamHandler(node.ProtocolId, node.HandleStream)
-	log.Infof("Node address: /ip4/127.0.0.1/tcp/%v/p2p/%s", port, host.ID().String())
+	//log.Infof("Node address: /ip4/127.0.0.1/tcp/%v/p2p/%s", port, host.ID().String())
+	log.Infof("Node address: /ip4/192.168.31.119/tcp/%v/p2p/%s", port, host.ID().String())
 
 	var kdht *dht.IpfsDHT
 
@@ -126,5 +139,17 @@ func main() {
 		go sendTransaction(h)
 	}
 
-	select {}
+	c := make(chan os.Signal)
+	signal.Notify(c, os.Interrupt)
+	select {
+	case sign := <-c:
+		log.Infoln("Got %s signal. Aborting...", sign)
+
+		if pp {
+			pprof.StopCPUProfile()
+			f.Close()
+		}
+
+		os.Exit(1)
+	}
 }

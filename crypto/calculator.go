@@ -8,6 +8,7 @@ package crypto
 
 import (
 	"crypto/rand"
+	"encoding/hex"
 	log "github.com/sirupsen/logrus"
 	"go-chronos/common"
 	"math/big"
@@ -53,11 +54,11 @@ func CalculatorInitialization(pp *big.Int, order *big.Int, t int64) {
 	calculatorOnce.Do(func() {
 		calculatorInst = &Calculator{
 			// 传递消息的管道，外界 -> calculator
-			seedChannel:      make(chan *big.Int),
-			prevProofChannel: make(chan *big.Int),
+			seedChannel:      make(chan *big.Int, 1),
+			prevProofChannel: make(chan *big.Int, 1),
 			// 传递消息的管道， calculator -> 外界
-			resultChannel: make(chan *big.Int),
-			proofChannel:  make(chan *big.Int),
+			resultChannel: make(chan *big.Int, 1),
+			proofChannel:  make(chan *big.Int, 1),
 
 			// 证明参数，阶数，时间参数
 			proofParam: pp,
@@ -81,6 +82,7 @@ func (c *Calculator) GetSeedParams() (*big.Int, *big.Int) {
 	seed := new(big.Int)
 	proof := new(big.Int)
 
+	log.Debugf("Channel length: %d", len(c.resultChannel))
 	if len(c.resultChannel) != 0 {
 		seed = <-c.resultChannel
 		proof = <-c.proofChannel
@@ -97,21 +99,22 @@ func (c *Calculator) GetSeedParams() (*big.Int, *big.Int) {
 
 // AppendNewSeed 在计算运行时修改此时的运行参数
 func (c *Calculator) AppendNewSeed(seed *big.Int, proof *big.Int) {
-	c.changeLock.RLock()
+	c.changeLock.Lock()
+	log.Infof("Trying append new seed %s.", hex.EncodeToString(seed.Bytes()))
 
 	// 检查如果当前的 seed 没有变化就直接返回
 	if c.seed.Cmp(seed) == 0 {
-		c.changeLock.RUnlock()
+		c.changeLock.Unlock()
 
 		return
 	}
 
-	c.changeLock.RUnlock()
+	// todo： 这里切换的地方感觉还是存在问题
+	c.changed = true
+	c.changeLock.Unlock()
 
 	c.seedChannel <- seed
 	c.prevProofChannel <- proof
-	log.Infoln("VDF seed updated.")
-	c.changed = true
 }
 
 // GenerateParams 用于生成计算参数，返回 order(n), proof_param
@@ -145,14 +148,18 @@ func (c *Calculator) run() {
 		select {
 		case seed := <-c.seedChannel:
 			c.changeLock.Lock()
+			log.Debugf("Start new VDF calculate.")
 
+			c.changed = false
+			c.changeLock.Unlock()
 			c.seed = seed
 			c.proof = <-c.prevProofChannel
 
-			c.changeLock.Unlock()
-			pi, result := c.calculate(seed)
+			result, pi := c.calculate(seed)
 
 			if pi != nil {
+				log.Debugf("Calculate result: %s", hex.EncodeToString(result.Bytes()))
+				log.Debugf("Calculate proof: %s", hex.EncodeToString(pi.Bytes()))
 				c.resultChannel <- result
 				c.proofChannel <- pi
 			}
@@ -167,33 +174,32 @@ func (c *Calculator) calculate(seed *big.Int) (*big.Int, *big.Int) {
 	result := new(big.Int)
 	result.Set(seed)
 
-	// g = seed
-	g.Set(seed)
-
 	// result = g^(2^t)
 	// 注： 这里如果直接计算 m^a mod n 的时间复杂度是接近 O(t) 的
 	// 所以在 t 足够大的情况下是可以抵御攻击的
 	for round := int64(0); round < c.timeParam; round++ {
+		//log.Infoln(round)
 		if c.changed {
 			return nil, nil
 		}
 
 		// result = result^2 mod n
-		result = result.Mul(result, result)
-		result = result.Mod(result, c.order)
+		result.Mul(result, result)
+		result.Mod(result, c.order)
 
 		// tmp = 2 * r
 		tmp := big.NewInt(2)
-		tmp = tmp.Mul(tmp, r)
+		b := new(big.Int)
 
-		b := tmp.Div(tmp, c.proofParam) // b = tmp / l
-		r = tmp.Mod(tmp, c.proofParam)  // r = tmp * l
+		tmp.Mul(tmp, r)
 
+		b.Div(tmp, c.proofParam) // b = tmp / l
+		r.Mod(tmp, c.proofParam) // r = tmp % l
 		// pi = g^b * pi^2 mod n
-		pi := pi.Mul(pi, pi)
-		tmp = g.Exp(g, b, c.order)
-		pi = pi.Mul(pi, tmp)
-		pi = pi.Mod(pi, c.order)
+		pi.Mul(pi, pi)
+		g.Exp(seed, b, c.order)
+		pi.Mul(pi, g)
+		pi.Mod(pi, c.order)
 	}
 
 	return result, pi
@@ -237,7 +243,8 @@ func GenerateGenesisParams() (*common.GenesisParams, error) {
 	}
 
 	genesisParams.Order = [128]byte(order.Bytes())
-	genesisParams.TimeParam = 10000000
+	genesisParams.TimeParam = 1000000
+	//genesisParams.TimeParam = 1000
 	genesisParams.VerifyParam = [32]byte(pp.Bytes())
 	genesisParams.Seed = [32]byte(seed.Bytes())
 
