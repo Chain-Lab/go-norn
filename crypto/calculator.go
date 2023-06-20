@@ -102,10 +102,10 @@ func (c *Calculator) AppendNewSeed(seed *big.Int, proof *big.Int) {
 	c.changeLock.Lock()
 	log.Infof("Trying append new seed %s.", hex.EncodeToString(seed.Bytes()))
 
-	// 检查如果当前的 seed 没有变化就直接返回
-	if c.seed.Cmp(seed) == 0 {
+	// 检查如果当前的 seed 没有变化就直接返回 或者
+	// 如果当前的 seed 不是初始的0，并且输入无法通过验证则不更新
+	if c.seed.Cmp(seed) == 0 || (c.seed.Cmp(zero) != 0 && !c.Verify(c.seed, proof, seed)) {
 		c.changeLock.Unlock()
-
 		return
 	}
 

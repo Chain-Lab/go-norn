@@ -4,12 +4,14 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"github.com/gookit/config/v2"
 	"github.com/libp2p/go-libp2p"
 	dht "github.com/libp2p/go-libp2p-kad-dht"
 	"github.com/multiformats/go-multiaddr"
 	log "github.com/sirupsen/logrus"
 	"go-chronos/core"
 	"go-chronos/node"
+	"go-chronos/rpc"
 	"go-chronos/utils"
 	_ "net/http/pprof"
 	"os"
@@ -19,8 +21,8 @@ import (
 )
 
 // 测试指令：
-// ./chronos -d ./data1 -g
-// ./chronos -d ./data2 -p 23212 -b /ip4/127.0.0.1/tcp/31258/p2p/12D3KooWJtvSD3yzu1XpKxr3eKutgjJXgky266AdnUJSg25ZXuVr
+// ./chronos -d ./data1 -g -c config1.yml
+// ./chronos -d ./data2 -p -c config2.yml -b /ip4/127.0.0.1/tcp/31258/p2p/12D3KooWJtvSD3yzu1XpKxr3eKutgjJXgky266AdnUJSg25ZXuVr
 
 func main() {
 	flag.Parse()
@@ -46,7 +48,10 @@ func main() {
 		log.SetLevel(log.DebugLevel)
 	}
 
-	core.LoadConfig()
+	core.LoadConfig(cfg)
+	go rpc.RPCServerStart()
+	port := config.Int("node.port")
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -60,7 +65,7 @@ func main() {
 	}
 
 	chain := core.NewBlockchain(db)
-	txPool := core.NewTxPool()
+	txPool := core.GetTxPoolInst()
 	hConfig := node.HandlerConfig{
 		TxPool: txPool,
 		Chain:  chain,
@@ -90,8 +95,8 @@ func main() {
 	}
 
 	host.SetStreamHandler(node.ProtocolId, node.HandleStream)
-	//log.Infof("Node address: /ip4/127.0.0.1/tcp/%v/p2p/%s", port, host.ID().String())
-	log.Infof("Node address: /ip4/192.168.31.119/tcp/%v/p2p/%s", port, host.ID().String())
+	log.Infof("Node address: /ip4/127.0.0.1/tcp/%v/p2p/%s", port, host.ID().String())
+	//log.Infof("Node address: /ip4/192.168.31.119/tcp/%v/p2p/%s", port, host.ID().String())
 
 	var kdht *dht.IpfsDHT
 
@@ -135,15 +140,11 @@ func main() {
 		}()
 	}
 
-	if test {
-		go sendTransaction(h)
-	}
-
 	c := make(chan os.Signal)
 	signal.Notify(c, os.Interrupt)
 	select {
 	case sign := <-c:
-		log.Infoln("Got %s signal. Aborting...", sign)
+		log.Infof("Got %s signal. Aborting...", sign)
 
 		if pp {
 			pprof.StopCPUProfile()

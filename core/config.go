@@ -13,12 +13,12 @@ import (
 )
 
 // LoadConfig 在启动时运行一次，加载配置文件
-func LoadConfig() {
+func LoadConfig(filepath string) {
 	config.WithOptions(config.ParseEnv)
 
 	config.AddDriver(yaml.Driver)
 
-	err := config.LoadFiles("./config.yml")
+	err := config.LoadFiles(filepath)
 	if err != nil {
 		log.WithField("error", err).Errorln("Load config file failed.")
 	}

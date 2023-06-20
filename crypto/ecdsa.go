@@ -27,7 +27,7 @@ func decodePrivateKeyFromHexString(hexString string) (*ecdsa.PrivateKey, error) 
 
 	x, y := elliptic.P256().ScalarBaseMult(kBytes)
 
-	result.X = x
-	result.Y = y
+	result.PublicKey.X = x
+	result.PublicKey.Y = y
 	return result, nil
 }

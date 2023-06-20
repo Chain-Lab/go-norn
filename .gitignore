@@ -22,3 +22,4 @@ go.work
 .idea
 
 .DS_Store
+cmd/chronos/data*

@@ -25,13 +25,16 @@ type TxPool struct {
 	lock   sync.RWMutex
 }
 
-func NewTxPool() *TxPool {
-	return &TxPool{
-		//txQueue: make([]*common.Hash, 0, 8192),
-		txQueue: make([]string, 0, 8192),
-		//txs:     sync.Map{},
-		//txs: make(map[common.Hash]*common.Transaction),
-	}
+func GetTxPoolInst() *TxPool {
+	txOnce.Do(func() {
+		txPoolInst = &TxPool{
+			//txQueue: make([]*common.Hash, 0, 8192),
+			txQueue: make([]string, 0, 8192),
+			//txs:     sync.Map{},
+			//txs: make(map[common.Hash]*common.Transaction),
+		}
+	})
+	return txPoolInst
 }
 
 // Package 用于打包交易，这里返回的是 Transaction 的切片

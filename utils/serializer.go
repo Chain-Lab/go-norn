@@ -12,6 +12,22 @@ import (
 //	writePool = sync.Pool{New: func() any { return karmem.NewWriter(1024) }}
 //)
 
+//type CoreTypes interface {
+//	common.Block | common.BlockHeader |
+//		common.GeneralParams | common.GeneralParams
+//}
+//
+//type P2PTypes interface {
+//	p2p.SyncStatusMsg
+//}
+//
+//type KarmemTypesInterface interface {
+//	CoreTypes | P2PTypes
+//	ReadAsRoot(reader *karmem.Reader)
+//}
+//
+//type KarmemType[T KarmemTypesInterface] struct{}
+
 func SerializeBlock(block *common.Block) ([]byte, error) {
 	writer := karmem.NewWriter(KARMEM_CAP)
 

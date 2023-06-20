@@ -25,7 +25,7 @@ var (
 
 func VRFCalculate(curve elliptic.Curve, msg []byte) ([]byte, *big.Int, *big.Int, error) {
 	N := curve.Params().N
-	prvHex := config.String("prv")
+	prvHex := config.String("consensus.prv")
 	prv, err := decodePrivateKeyFromHexString(prvHex)
 	if err != nil {
 		log.WithField("error", err).Fatalln("Load private key failed.")

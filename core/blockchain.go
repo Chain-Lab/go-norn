@@ -116,7 +116,7 @@ func (bc *BlockChain) PackageNewBlock(txs []common.Transaction, params *common.G
 	}
 
 	bestBlock := bc.buffer.GetPriorityLeaf()
-	publicKey, err := hex.DecodeString(config.String("pub"))
+	publicKey, err := hex.DecodeString(config.String("consensus.pub"))
 
 	if err != nil {
 		log.Errorln("Get public key from config failed.")
