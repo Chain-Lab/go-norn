@@ -37,20 +37,26 @@ func main() {
 		//defer pprof.StopCPUProfile()
 	}
 
+	// 显示帮助信息，每个选项相关的功能
 	if help {
 		flag.Usage()
 		return
 	}
 
+	// 当前的日志级别是否设置为 Trace
 	if trace {
 		log.SetLevel(log.TraceLevel)
 	}
 
+	// 当前的日志级别是否设置为 Debug
 	if debug {
 		log.SetLevel(log.DebugLevel)
 	}
 
+	// 加载 config 配置文件
 	core.LoadConfig(cfg)
+
+	// RPC 协程服务开启
 	go rpc.RPCServerStart()
 	port := config.Int("node.port")
 
@@ -58,7 +64,6 @@ func main() {
 	defer cancel()
 
 	// 数据库、节点的启动
-
 	db, err := utils.NewLevelDB(datadir)
 
 	if err != nil {
@@ -80,7 +85,6 @@ func main() {
 	}
 
 	// 网络部分的启动
-
 	localMultiAddr, err := multiaddr.NewMultiaddr(
 		fmt.Sprintf("/ip4/0.0.0.0/tcp/%d", port),
 	)
@@ -97,6 +101,7 @@ func main() {
 	}
 
 	host.SetStreamHandler(node.ProtocolId, node.HandleStream)
+	// 打印节点的 id 信息
 	log.Infof("Node address: /ip4/127.0.0.1/tcp/%v/p2p/%s", port, host.ID().String())
 	//log.Infof("Node address: /ip4/192.168.31.119/tcp/%v/p2p/%s", port, host.ID().String())
 
@@ -122,6 +127,7 @@ func main() {
 		}
 	}
 
+	// 节点发现协程
 	go node.Discover(ctx, host, kdht, "Chronos network.")
 
 	if genesis {

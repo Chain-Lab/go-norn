@@ -18,10 +18,11 @@ import (
 )
 
 const (
-	maxBlockCache       = 1024
-	maxTransactionCache = 32768
-	maxBlockProcessList = 12
-	maxBlockChannel     = 128
+	maxBlockCache         = 1024
+	maxTransactionCache   = 32768
+	maxBlockProcessList   = 12
+	maxBlockChannel       = 128
+	transactionStartIndex = 3
 )
 
 type blockList []*common.Block
@@ -30,24 +31,33 @@ type blockList []*common.Block
 // 如果需要对区块进行校验或者哈希的修改，对数据进行深拷贝得到一份复制来进行处理
 
 type BlockChain struct {
+	// 数据库相关的成员变量
 	db            *utils.LevelDB
 	dbWriterQueue chan *common.Block
 
+	// 当前的链所维护的区块高度对应区块 blockHeightMap、区块 cache 和交易 cache
 	blockHeightMap *lru.Cache
 	blockCache     *lru.Cache
 	txCache        *lru.Cache
 
+	// 当前的最新区块 latestBlock、最新高度 latestHeight
 	latestBlock  *common.Block
 	latestHeight int64
-	latestLock   sync.RWMutex
+	// 最新状态的同步锁
+	latestLock sync.RWMutex
 
-	bufferChan    chan *common.Block
-	buffer        *BlockBuffer
-	appendLock    sync.RWMutex
+	// 区块缓冲区的 channel，以及所维护的 buffer
+	bufferChan chan *common.Block
+	buffer     *BlockBuffer
+	appendLock sync.RWMutex
+
+	// genesisParams 当前所维护的链的创世区块参数
 	genesisParams *common.GenesisParams
 }
 
+// NewBlockchain 创建一个 BlockChain 实，需要传入一个 LevelDB 实例 db
 func NewBlockchain(db *utils.LevelDB) *BlockChain {
+	// 实例化一系列的 cache 并处理可能出现的错误
 	blockCache, err := lru.New(maxBlockCache)
 	if err != nil {
 		log.WithField("error", err).Debugln("Create block cache failed")
@@ -66,6 +76,7 @@ func NewBlockchain(db *utils.LevelDB) *BlockChain {
 		return nil
 	}
 
+	// 使用数据库实例 db 实例化一个 Blockchain 对象
 	chain := &BlockChain{
 		db:            db,
 		dbWriterQueue: make(chan *common.Block),
@@ -91,6 +102,8 @@ func NewBlockchain(db *utils.LevelDB) *BlockChain {
 		genesis, _ := chain.GetBlockByHeight(0)
 		chain.genesisInitialization(genesis)
 	}
+
+	// 区块处理协程启动
 	go chain.BlockProcessRoutine()
 	return chain
 }
@@ -107,6 +120,7 @@ func (bc *BlockChain) BlockProcessRoutine() {
 
 // PackageNewBlock 打包新的区块，传入交易序列
 func (bc *BlockChain) PackageNewBlock(txs []common.Transaction, params *common.GeneralParams) (*common.Block, error) {
+	// 对传入的区块参数进行序列化
 	log.Traceln("Start package new block.")
 	paramsBytes, err := utils.SerializeGeneralParams(params)
 
@@ -115,6 +129,7 @@ func (bc *BlockChain) PackageNewBlock(txs []common.Transaction, params *common.G
 		return nil, err
 	}
 
+	// 从区块缓冲视图中找到当前视图下最优的区块，具体的选取方法需要查阅文档 （wiki/区块缓冲视图.md）
 	bestBlock := bc.buffer.GetPriorityLeaf()
 	publicKey, err := hex.DecodeString(config.String("consensus.pub"))
 
@@ -123,7 +138,9 @@ func (bc *BlockChain) PackageNewBlock(txs []common.Transaction, params *common.G
 		return nil, err
 	}
 
+	// 对交易列表构建 Merkle 哈希树
 	merkleRoot := BuildMerkleTree(txs)
+	// 区块创建
 	block := common.Block{
 		Header: common.BlockHeader{
 			Timestamp:     time.Now().UnixMilli(),
@@ -137,6 +154,7 @@ func (bc *BlockChain) PackageNewBlock(txs []common.Transaction, params *common.G
 		Transactions: txs,
 	}
 
+	// 区块头序列化
 	byteBlockHeaderData, err := utils.SerializeBlockHeader(&block.Header)
 
 	if err != nil {
@@ -195,11 +213,14 @@ func (bc *BlockChain) NewGenesisBlock() {
 	bc.InsertBlock(&genesisBlock)
 }
 
+// GetLatestBlock 获取当前的最新区块
 func (bc *BlockChain) GetLatestBlock() (*common.Block, error) {
+	// 首先尝试获取变量下存储的区块
 	if bc.latestBlock != nil {
 		return bc.latestBlock, nil
 	}
 
+	// 然后从数据库的索引下查询
 	latestBlockHash, err := bc.db.Get([]byte("latest"))
 
 	if err != nil {
@@ -207,6 +228,7 @@ func (bc *BlockChain) GetLatestBlock() (*common.Block, error) {
 		return nil, err
 	}
 
+	// 如果索引存在，则从数据库中拉取
 	blockHash := common.Hash(latestBlockHash)
 
 	block, err := bc.GetBlockByHash(&blockHash)
@@ -294,12 +316,14 @@ func (bc *BlockChain) GetBlockByHeight(height int64) (*common.Block, error) {
 	return block, nil
 }
 
+// writeBlockCache 向 哈希 -> 区块的 cache 下添加区块信息
 func (bc *BlockChain) writeBlockCache(block *common.Block) {
 	bc.blockHeightMap.Add(block.Header.Height, block.Header.BlockHash)
 	blockHash := block.BlockHash()
 	bc.blockCache.Add(blockHash, block)
 }
 
+// writeTxCache 向 哈希 -> 交易的 cache 中添加交易
 func (bc *BlockChain) writeTxCache(transaction *common.Transaction) {
 	hash := transaction.Body.Hash
 	strHash := hex.EncodeToString(hash[:])
@@ -309,13 +333,12 @@ func (bc *BlockChain) writeTxCache(transaction *common.Transaction) {
 // InsertBlock 函数用于将区块插入到数据库中
 func (bc *BlockChain) InsertBlock(block *common.Block) {
 	// todo: 这里作为 Public 函数只是为了测试
-	var err error
 	count := len(block.Transactions)
 
 	blockHash := common.Hash(block.Header.BlockHash)
 
 	// 获取对应哈希的区块，如果区块存在，说明链上已经存在该区块
-	_, err = bc.GetBlockByHash(&blockHash)
+	_, err := bc.GetBlockByHash(&blockHash)
 	if err == nil {
 		log.WithField("hash", block.BlockHash()).Warning("Block exists.")
 		return
@@ -323,6 +346,7 @@ func (bc *BlockChain) InsertBlock(block *common.Block) {
 
 	latestBlock, err := bc.GetLatestBlock()
 	if !block.IsGenesisBlock() {
+		// 插入区块非创世区块，需要检查拉取最新区块 是否成功 以及 前一个区块的哈希值是否符合
 		if err != nil {
 			log.WithField("error", err).Debugln("Get latest block failed.")
 			return
@@ -333,6 +357,7 @@ func (bc *BlockChain) InsertBlock(block *common.Block) {
 			return
 		}
 	} else {
+		// 插入区块是创世区块，说明 buffer 没有初始化，需要进行初始化
 		bc.createBlockBuffer(block)
 		bc.genesisInitialization(block)
 	}
@@ -347,9 +372,9 @@ func (bc *BlockChain) InsertBlock(block *common.Block) {
 	bc.latestLock.Unlock()
 	bc.writeBlockCache(block)
 
-	// todo: 把这里的魔数改成声明
-	keys := make([][]byte, count+3)
-	values := make([][]byte, count+3)
+	// 交易列表添加到数据库前需要预留三个位置，修改 latest的哈希值、区块、区块高度对应的哈希
+	keys := make([][]byte, count+transactionStartIndex)
+	values := make([][]byte, count+transactionStartIndex)
 	//fmt.Printf("Data size %d bytes.", len(values[0]))
 
 	log.WithFields(log.Fields{
@@ -374,7 +399,7 @@ func (bc *BlockChain) InsertBlock(block *common.Block) {
 		tx := block.Transactions[idx]
 
 		txWriter := karmem.NewWriter(1024)
-		keys[idx+3] = append([]byte("tx#"), tx.Body.Hash[:]...)
+		keys[idx+transactionStartIndex] = append([]byte("tx#"), tx.Body.Hash[:]...)
 		_, err := tx.WriteAsRoot(txWriter)
 
 		if err != nil {
@@ -385,14 +410,16 @@ func (bc *BlockChain) InsertBlock(block *common.Block) {
 			return
 		}
 
-		values[idx+3] = txWriter.Bytes()
+		values[idx+transactionStartIndex] = txWriter.Bytes()
 	}
 
+	// 批量添加/修改数据到数据库
 	bc.db.BatchInsert(keys, values)
 	seed := new(big.Int)
 	proof := new(big.Int)
 
 	// todo: 异常处理
+	// 根据区块的信息来反序列化参数
 	if block.Header.Height == 0 {
 		params, _ := utils.DeserializeGenesisParams(block.Header.Params)
 		// todo: 将编码转换的过程放入到VRF代码中
@@ -404,10 +431,13 @@ func (bc *BlockChain) InsertBlock(block *common.Block) {
 		seed.SetBytes(params.Result)
 		proof.SetBytes(params.Proof)
 	}
+
+	// 向 VDF 的计算添加区块下的信息
 	calculator := crypto.GetCalculatorInstance()
 	calculator.AppendNewSeed(seed, proof)
 }
 
+// AppendBlockTask 向区块缓冲视图中添加区块处理任务
 func (bc *BlockChain) AppendBlockTask(block *common.Block) {
 	if block.IsGenesisBlock() {
 		bc.InsertBlock(block)
@@ -418,6 +448,7 @@ func (bc *BlockChain) AppendBlockTask(block *common.Block) {
 	bc.buffer.AppendBlock(block)
 }
 
+// GetTransactionByHash 通过交易的哈希值来获取交易
 func (bc *BlockChain) GetTransactionByHash(hash common.Hash) (*common.Transaction, error) {
 	strHash := hex.EncodeToString(hash[:])
 	value, hit := bc.txCache.Get(strHash)

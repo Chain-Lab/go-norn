@@ -8,11 +8,11 @@ import (
 )
 
 const (
-	maxTxPackageCount = 8001
+	maxTxPackageCount = 8001 // 交易池打包的最多交易数量
 )
 
 var (
-	txOnce     sync.Once
+	txOnce     sync.Once // 只实例化一次交易池，golang 下的单例模式
 	txPoolInst *TxPool
 )
 

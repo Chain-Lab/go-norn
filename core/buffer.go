@@ -15,12 +15,12 @@ import (
 )
 
 const (
-	secondQueueInterval = 100 * time.Millisecond
 	// todo: 前期测试使用，后面需要修改限制条件
-	maxBlockMark  = 200
-	maxKnownBlock = 1024
-	maxQueueBlock = 512
-	maxBufferSize = 12
+	secondQueueInterval = 100 * time.Millisecond // 区块缓冲视图队列处理延时
+	maxBlockMark        = 200                    // 单个区块最多标记多少次不再处理
+	maxKnownBlock       = 1024                   // lru 缓冲下最多存放多少区块
+	maxQueueBlock       = 512                    // 区块处理第二队列最多存放多少区块
+	maxBufferSize       = 12                     // buffer 缓冲多少高度时弹出一个区块
 )
 
 // BlockBuffer 维护一个树形结构的缓冲区，保存当前视图下的区块信息
@@ -148,10 +148,13 @@ func (b *BlockBuffer) secondProcess() {
 	var block *common.Block = nil
 	for {
 		select {
+		// 接收计时器到期事件
 		case <-timer.C:
 			if block == nil {
 				block = <-b.secondChan
 			}
+
+			// 获取区块的相关信息
 			blockHash := block.BlockHash()
 			prevBlockHash := block.PrevBlockHash()
 			blockHeight := block.Header.Height
@@ -278,6 +281,7 @@ func (b *BlockBuffer) updateTreeView(start int64) {
 	height := int64(start)
 
 	for {
+		// 如果高度超过 buffer 中的最高高度则跳过
 		if height > b.bufferedHeight {
 			break
 		}
@@ -288,6 +292,7 @@ func (b *BlockBuffer) updateTreeView(start int64) {
 			continue
 		}
 
+		// 获取当前情况下的某个区块后续的区块列表
 		list, _ := b.nextBlockMap[prevBlockHash]
 
 		if list == nil || len(list) == 0 {
@@ -296,6 +301,7 @@ func (b *BlockBuffer) updateTreeView(start int64) {
 			continue
 		}
 
+		// 从列表中选出一个最优的区块，然后进入下一次循环
 		selected := b.selectBlockFromList(list)
 		b.selectedBlock[height] = selected
 		prevBlock = selected

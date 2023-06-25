@@ -12,10 +12,12 @@ import (
 
 //var writerPool = sync.Pool{New: func() any { return karmem.NewWriter(1024) }}
 
+// Verify 交易验证方法
 func (tx *Transaction) Verify() bool {
 	//writer := writerPool.Get().(*karmem.Writer)
 	//defer writerPool.Put(writer)
 	//defer writer.Reset()
+	// 初始化交易序列化的 writer
 	writer := karmem.NewWriter(1024)
 
 	txBody := tx.Body
@@ -23,9 +25,12 @@ func (tx *Transaction) Verify() bool {
 	bytePublicKey := txBody.Public[:]
 	// todo: 这样将 [32]byte 转换为 []byte 是否存在风险
 	byteHash := make([]byte, 32)
+
+	// 对交易的签名进行拷贝，便于后续验证
 	copy(byteSignature, txBody.Signature[:])
 	copy(byteHash, txBody.Hash[:])
 
+	// 对公钥进行反序列化，得到椭圆曲线上的点 (x, y) 表示公钥
 	x, y := elliptic.UnmarshalCompressed(elliptic.P256(), bytePublicKey[:])
 	publicKey := ecdsa.PublicKey{
 		Curve: elliptic.P256(),

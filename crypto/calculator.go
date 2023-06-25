@@ -16,9 +16,9 @@ import (
 )
 
 var (
-	calculatorOnce sync.Once
-	calculatorInst *Calculator
-	zero           *big.Int = big.NewInt(0)
+	calculatorOnce sync.Once                   // 单例，实例化一次 calculator
+	calculatorInst *Calculator                 // calculator 的实例
+	zero           *big.Int    = big.NewInt(0) // 常量，大整数下的 0
 )
 
 type Calculator struct {
@@ -122,6 +122,7 @@ func GenerateParams() (*big.Int, *big.Int, error) {
 	r := rand.Reader
 	n := new(big.Int)
 
+	// 随机获取 512 bits 的素数
 	p, err := rand.Prime(r, 512)
 	if err != nil {
 		return nil, nil, err

@@ -16,6 +16,7 @@ import (
 )
 
 func RPCServerStart() {
+	// 从配置文件中获取 RPC 绑定的 ip 和 port
 	addr := config.String("rpc.address")
 	lis, err := net.Listen("tcp", addr)
 
@@ -25,6 +26,7 @@ func RPCServerStart() {
 	}
 
 	s := grpc.NewServer()
+	// 注册 RPC 处理的 Service
 	pb.RegisterTransactionServer(s, &transactionService{})
 	reflection.Register(s)
 
