@@ -74,7 +74,7 @@ func (p *Peer) broadcastTxHash() {
 }
 
 func (p *Peer) sendStatus() {
-	ticker := time.NewTicker(1 * time.Second)
+	ticker := time.NewTicker(50 * time.Millisecond)
 	for {
 		if p.peer.Stopped() {
 			break
@@ -83,8 +83,11 @@ func (p *Peer) sendStatus() {
 		select {
 		case <-ticker.C:
 			height := p.chain.Height()
-
 			requestSyncStatusMsg(height, p)
+		}
+		// fixed[230725]：在同步完成后不再请求对端高度
+		if p.handler.Synced() {
+			break
 		}
 	}
 }

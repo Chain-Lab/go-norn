@@ -24,6 +24,8 @@ enum StatusCode uint8 {
     SyncBlocksMsg;
     GetBufferedBlocksMsg;
     BufferedBlocksMsg;
+    TimeSyncReq;
+    TimeSyncRsp;
 }
 
 struct SyncStatusMsg table {
@@ -31,6 +33,14 @@ struct SyncStatusMsg table {
     LatestHash [32]byte;
     BufferedStartHeight int64;
     BufferedEndHeight int64;
+}
+
+struct TimeSyncMsg table {
+    Code int8;
+    ReqTime int64;
+    RecReqTime int64;
+    RspTime int64;
+    RecRspTime int64;
 }
 
 struct Message table {

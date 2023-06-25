@@ -58,9 +58,11 @@ func handleNewBlockMsg(h *Handler, msg *p2p.Message, p *Peer) {
 	}
 
 	if verifyBlockVRF(block) {
+		log.WithField("status", status).Debugln("Receive block from p2p.")
 		h.chain.AppendBlockTask(block)
 		h.blockBroadcastQueue <- block
 	} else {
+		//log.Infoln(hex.EncodeToString(block.Header.PublicKey[:]))
 		log.Warning("Block VRF verify failed.")
 	}
 }
@@ -141,6 +143,7 @@ func handleTransactionMsg(h *Handler, msg *p2p.Message, p *Peer) {
 
 func handleNewPooledTransactionHashesMsg(h *Handler, msg *p2p.Message, p *Peer) {
 	status := h.blockSyncer.getStatus()
+	// todo: 修改这里的条件判断为统一的函数
 	if status != synced {
 		return
 	}
@@ -211,6 +214,32 @@ func handleSyncBlockMsg(h *Handler, msg *p2p.Message, p *Peer) {
 	h.appendBlockToSyncer(block)
 }
 
+func handleTimeSyncReq(h *Handler, msg *p2p.Message, p *Peer) {
+	payload := msg.Payload
+	tMsg, err := utils.DeserializeTimeSyncMsg(payload)
+	tMsg.RecReqTime = h.timeSyncer.GetLogicClock()
+
+	if err != nil {
+		log.WithError(err).Debugln("Time sync message deserialize failed.")
+		return
+	}
+
+	h.timeSyncer.ProcessSyncRequest(tMsg, p)
+}
+
+func handleTimeSyncRsp(h *Handler, msg *p2p.Message, p *Peer) {
+	payload := msg.Payload
+	tMsg, err := utils.DeserializeTimeSyncMsg(payload)
+	tMsg.RecRspTime = h.timeSyncer.GetLogicClock()
+
+	if err != nil {
+		log.WithError(err).Debugln("Time sync message deserialize failed.")
+		return
+	}
+
+	h.timeSyncer.ProcessSyncRespond(tMsg, p)
+}
+
 func verifyBlockVRF(block *common.Block) bool {
 	//println(hex.EncodeToString(block.Header.PublicKey[:]))
 	bytesParams := block.Header.Params
@@ -233,6 +262,11 @@ func verifyBlockVRF(block *common.Block) bool {
 
 	if err != nil || !verified {
 		log.Debugln("Verify VRF failed.")
+		//log.Infoln(hex.EncodeToString(s.Bytes()))
+		//log.Infoln(hex.EncodeToString(t.Bytes()))
+		//log.Infoln(hex.EncodeToString(params.Result))
+		//log.Infoln(hex.EncodeToString(params.RandomNumber[:]))
+		//log.Infoln(hex.EncodeToString(block.Header.PublicKey[:]))
 		return false
 	}
 

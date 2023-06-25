@@ -4,15 +4,16 @@ import (
 	"encoding/hex"
 	log "github.com/sirupsen/logrus"
 	"go-chronos/common"
+	"go-chronos/metrics"
 	"sync"
 )
 
 const (
-	maxTxPackageCount = 8001
+	maxTxPackageCount = 5001 // 交易池打包的最多交易数量
 )
 
 var (
-	txOnce     sync.Once
+	txOnce     sync.Once // 只实例化一次交易池，golang 下的单例模式
 	txPoolInst *TxPool
 )
 
@@ -61,13 +62,14 @@ func (pool *TxPool) Package() []common.Transaction {
 		}
 
 		tx := value.(*common.Transaction)
-		//if !tx.Verify() {
-		//	log.Errorln("Verify failed.")
-		//	continue
-		//}
+		if !tx.Verify() {
+			log.Errorln("Verify failed.")
+			continue
+		}
 		// todo： 这里是传值还是传指针？
 		result = append(result, *tx)
 		count++
+		metrics.TxPoolMetricsDec()
 
 		if count >= maxTxPackageCount-1 {
 			break
@@ -89,6 +91,7 @@ func (pool *TxPool) Add(transaction *common.Transaction) {
 	pool.txs.Store(txHash, transaction)
 	//pool.txs[tx]
 	pool.txQueue = append(pool.txQueue, txHash)
+	metrics.TxPoolMetricsInc()
 }
 
 func (pool *TxPool) Contain(hash string) bool {

@@ -30,6 +30,7 @@ func respondSyncGetBlock(block *common.Block, p *Peer) {
 }
 
 func respondGetSyncStatus(msg *p2p.SyncStatusMsg, p *Peer) {
+	//metrics.RespondGetSyncStatusGauge.Inc()
 	byteStatusMsg, err := utils.SerializeStatusMsg(msg)
 
 	if err != nil {
@@ -37,4 +38,17 @@ func respondGetSyncStatus(msg *p2p.SyncStatusMsg, p *Peer) {
 	}
 
 	p.peer.Send(p2p.StatusCodeSyncStatusMsg, byteStatusMsg)
+	//metrics.RespondGetSyncStatusGauge.Dec()
+}
+
+func respondTimeSync(msg *p2p.TimeSyncMsg, p *Peer) {
+	//metrics.RespondTimeSyncRoutineGauge.Inc()
+	byteTimeSyncMsg, err := utils.SerializeTimeSyncMsg(msg)
+
+	if err != nil {
+		return
+	}
+
+	p.peer.Send(p2p.StatusCodeTimeSyncRsp, byteTimeSyncMsg)
+	//metrics.RespondTimeSyncRoutineGauge.Dec()
 }

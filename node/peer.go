@@ -18,6 +18,7 @@ const (
 	maxQueuedTxAnns    = 4096
 	maxQueuedBlocks    = 4
 	maxQueuedBlockAnns = 4
+	messageQueueCap    = 5000
 )
 
 type PeerConfig struct {
@@ -49,7 +50,7 @@ type Peer struct {
 }
 
 func NewPeer(peerId peer.ID, s *network.Stream, config PeerConfig) (*Peer, error) {
-	msgQueue := make(chan *p2p.Message)
+	msgQueue := make(chan *p2p.Message, messageQueueCap)
 	pp, err := p2p.NewPeer(peerId, s, msgQueue)
 
 	if err != nil {

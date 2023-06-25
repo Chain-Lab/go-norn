@@ -19,9 +19,10 @@ import (
 type msgHandler func(h *Handler, msg *p2p.Message, p *Peer)
 
 const (
-	maxKnownBlock       = 1024
-	maxKnownTransaction = 32768
-	ProtocolId          = protocol.ID("/chronos/1.0.0")
+	maxKnownBlock          = 1024
+	maxKnownTransaction    = 32768
+	maxSyncerStatusChannel = 512
+	ProtocolId             = protocol.ID("/chronos/1.0.0")
 )
 
 var handlerMap = map[p2p.StatusCode]msgHandler{
@@ -36,6 +37,8 @@ var handlerMap = map[p2p.StatusCode]msgHandler{
 	p2p.StatusCodeSyncStatusMsg:                 handleSyncStatusMsg,
 	p2p.StatusCodeSyncGetBlocksMsg:              handleSyncGetBlocksMsg,
 	p2p.StatusCodeSyncBlocksMsg:                 handleSyncBlockMsg,
+	p2p.StatusCodeTimeSyncReq:                   handleTimeSyncReq,
+	p2p.StatusCodeTimeSyncRsp:                   handleTimeSyncRsp,
 }
 
 var (
@@ -43,8 +46,10 @@ var (
 )
 
 type HandlerConfig struct {
-	TxPool *core.TxPool
-	Chain  *core.BlockChain
+	TxPool       *core.TxPool
+	Chain        *core.BlockChain
+	Genesis      bool
+	InitialDelta int64 // 初始时间偏移，仅仅用于进行时间同步测试
 }
 
 type Handler struct {
@@ -60,6 +65,7 @@ type Handler struct {
 	chain  *core.BlockChain
 
 	blockSyncer  *BlockSyncer
+	timeSyncer   *TimeSyncer
 	startRoutine sync.Once
 
 	peerSetLock sync.RWMutex
@@ -99,7 +105,8 @@ func NewHandler(config *HandlerConfig) (*Handler, error) {
 	blockSyncerConfig := &BlockSyncerConfig{
 		Chain: config.Chain,
 	}
-	syncer := NewBlockSyncer(blockSyncerConfig)
+	bs := NewBlockSyncer(blockSyncerConfig)
+	ts := NewTimeSyncer(config.Genesis, config.InitialDelta)
 
 	handler := &Handler{
 		// todo: 限制节点数量，Kad 应该限制了节点数量不超过20个
@@ -114,11 +121,13 @@ func NewHandler(config *HandlerConfig) (*Handler, error) {
 		txPool: config.TxPool,
 		chain:  config.Chain,
 
-		blockSyncer: syncer,
+		blockSyncer: bs,
+		timeSyncer:  ts,
 	}
 
 	go handler.packageBlockRoutine()
-	syncer.Start()
+	bs.Start()
+	ts.Start()
 	handlerInst = handler
 
 	return handler, nil
@@ -142,7 +151,7 @@ func (h *Handler) packageBlockRoutine() {
 		select {
 		case <-ticker.C:
 			if !h.Synced() {
-				//log.Infoln("Waiting for node synced.")
+				log.Infoln("Waiting for node synced.")
 				continue
 			}
 
@@ -174,7 +183,8 @@ func (h *Handler) packageBlockRoutine() {
 
 			txs := h.txPool.Package()
 			//log.Infof("Package %d txs.", len(txs))
-			newBlock, err := h.chain.PackageNewBlock(txs, &params)
+			timestamp := h.timeSyncer.GetLogicClock()
+			newBlock, err := h.chain.PackageNewBlock(txs, timestamp, &params)
 
 			if err != nil {
 				log.WithField("error", err).Debugln("Package new block failed.")
@@ -183,7 +193,7 @@ func (h *Handler) packageBlockRoutine() {
 
 			h.chain.AppendBlockTask(newBlock)
 			h.blockBroadcastQueue <- newBlock
-			log.Debugf("Package new block# 0x%s", hex.EncodeToString(newBlock.Header.BlockHash[:]))
+			log.Infof("Package new block# 0x%s", hex.EncodeToString(newBlock.Header.BlockHash[:]))
 		}
 	}
 }
@@ -238,7 +248,7 @@ func (h *Handler) broadcastBlock() {
 			//todo: 这里是由于获取新区块的逻辑还没有，所以先全部广播
 			//  在后续完成对应的逻辑后，再修改这里的逻辑来降低广播的时间复杂度
 			countBroadcastBlock := peersCount
-			log.WithField("count", countBroadcastBlock).Infoln("Broadcast block.")
+			//log.WithField("count", countBroadcastBlock).Infoln("Broadcast block.")
 
 			for idx := 0; idx < countBroadcastBlock; idx++ {
 				peers[idx].AsyncSendNewBlock(block)
@@ -329,9 +339,9 @@ func (h *Handler) syncStatus() uint8 {
 
 func (h *Handler) Synced() bool {
 	status := h.blockSyncer.getStatus()
-	if status == synced {
+	if status == synced && h.timeSyncer.synced() {
 		h.startRoutine.Do(func() {
-			log.Traceln("Block sync finish!")
+			log.Infoln("Block && time sync finish!")
 			go h.broadcastBlock()
 			go h.broadcastTransaction()
 		})
@@ -344,7 +354,7 @@ func (h *Handler) Synced() bool {
 func (h *Handler) StatusMessage() *p2p.SyncStatusMsg {
 	block, err := h.chain.GetLatestBlock()
 
-	if err != nil {
+	if err != nil || !h.Synced() {
 		return &p2p.SyncStatusMsg{
 			LatestHeight:        -1,
 			LatestHash:          [32]byte{},
@@ -372,4 +382,9 @@ func (h *Handler) removePeerIfStopped(idx int) {
 	if p.Stopped() {
 		h.peerSet = append(h.peerSet[:idx], h.peerSet[idx+1:]...)
 	}
+}
+
+func GetLogicClock() int64 {
+	h := GetHandlerInst()
+	return h.timeSyncer.GetLogicClock()
 }

@@ -40,3 +40,10 @@ func DeserializeGenesisParams(byteParamsData []byte) (*common.GenesisParams, err
 
 	return genesisParams, nil
 }
+
+func DeserializeTimeSyncMsg(byteTimeSyncMsg []byte) (*p2p.TimeSyncMsg, error) {
+	msg := new(p2p.TimeSyncMsg)
+	msg.ReadAsRoot(karmem.NewReader(byteTimeSyncMsg))
+
+	return msg, nil
+}

@@ -7,13 +7,15 @@ import (
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
 	log "github.com/sirupsen/logrus"
+	"go-chronos/metrics"
 	karmem "karmem.org/golang"
 	"sync"
 	"time"
 )
 
 const (
-	pingInterval = 15 * time.Second
+	pingInterval    = 15 * time.Second
+	messageQueueCap = 5000
 	//bufferSize   = 50 * 1024 * 1024
 )
 
@@ -43,7 +45,7 @@ func NewPeer(id peer.ID, s *network.Stream, msgQueue chan *Message) (*Peer, erro
 		//rw:       bufio.NewReadWriter(bufio.NewReaderSize(*s, bufferSize), bufio.NewWriterSize(*s, bufferSize)),
 		rw:        bufio.NewReadWriter(bufio.NewReader(*s), bufio.NewWriter(*s)),
 		msgQueue:  msgQueue,
-		sendQueue: make(chan *Message),
+		sendQueue: make(chan *Message, messageQueueCap),
 		stopped:   false,
 	}
 
@@ -65,6 +67,8 @@ func (p *Peer) Run() {
 
 	p.wg.Add(2)
 	go p.pingLoop()
+
+	// 不可多协程并发写，存在问题
 	go p.readLoop(readErr)
 	go p.writeLoop()
 	return
@@ -176,10 +180,11 @@ func (p *Peer) Send(msgCode StatusCode, payload []byte) {
 
 	//log.WithField("payload", hex.EncodeToString(payload)).Infoln("Send msg to channel.")
 	p.sendQueue <- &msg
+	metrics.SendQueueCountInc()
 }
 
 func (p *Peer) writeLoop() {
-	log.Infoln("Start write loop.")
+	log.Traceln("Start write loop.")
 	for {
 		if p.stopped {
 			break
@@ -187,6 +192,7 @@ func (p *Peer) writeLoop() {
 
 		select {
 		case msg := <-p.sendQueue:
+			//metrics.SendQueueCountDec()
 			//msgWriter := writerPool.Get().(*karmem.Writer)
 			msgWriter := karmem.NewWriter(1024)
 			//log.WithFields(log.Fields{

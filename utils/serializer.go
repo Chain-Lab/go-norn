@@ -14,17 +14,18 @@ import (
 
 //type CoreTypes interface {
 //	common.Block | common.BlockHeader |
-//		common.GeneralParams | common.GeneralParams
+//	common.GeneralParams | common.GeneralParams
 //}
 //
 //type P2PTypes interface {
-//	p2p.SyncStatusMsg
+//	p2p.SyncStatusMsg | p2p.TimeSyncMsg
 //}
 //
 //type KarmemTypesInterface interface {
 //	CoreTypes | P2PTypes
 //	ReadAsRoot(reader *karmem.Reader)
 //}
+
 //
 //type KarmemType[T KarmemTypesInterface] struct{}
 
@@ -108,4 +109,17 @@ func SerializeGeneralParams(p *common.GeneralParams) ([]byte, error) {
 
 	result := writer.Bytes()
 	return result, nil
+}
+
+func SerializeTimeSyncMsg(msg *p2p.TimeSyncMsg) ([]byte, error) {
+	writer := karmem.NewWriter(KARMEM_CAP)
+
+	_, err := msg.WriteAsRoot(writer)
+	if err != nil {
+		log.WithError(err).Debugln("Time sync message serialize failed.")
+		return nil, err
+	}
+
+	result := writer.Bytes()
+	return result, err
 }

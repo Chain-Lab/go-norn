@@ -6,8 +6,6 @@ import (
 	"crypto/rand"
 	log "github.com/sirupsen/logrus"
 	"go-chronos/common"
-	"go-chronos/core"
-	"go-chronos/utils"
 	"time"
 )
 
@@ -65,57 +63,57 @@ func BuildAndVerifyMassiveTransaction() {
 
 }
 
-func PackageBlockAndInsert() {
-	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-
-	if err != nil {
-		log.WithField("error", err).Panicln("Generate private key failed.")
-		return
-	}
-
-	txs := make([]common.Transaction, 0, 3000)
-
-	for i := 0; i < 3000; i++ {
-		tx := buildTransaction(privateKey)
-		txs = append(txs, *tx)
-	}
-	for i := 0; i < 3000; i++ {
-		tx := txs[i]
-		tx.Verify()
-	}
-	db, err := utils.NewLevelDB("./data")
-
-	if err != nil {
-		panic(err)
-	}
-
-	bc := core.NewBlockchain(db)
-	bc.NewGenesisBlock()
-
-	packageStart := time.Now()
-	block, err := bc.PackageNewBlock(txs)
-	packageTimeUsed := time.Since(packageStart)
-
-	if err != nil {
-		log.WithField("error", err).Panicln("Package block failed.")
-		return
-	}
-
-	insertStart := time.Now()
-	bc.InsertBlock(block)
-	if err != nil {
-		log.WithField("error", err).Panicln("Insert block failed.")
-		return
-	}
-	insertTimeUse := time.Since(insertStart)
-
-	log.Infof("Package block use %d us.", packageTimeUsed.Microseconds())
-	log.Infof("Insert block use %d us.", insertTimeUse.Microseconds())
-
-}
+//func PackageBlockAndInsert() {
+//	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+//
+//	if err != nil {
+//		log.WithField("error", err).Panicln("Generate private key failed.")
+//		return
+//	}
+//
+//	txs := make([]common.Transaction, 0, 3000)
+//
+//	for i := 0; i < 3000; i++ {
+//		tx := buildTransaction(privateKey)
+//		txs = append(txs, *tx)
+//	}
+//	for i := 0; i < 3000; i++ {
+//		tx := txs[i]
+//		tx.Verify()
+//	}
+//	db, err := utils.NewLevelDB("./data")
+//
+//	if err != nil {
+//		panic(err)
+//	}
+//
+//	bc := core.NewBlockchain(db)
+//	bc.NewGenesisBlock()
+//
+//	packageStart := time.Now()
+//	block, err := bc.PackageNewBlock(txs)
+//	packageTimeUsed := time.Since(packageStart)
+//
+//	if err != nil {
+//		log.WithField("error", err).Panicln("Package block failed.")
+//		return
+//	}
+//
+//	insertStart := time.Now()
+//	bc.InsertBlock(block)
+//	if err != nil {
+//		log.WithField("error", err).Panicln("Insert block failed.")
+//		return
+//	}
+//	insertTimeUse := time.Since(insertStart)
+//
+//	log.Infof("Package block use %d us.", packageTimeUsed.Microseconds())
+//	log.Infof("Insert block use %d us.", insertTimeUse.Microseconds())
+//
+//}
 
 func main() {
 	BuildAndVerifyTransaction()
 	BuildAndVerifyMassiveTransaction()
-	PackageBlockAndInsert()
+	//PackageBlockAndInsert()
 }

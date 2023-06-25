@@ -16,9 +16,9 @@ import (
 )
 
 var (
-	calculatorOnce sync.Once
-	calculatorInst *Calculator
-	zero           *big.Int = big.NewInt(0)
+	calculatorOnce sync.Once                   // 单例，实例化一次 calculator
+	calculatorInst *Calculator                 // calculator 的实例
+	zero           *big.Int    = big.NewInt(0) // 常量，大整数下的 0
 )
 
 type Calculator struct {
@@ -100,7 +100,7 @@ func (c *Calculator) GetSeedParams() (*big.Int, *big.Int) {
 // AppendNewSeed 在计算运行时修改此时的运行参数
 func (c *Calculator) AppendNewSeed(seed *big.Int, proof *big.Int) {
 	c.changeLock.Lock()
-	log.Infof("Trying append new seed %s.", hex.EncodeToString(seed.Bytes()))
+	//log.Infof("Trying append new seed %s.", hex.EncodeToString(seed.Bytes()))
 
 	// 检查如果当前的 seed 没有变化就直接返回 或者
 	// 如果当前的 seed 不是初始的0，并且输入无法通过验证则不更新
@@ -122,6 +122,7 @@ func GenerateParams() (*big.Int, *big.Int, error) {
 	r := rand.Reader
 	n := new(big.Int)
 
+	// 随机获取 512 bits 的素数
 	p, err := rand.Prime(r, 512)
 	if err != nil {
 		return nil, nil, err
@@ -148,12 +149,12 @@ func (c *Calculator) run() {
 		select {
 		case seed := <-c.seedChannel:
 			c.changeLock.Lock()
-			log.Debugf("Start new VDF calculate.")
+			log.Infoln("Start new VDF calculate.")
 
 			c.changed = false
-			c.changeLock.Unlock()
 			c.seed = seed
 			c.proof = <-c.prevProofChannel
+			c.changeLock.Unlock()
 
 			result, pi := c.calculate(seed)
 

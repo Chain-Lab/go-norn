@@ -24,7 +24,7 @@ func NewKDHT(ctx context.Context, host host.Host, bootstrapPeers []multiaddr.Mul
 	// 如果没有引导节点，以服务器模式 ModeServer 启动
 	if len(bootstrapPeers) == 0 {
 		options = append(options, dht.Mode(dht.ModeServer))
-		log.Infoln("Start node as a bootstrap server.")
+		//log.Infoln("Start node as a bootstrap server.")
 	}
 
 	// 生成一个 DHT 实例
