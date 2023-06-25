@@ -23,7 +23,9 @@ import (
 // 测试指令：
 // ./chronos -d ./data1 -g -c config1.yml
 // ./chronos -d ./data2 -p -c config2.yml -b /ip4/127.0.0.1/tcp/31258/p2p/12D3KooWJtvSD3yzu1XpKxr3eKutgjJXgky266AdnUJSg25ZXuVr
-
+// arm64： CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -o chronos_arm64
+// pprof 性能分析：
+// go tool pprof -http=:8080 cpu.profile
 func main() {
 	flag.Parse()
 
