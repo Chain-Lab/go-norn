@@ -38,6 +38,8 @@ const (
 	StatusCodeSyncBlocksMsg                 StatusCode = 20
 	StatusCodeGetBufferedBlocksMsg          StatusCode = 21
 	StatusCodeBufferedBlocksMsg             StatusCode = 22
+	StatusCodeTimeSyncReq                   StatusCode = 23
+	StatusCodeTimeSyncRsp                   StatusCode = 24
 )
 
 type (
@@ -46,6 +48,7 @@ type (
 
 const (
 	PacketIdentifierSyncStatusMsg = 12064657818327214469
+	PacketIdentifierTimeSyncMsg   = 6014709404869090737
 	PacketIdentifierMessage       = 14302180353067076632
 )
 
@@ -108,6 +111,66 @@ func (x *SyncStatusMsg) Read(viewer *SyncStatusMsgViewer, reader *karmem.Reader)
 	}
 	x.BufferedStartHeight = viewer.BufferedStartHeight()
 	x.BufferedEndHeight = viewer.BufferedEndHeight()
+}
+
+type TimeSyncMsg struct {
+	Code       int8
+	ReqTime    int64
+	RecReqTime int64
+	RspTime    int64
+	RecRspTime int64
+}
+
+func NewTimeSyncMsg() TimeSyncMsg {
+	return TimeSyncMsg{}
+}
+
+func (x *TimeSyncMsg) PacketIdentifier() PacketIdentifier {
+	return PacketIdentifierTimeSyncMsg
+}
+
+func (x *TimeSyncMsg) Reset() {
+	x.Read((*TimeSyncMsgViewer)(unsafe.Pointer(&_Null)), _NullReader)
+}
+
+func (x *TimeSyncMsg) WriteAsRoot(writer *karmem.Writer) (offset uint, err error) {
+	return x.Write(writer, 0)
+}
+
+func (x *TimeSyncMsg) Write(writer *karmem.Writer, start uint) (offset uint, err error) {
+	offset = start
+	size := uint(40)
+	if offset == 0 {
+		offset, err = writer.Alloc(size)
+		if err != nil {
+			return 0, err
+		}
+	}
+	writer.Write4At(offset, uint32(37))
+	__CodeOffset := offset + 4
+	writer.Write1At(__CodeOffset, *(*uint8)(unsafe.Pointer(&x.Code)))
+	__ReqTimeOffset := offset + 5
+	writer.Write8At(__ReqTimeOffset, *(*uint64)(unsafe.Pointer(&x.ReqTime)))
+	__RecReqTimeOffset := offset + 13
+	writer.Write8At(__RecReqTimeOffset, *(*uint64)(unsafe.Pointer(&x.RecReqTime)))
+	__RspTimeOffset := offset + 21
+	writer.Write8At(__RspTimeOffset, *(*uint64)(unsafe.Pointer(&x.RspTime)))
+	__RecRspTimeOffset := offset + 29
+	writer.Write8At(__RecRspTimeOffset, *(*uint64)(unsafe.Pointer(&x.RecRspTime)))
+
+	return offset, nil
+}
+
+func (x *TimeSyncMsg) ReadAsRoot(reader *karmem.Reader) {
+	x.Read(NewTimeSyncMsgViewer(reader, 0), reader)
+}
+
+func (x *TimeSyncMsg) Read(viewer *TimeSyncMsgViewer, reader *karmem.Reader) {
+	x.Code = viewer.Code()
+	x.ReqTime = viewer.ReqTime()
+	x.RecReqTime = viewer.RecReqTime()
+	x.RspTime = viewer.RspTime()
+	x.RecRspTime = viewer.RecRspTime()
 }
 
 type Message struct {
@@ -229,6 +292,55 @@ func (x *SyncStatusMsgViewer) BufferedEndHeight() (v int64) {
 		return v
 	}
 	return *(*int64)(unsafe.Add(unsafe.Pointer(&x._data), 52))
+}
+
+type TimeSyncMsgViewer struct {
+	_data [40]byte
+}
+
+func NewTimeSyncMsgViewer(reader *karmem.Reader, offset uint32) (v *TimeSyncMsgViewer) {
+	if !reader.IsValidOffset(offset, 8) {
+		return (*TimeSyncMsgViewer)(unsafe.Pointer(&_Null))
+	}
+	v = (*TimeSyncMsgViewer)(unsafe.Add(reader.Pointer, offset))
+	if !reader.IsValidOffset(offset, v.size()) {
+		return (*TimeSyncMsgViewer)(unsafe.Pointer(&_Null))
+	}
+	return v
+}
+
+func (x *TimeSyncMsgViewer) size() uint32 {
+	return *(*uint32)(unsafe.Pointer(&x._data))
+}
+func (x *TimeSyncMsgViewer) Code() (v int8) {
+	if 4+1 > x.size() {
+		return v
+	}
+	return *(*int8)(unsafe.Add(unsafe.Pointer(&x._data), 4))
+}
+func (x *TimeSyncMsgViewer) ReqTime() (v int64) {
+	if 5+8 > x.size() {
+		return v
+	}
+	return *(*int64)(unsafe.Add(unsafe.Pointer(&x._data), 5))
+}
+func (x *TimeSyncMsgViewer) RecReqTime() (v int64) {
+	if 13+8 > x.size() {
+		return v
+	}
+	return *(*int64)(unsafe.Add(unsafe.Pointer(&x._data), 13))
+}
+func (x *TimeSyncMsgViewer) RspTime() (v int64) {
+	if 21+8 > x.size() {
+		return v
+	}
+	return *(*int64)(unsafe.Add(unsafe.Pointer(&x._data), 21))
+}
+func (x *TimeSyncMsgViewer) RecRspTime() (v int64) {
+	if 29+8 > x.size() {
+		return v
+	}
+	return *(*int64)(unsafe.Add(unsafe.Pointer(&x._data), 29))
 }
 
 type MessageViewer struct {

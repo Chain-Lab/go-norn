@@ -169,7 +169,7 @@ func (b *BlockBuffer) secondProcess() {
 			if list == nil {
 				// 区块的前一个哈希不在缓冲树中，也不是最新的区块哈希
 				if prevBlockHash != b.latestBlockHash {
-					log.WithField("height", blockHeight).Infof("Prev block #%s not exists.", prevBlockHash)
+					//log.WithField("height", blockHeight).Infof("Prev block #%s not exists.", prevBlockHash)
 					// 这样增加值是否会存在问题？
 					b.blockMark[blockHash]++
 
@@ -228,7 +228,7 @@ func (b *BlockBuffer) PopSelectedBlock() *common.Block {
 	//defer b.updateLock.Unlock()
 
 	height := b.latestBlockHeight + 1
-	log.WithField("height", height).Info("Pop block from view.")
+	//log.WithField("height", height).Info("Pop block from view.")
 	// 检查一下列表是否存在
 	_, ok := b.blockProcessList[height]
 

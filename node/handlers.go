@@ -141,6 +141,7 @@ func handleTransactionMsg(h *Handler, msg *p2p.Message, p *Peer) {
 
 func handleNewPooledTransactionHashesMsg(h *Handler, msg *p2p.Message, p *Peer) {
 	status := h.blockSyncer.getStatus()
+	// todo: 修改这里的条件判断为统一的函数
 	if status != synced {
 		return
 	}
@@ -209,6 +210,32 @@ func handleSyncBlockMsg(h *Handler, msg *p2p.Message, p *Peer) {
 		return
 	}
 	h.appendBlockToSyncer(block)
+}
+
+func handleTimeSyncReq(h *Handler, msg *p2p.Message, p *Peer) {
+	payload := msg.Payload
+	tMsg, err := utils.DeserializeTimeSyncMsg(payload)
+	tMsg.RecReqTime = h.timeSyncer.GetLogicClock()
+
+	if err != nil {
+		log.WithError(err).Debugln("Time sync message deserialize failed.")
+		return
+	}
+
+	h.timeSyncer.ProcessSyncRequest(tMsg, p)
+}
+
+func handleTimeSyncRsp(h *Handler, msg *p2p.Message, p *Peer) {
+	payload := msg.Payload
+	tMsg, err := utils.DeserializeTimeSyncMsg(payload)
+	tMsg.RecRspTime = h.timeSyncer.GetLogicClock()
+
+	if err != nil {
+		log.WithError(err).Debugln("Time sync message deserialize failed.")
+		return
+	}
+
+	h.timeSyncer.ProcessSyncRespond(tMsg, p)
 }
 
 func verifyBlockVRF(block *common.Block) bool {

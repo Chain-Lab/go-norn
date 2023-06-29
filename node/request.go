@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"go-chronos/common"
 	"go-chronos/p2p"
+	"go-chronos/utils"
 )
 
 func requestBlockWithHash(blockHash common.Hash, p *Peer) {
@@ -27,4 +28,14 @@ func requestSyncGetBlock(height int64, p *Peer) {
 	binary.LittleEndian.PutUint64(byteHeight, uint64(height))
 
 	p.peer.Send(p2p.StatusCodeSyncGetBlocksMsg, byteHeight)
+}
+
+func requestTimeSync(msg *p2p.TimeSyncMsg, p *Peer) {
+	byteTimeSyncMsg, err := utils.SerializeTimeSyncMsg(msg)
+
+	if err != nil {
+		return
+	}
+
+	p.peer.Send(p2p.StatusCodeTimeSyncReq, byteTimeSyncMsg)
 }

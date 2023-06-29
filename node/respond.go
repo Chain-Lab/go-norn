@@ -38,3 +38,13 @@ func respondGetSyncStatus(msg *p2p.SyncStatusMsg, p *Peer) {
 
 	p.peer.Send(p2p.StatusCodeSyncStatusMsg, byteStatusMsg)
 }
+
+func respondTimeSync(msg *p2p.TimeSyncMsg, p *Peer) {
+	byteTimeSyncMsg, err := utils.SerializeTimeSyncMsg(msg)
+
+	if err != nil {
+		return
+	}
+
+	p.peer.Send(p2p.StatusCodeTimeSyncRsp, byteTimeSyncMsg)
+}

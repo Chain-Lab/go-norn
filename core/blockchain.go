@@ -378,9 +378,10 @@ func (bc *BlockChain) InsertBlock(block *common.Block) {
 	//fmt.Printf("Data size %d bytes.", len(values[0]))
 
 	log.WithFields(log.Fields{
-		"hash":   hex.EncodeToString(block.Header.BlockHash[:]),
-		"height": block.Header.Height,
-		"count":  len(block.Transactions),
+		"hash":    hex.EncodeToString(block.Header.BlockHash[:]),
+		"height":  block.Header.Height,
+		"count":   len(block.Transactions),
+		"address": hex.EncodeToString(block.Header.PublicKey[:]),
 	}).Infoln("Insert block to database.")
 
 	keys[0] = utils.BlockHash2DBKey(block.Header.BlockHash)
@@ -444,7 +445,7 @@ func (bc *BlockChain) AppendBlockTask(block *common.Block) {
 		return
 	}
 
-	log.Infoln("Append block to buffer.")
+	//log.Infoln("Append block to buffer.")
 	bc.buffer.AppendBlock(block)
 }
 

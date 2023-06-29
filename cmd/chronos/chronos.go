@@ -22,7 +22,7 @@ import (
 
 // 测试指令：
 // ./chronos -d ./data1 -g -c config1.yml
-// ./chronos -d ./data2 -p -c config2.yml -b /ip4/127.0.0.1/tcp/31258/p2p/12D3KooWJtvSD3yzu1XpKxr3eKutgjJXgky266AdnUJSg25ZXuVr
+// ./chronos -d ./data2 -c config2.yml -b /ip4/127.0.0.1/tcp/31258/p2p/12D3KooWJtvSD3yzu1XpKxr3eKutgjJXgky266AdnUJSg25ZXuVr
 // arm64： CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -o chronos_arm64
 // pprof 性能分析：
 // go tool pprof -http=:8080 cpu.profile
@@ -31,7 +31,8 @@ func main() {
 
 	var f *os.File
 	if pp {
-		f, _ := os.OpenFile("cpu.profile", os.O_CREATE|os.O_RDWR, 0644)
+		fileName := fmt.Sprint("cpu-%d.profile", time.Now().UnixMilli())
+		f, _ := os.OpenFile(fileName, os.O_CREATE|os.O_RDWR, 0644)
 		//defer f.Close()
 		pprof.StartCPUProfile(f)
 		//defer pprof.StopCPUProfile()
@@ -74,8 +75,10 @@ func main() {
 	chain := core.NewBlockchain(db)
 	txPool := core.GetTxPoolInst()
 	hConfig := node.HandlerConfig{
-		TxPool: txPool,
-		Chain:  chain,
+		TxPool:       txPool,
+		Chain:        chain,
+		Genesis:      genesis,
+		InitialDelta: delta,
 	}
 
 	h, err := node.NewHandler(&hConfig)
@@ -102,8 +105,8 @@ func main() {
 
 	host.SetStreamHandler(node.ProtocolId, node.HandleStream)
 	// 打印节点的 id 信息
-	log.Infof("Node address: /ip4/127.0.0.1/tcp/%v/p2p/%s", port, host.ID().String())
-	//log.Infof("Node address: /ip4/192.168.31.119/tcp/%v/p2p/%s", port, host.ID().String())
+	//log.Infof("Node address: /ip4/127.0.0.1/tcp/%v/p2p/%s", port, host.ID().String())
+	log.Infof("Node address: /ip4/192.168.31.119/tcp/%v/p2p/%s", port, host.ID().String())
 
 	var kdht *dht.IpfsDHT
 

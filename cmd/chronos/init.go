@@ -7,6 +7,7 @@ import (
 )
 
 var (
+	delta     int64
 	bootstrap string
 	datadir   string
 	cfg       string
@@ -26,13 +27,14 @@ func init() {
 	flag.BoolVar(&debug, "debug", false, "Debug log level")
 	flag.BoolVar(&trace, "trace", false, "Track log level")
 	flag.BoolVar(&pp, "pprof", false, "Track with pprof")
+	flag.Int64Var(&delta, "delta", 0, "Initial time delta (for test)")
 
 	flag.Usage = usage
 }
 
 func usage() {
 	fmt.Fprintf(os.Stderr, `chronos version: 1.0.0
-Usage: chronos [-b bootstrap] [-d datadir] [-p port] [-h help] [-g genesis] [--debug]
+Usage: chronos [-b bootstrap] [-d datadir] [-c config] [-h help] [-g genesis] [--debug]
 
 Options:
 `)
