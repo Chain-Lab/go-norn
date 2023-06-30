@@ -7,7 +7,9 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	log "github.com/sirupsen/logrus"
+	"go-chronos/metrics"
 	karmem "karmem.org/golang"
+	"time"
 )
 
 //var writerPool = sync.Pool{New: func() any { return karmem.NewWriter(1024) }}
@@ -18,6 +20,7 @@ func (tx *Transaction) Verify() bool {
 	//defer writerPool.Put(writer)
 	//defer writer.Reset()
 	// 初始化交易序列化的 writer
+	verifyStart := time.Now()
 	writer := karmem.NewWriter(1024)
 
 	txBody := tx.Body
@@ -70,5 +73,8 @@ func (tx *Transaction) Verify() bool {
 		return false
 	}
 
-	return ecdsa.VerifyASN1(&publicKey, txHashBytes, byteSignature)
+	result := ecdsa.VerifyASN1(&publicKey, txHashBytes, byteSignature)
+	metrics.VerifyTransactionMetricsSet(float64(time.Since(verifyStart).Milliseconds()))
+
+	return result
 }

@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	log "github.com/sirupsen/logrus"
 	"go-chronos/common"
+	"go-chronos/metrics"
 	"sync"
 )
 
@@ -68,6 +69,7 @@ func (pool *TxPool) Package() []common.Transaction {
 		// todo： 这里是传值还是传指针？
 		result = append(result, *tx)
 		count++
+		metrics.TxPoolMetricsDec()
 
 		if count >= maxTxPackageCount-1 {
 			break
@@ -84,6 +86,7 @@ func (pool *TxPool) Add(transaction *common.Transaction) {
 	// todo: 在当前版本下先直接加锁打包
 	pool.lock.Lock()
 	defer pool.lock.Unlock()
+	defer metrics.TxPoolMetricsInc()
 
 	txHash := hex.EncodeToString(transaction.Body.Hash[:])
 	pool.txs.Store(txHash, transaction)

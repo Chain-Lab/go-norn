@@ -8,6 +8,7 @@ package node
 
 import (
 	log "github.com/sirupsen/logrus"
+	"go-chronos/metrics"
 	"go-chronos/p2p"
 	"math/rand"
 	"sync"
@@ -130,6 +131,7 @@ func (ts *TimeSyncer) ProcessSyncRespond(msg *p2p.TimeSyncMsg, p *Peer) {
 	// 如果在容忍范围内，则调整本地偏差值
 	if abs(delta) < availableThreshold {
 		ts.delta += delta
+		metrics.TimeSyncDeltaSet(float64(delta))
 		if ts.status == CONFIRMING {
 			ts.confirmTimes += 1
 		}

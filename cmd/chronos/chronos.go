@@ -8,11 +8,13 @@ import (
 	"github.com/libp2p/go-libp2p"
 	dht "github.com/libp2p/go-libp2p-kad-dht"
 	"github.com/multiformats/go-multiaddr"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	log "github.com/sirupsen/logrus"
 	"go-chronos/core"
 	"go-chronos/node"
 	"go-chronos/rpc"
 	"go-chronos/utils"
+	"net/http"
 	_ "net/http/pprof"
 	"os"
 	"os/signal"
@@ -22,7 +24,8 @@ import (
 
 // 测试指令：
 // ./chronos -d ./data1 -g -c config1.yml
-// ./chronos -d ./data2 -c config2.yml -b /ip4/127.0.0.1/tcp/31258/p2p/12D3KooWJtvSD3yzu1XpKxr3eKutgjJXgky266AdnUJSg25ZXuVr
+// ./chronos -d ./data2 -c config2.yml --metrics -b /ip4/127.0.0.1/tcp/31258/p2p/12D3KooWJtvSD3yzu1XpKxr3eKutgjJXgky266AdnUJSg25ZXuVr
+// ./chronos -d ./data2 -c config2.yml --metrics --delta 40000 -b /ip4/127.0.0.1/tcp/31258/p2p/12D3KooWJtvSD3yzu1XpKxr3eKutgjJXgky266AdnUJSg25ZXuVr
 // arm64： CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -o chronos_arm64
 // pprof 性能分析：
 // go tool pprof -http=:8080 cpu.profile
@@ -31,7 +34,7 @@ func main() {
 
 	var f *os.File
 	if pp {
-		fileName := fmt.Sprint("cpu-%d.profile", time.Now().UnixMilli())
+		fileName := fmt.Sprintf("cpu-%d.profile", time.Now().UnixMilli())
 		f, _ := os.OpenFile(fileName, os.O_CREATE|os.O_RDWR, 0644)
 		//defer f.Close()
 		pprof.StartCPUProfile(f)
@@ -56,6 +59,14 @@ func main() {
 
 	// 加载 config 配置文件
 	core.LoadConfig(cfg)
+
+	//metrics2.RegisterMetrics()
+	if metrics {
+		metricPort := ":" + config.String("metrics.port")
+		http.Handle("/metrics", promhttp.Handler())
+		go http.ListenAndServe(metricPort, nil)
+		log.Infof("Metric server start on localhost%s", metricPort)
+	}
 
 	// RPC 协程服务开启
 	go rpc.RPCServerStart()

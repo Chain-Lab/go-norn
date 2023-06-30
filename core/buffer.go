@@ -228,7 +228,7 @@ func (b *BlockBuffer) PopSelectedBlock() *common.Block {
 	//defer b.updateLock.Unlock()
 
 	height := b.latestBlockHeight + 1
-	//log.WithField("height", height).Info("Pop block from view.")
+	log.WithField("height", height).Info("Pop block from view.")
 	// 检查一下列表是否存在
 	_, ok := b.blockProcessList[height]
 

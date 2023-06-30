@@ -16,6 +16,7 @@ var (
 	debug     bool
 	trace     bool
 	pp        bool
+	metrics   bool
 )
 
 func init() {
@@ -27,6 +28,7 @@ func init() {
 	flag.BoolVar(&debug, "debug", false, "Debug log level")
 	flag.BoolVar(&trace, "trace", false, "Track log level")
 	flag.BoolVar(&pp, "pprof", false, "Track with pprof")
+	flag.BoolVar(&metrics, "metrics", false, "Open metrics service")
 	flag.Int64Var(&delta, "delta", 0, "Initial time delta (for test)")
 
 	flag.Usage = usage

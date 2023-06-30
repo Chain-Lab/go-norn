@@ -1,0 +1,13 @@
+consensus:
+  prv: dd43444a6b179be853da26ec7d40583a132fe077e7f464e5aa791dc6d71a9b69
+  pub: 020fb395839f5b3c396e3fac91c9228c508c5273affe3dd5abeee4557b2574de1d
+  address: 0x6cdd04590cd050c0e0bd567a0eb4e5b3bd6a21ef
+
+node:
+  port: 31258
+
+rpc:
+  address: 0.0.0.0:45555
+
+metrics:
+  port: 8700

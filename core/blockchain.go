@@ -10,11 +10,14 @@ import (
 	"github.com/syndtr/goleveldb/leveldb/errors"
 	"go-chronos/common"
 	"go-chronos/crypto"
+	"go-chronos/metrics"
+	"time"
+
+	//handler "go-chronos/node"
 	"go-chronos/utils"
 	karmem "karmem.org/golang"
 	"math/big"
 	"sync"
-	"time"
 )
 
 const (
@@ -119,7 +122,9 @@ func (bc *BlockChain) BlockProcessRoutine() {
 }
 
 // PackageNewBlock 打包新的区块，传入交易序列
-func (bc *BlockChain) PackageNewBlock(txs []common.Transaction, params *common.GeneralParams) (*common.Block, error) {
+func (bc *BlockChain) PackageNewBlock(txs []common.Transaction, timestamp int64, params *common.GeneralParams) (*common.Block, error) {
+	packageStart := time.Now()
+
 	// 对传入的区块参数进行序列化
 	log.Traceln("Start package new block.")
 	paramsBytes, err := utils.SerializeGeneralParams(params)
@@ -143,6 +148,7 @@ func (bc *BlockChain) PackageNewBlock(txs []common.Transaction, params *common.G
 	// 区块创建
 	block := common.Block{
 		Header: common.BlockHeader{
+			//Timestamp:     handler.GetLogicClock(),
 			Timestamp:     time.Now().UnixMilli(),
 			PrevBlockHash: bestBlock.Header.BlockHash,
 			BlockHash:     [32]byte{},
@@ -167,6 +173,7 @@ func (bc *BlockChain) PackageNewBlock(txs []common.Transaction, params *common.G
 	blockHash := common.Hash(hash.Sum(nil))
 	block.Header.BlockHash = blockHash
 
+	metrics.PackageBlockMetricsSet(float64(time.Since(packageStart).Milliseconds()))
 	return &block, nil
 }
 
@@ -200,7 +207,8 @@ func (bc *BlockChain) NewGenesisBlock() {
 	// todo: 创世区块应该是前一个区块的哈希为 0x0，这里需要修改
 	genesisBlock := common.Block{
 		Header: common.BlockHeader{
-			Timestamp:     time.Now().UnixMilli(),
+			Timestamp: time.Now().UnixMilli(),
+			//Timestamp:     handler.GetLogicClock(),
 			PrevBlockHash: nullHash,
 			BlockHash:     [32]byte{},
 			MerkleRoot:    [32]byte(nullHash),
@@ -381,7 +389,7 @@ func (bc *BlockChain) InsertBlock(block *common.Block) {
 		"hash":    hex.EncodeToString(block.Header.BlockHash[:]),
 		"height":  block.Header.Height,
 		"count":   len(block.Transactions),
-		"address": hex.EncodeToString(block.Header.PublicKey[:]),
+		"address": hex.EncodeToString(block.Header.PublicKey[:])[:8],
 	}).Infoln("Insert block to database.")
 
 	keys[0] = utils.BlockHash2DBKey(block.Header.BlockHash)

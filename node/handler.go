@@ -182,7 +182,8 @@ func (h *Handler) packageBlockRoutine() {
 
 			txs := h.txPool.Package()
 			//log.Infof("Package %d txs.", len(txs))
-			newBlock, err := h.chain.PackageNewBlock(txs, &params)
+			timestamp := h.timeSyncer.GetLogicClock()
+			newBlock, err := h.chain.PackageNewBlock(txs, timestamp, &params)
 
 			if err != nil {
 				log.WithField("error", err).Debugln("Package new block failed.")
@@ -191,7 +192,7 @@ func (h *Handler) packageBlockRoutine() {
 
 			h.chain.AppendBlockTask(newBlock)
 			h.blockBroadcastQueue <- newBlock
-			log.Debugf("Package new block# 0x%s", hex.EncodeToString(newBlock.Header.BlockHash[:]))
+			log.Infof("Package new block# 0x%s", hex.EncodeToString(newBlock.Header.BlockHash[:]))
 		}
 	}
 }
@@ -380,4 +381,9 @@ func (h *Handler) removePeerIfStopped(idx int) {
 	if p.Stopped() {
 		h.peerSet = append(h.peerSet[:idx], h.peerSet[idx+1:]...)
 	}
+}
+
+func GetLogicClock() int64 {
+	h := GetHandlerInst()
+	return h.timeSyncer.GetLogicClock()
 }

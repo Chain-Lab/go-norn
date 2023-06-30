@@ -24,3 +24,5 @@ go.work
 .DS_Store
 cmd/chronos/data*
 *.profile
+
+data/

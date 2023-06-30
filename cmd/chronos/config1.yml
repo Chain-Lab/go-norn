@@ -8,3 +8,6 @@ node:
 
 rpc:
   address: 0.0.0.0:45555
+
+metrics:
+  port: 8700
