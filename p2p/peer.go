@@ -7,6 +7,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
 	log "github.com/sirupsen/logrus"
+	"go-chronos/metrics"
 	karmem "karmem.org/golang"
 	"sync"
 	"time"
@@ -176,6 +177,7 @@ func (p *Peer) Send(msgCode StatusCode, payload []byte) {
 
 	//log.WithField("payload", hex.EncodeToString(payload)).Infoln("Send msg to channel.")
 	p.sendQueue <- &msg
+	metrics.SendQueueCountInc()
 }
 
 func (p *Peer) writeLoop() {
@@ -187,6 +189,7 @@ func (p *Peer) writeLoop() {
 
 		select {
 		case msg := <-p.sendQueue:
+			metrics.SendQueueCountDec()
 			//msgWriter := writerPool.Get().(*karmem.Writer)
 			msgWriter := karmem.NewWriter(1024)
 			//log.WithFields(log.Fields{

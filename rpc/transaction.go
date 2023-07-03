@@ -11,6 +11,7 @@ import (
 	"encoding/hex"
 	"github.com/gogo/protobuf/proto"
 	"go-chronos/core"
+	"go-chronos/metrics"
 	"go-chronos/rpc/pb"
 	"go-chronos/utils"
 )
@@ -48,12 +49,12 @@ func (s *transactionService) SubmitTransaction(ctx context.Context, in *pb.Submi
 	}
 
 	// 对交易的签名进行验证，如果验证错误直接返回
-	if !transaction.Verify() {
-		resp.Status = pb.SubmitTransactionStatus_SIGNATURE_FAILED.Enum()
-		resp.Error = proto.String("Verify transaction signature failed.")
-		//log.Infoln("Verify transaction signature failed.")
-		return resp, err
-	}
+	//if !transaction.Verify() {
+	//	resp.Status = pb.SubmitTransactionStatus_SIGNATURE_FAILED.Enum()
+	//	resp.Error = proto.String("Verify transaction signature failed.")
+	//	//log.Infoln("Verify transaction signature failed.")
+	//	return resp, err
+	//}
 
 	// 获取交易池实例，然后添加交易
 	pool := core.GetTxPoolInst()
@@ -62,5 +63,6 @@ func (s *transactionService) SubmitTransaction(ctx context.Context, in *pb.Submi
 	//log.Infoln("Append transaction successful.")
 	resp.Status = pb.SubmitTransactionStatus_SUCCESS.Enum()
 	resp.Error = proto.String("Success.")
+	metrics.SubmitTxCountsMetricsInc()
 	return resp, err
 }

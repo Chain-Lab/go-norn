@@ -62,10 +62,10 @@ func (pool *TxPool) Package() []common.Transaction {
 		}
 
 		tx := value.(*common.Transaction)
-		//if !tx.Verify() {
-		//	log.Errorln("Verify failed.")
-		//	continue
-		//}
+		if !tx.Verify() {
+			log.Errorln("Verify failed.")
+			continue
+		}
 		// todo： 这里是传值还是传指针？
 		result = append(result, *tx)
 		count++

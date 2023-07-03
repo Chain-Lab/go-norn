@@ -11,6 +11,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	log "github.com/sirupsen/logrus"
 	"go-chronos/core"
+	metrics2 "go-chronos/metrics"
 	"go-chronos/node"
 	"go-chronos/rpc"
 	"go-chronos/utils"
@@ -26,6 +27,7 @@ import (
 // ./chronos -d ./data1 -g -c config1.yml
 // ./chronos -d ./data2 -c config2.yml --metrics -b /ip4/127.0.0.1/tcp/31258/p2p/12D3KooWJtvSD3yzu1XpKxr3eKutgjJXgky266AdnUJSg25ZXuVr
 // ./chronos -d ./data2 -c config2.yml --metrics --delta 40000 -b /ip4/127.0.0.1/tcp/31258/p2p/12D3KooWJtvSD3yzu1XpKxr3eKutgjJXgky266AdnUJSg25ZXuVr
+// ./chronos_arm64 -d ./data2 -c config2.yml --metrics --pprof -b
 // arm64： CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -o chronos_arm64
 // pprof 性能分析：
 // go tool pprof -http=:8080 cpu.profile
@@ -64,6 +66,7 @@ func main() {
 	if metrics {
 		metricPort := ":" + config.String("metrics.port")
 		http.Handle("/metrics", promhttp.Handler())
+		go metrics2.RegularMetricsRoutine()
 		go http.ListenAndServe(metricPort, nil)
 		log.Infof("Metric server start on localhost%s", metricPort)
 	}
