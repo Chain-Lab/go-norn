@@ -189,7 +189,7 @@ func (p *Peer) writeLoop() {
 
 		select {
 		case msg := <-p.sendQueue:
-			metrics.SendQueueCountDec()
+			//metrics.SendQueueCountDec()
 			//msgWriter := writerPool.Get().(*karmem.Writer)
 			msgWriter := karmem.NewWriter(1024)
 			//log.WithFields(log.Fields{

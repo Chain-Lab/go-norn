@@ -4,10 +4,10 @@ consensus:
   address: 0x6cdd04590cd050c0e0bd567a0eb4e5b3bd6a21ef
 
 node:
-  port: 31258
+  port: 31260
 
 rpc:
-  address: 0.0.0.0:45555
+  address: 0.0.0.0:45557
 
 metrics:
-  port: 8700
+  port: 8702

@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	maxTxPackageCount = 8001 // 交易池打包的最多交易数量
+	maxTxPackageCount = 1001 // 交易池打包的最多交易数量
 )
 
 var (

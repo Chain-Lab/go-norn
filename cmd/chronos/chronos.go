@@ -2,11 +2,13 @@ package main
 
 import (
 	"context"
+	"encoding/hex"
 	"flag"
 	"fmt"
 	"github.com/gookit/config/v2"
 	"github.com/libp2p/go-libp2p"
 	dht "github.com/libp2p/go-libp2p-kad-dht"
+	"github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/multiformats/go-multiaddr"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	log "github.com/sirupsen/logrus"
@@ -110,8 +112,22 @@ func main() {
 		return
 	}
 
+	privBytes, err := hex.DecodeString(config.String("p2p.prv"))
+
+	if err != nil {
+		log.WithError(err).Errorln("Decode private key failed.")
+		return
+	}
+
+	identity, err := crypto.UnmarshalPrivateKey(privBytes)
+	if err != nil {
+		log.WithError(err).Errorln("Unmarshal private key failed.")
+		return
+	}
+
 	host, err := libp2p.New(
 		libp2p.ListenAddrs(localMultiAddr),
+		libp2p.Identity(identity),
 	)
 	if err != nil {
 		log.WithField("error", err).Errorln("Create local host failed.")
@@ -119,8 +135,8 @@ func main() {
 
 	host.SetStreamHandler(node.ProtocolId, node.HandleStream)
 	// 打印节点的 id 信息
-	//log.Infof("Node address: /ip4/127.0.0.1/tcp/%v/p2p/%s", port, host.ID().String())
-	log.Infof("Node address: /ip4/192.168.31.119/tcp/%v/p2p/%s", port, host.ID().String())
+	log.Infof("Node address: /ip4/127.0.0.1/tcp/%v/p2p/%s", port, host.ID().String())
+	//log.Infof("Node address: /ip4/192.168.31.119/tcp/%v/p2p/%s", port, host.ID().String())
 
 	var kdht *dht.IpfsDHT
 

@@ -12,16 +12,17 @@ import (
 )
 
 var (
-	sendQueueCount = promauto.NewGauge(prometheus.GaugeOpts{
+	sendQueueCounter = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "p2p_send_queue_count",
 		Help: "P2P message send queue count.",
 	})
 )
 
 func SendQueueCountInc() {
-	sendQueueCount.Inc()
+	sendQueueCounter.Inc()
 }
 
-func SendQueueCountDec() {
-	sendQueueCount.Dec()
-}
+//
+//func SendQueueCountDec() {
+//	sendQueueCount.Dec()
+//}

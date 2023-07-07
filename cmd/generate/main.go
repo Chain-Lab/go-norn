@@ -11,6 +11,7 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"encoding/hex"
+	"github.com/libp2p/go-libp2p/core/crypto"
 	"golang.org/x/crypto/sha3"
 )
 
@@ -23,4 +24,10 @@ func main() {
 	sha3.Write(elliptic.MarshalCompressed(elliptic.P256(), prv.X, prv.Y))
 	println(hex.EncodeToString(elliptic.MarshalCompressed(elliptic.P256(), prv.X, prv.Y)))
 	println(hex.EncodeToString(sha3.Sum(nil))[0:40])
+
+	priv, _, _ := crypto.GenerateECDSAKeyPairWithCurve(elliptic.P256(), rand.Reader)
+	data, _ := crypto.MarshalPrivateKey(priv)
+	println(len(data))
+	println(hex.EncodeToString(data))
+
 }
