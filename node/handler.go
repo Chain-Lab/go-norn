@@ -354,7 +354,7 @@ func (h *Handler) Synced() bool {
 func (h *Handler) StatusMessage() *p2p.SyncStatusMsg {
 	block, err := h.chain.GetLatestBlock()
 
-	if err != nil {
+	if err != nil || !h.Synced() {
 		return &p2p.SyncStatusMsg{
 			LatestHeight:        -1,
 			LatestHash:          [32]byte{},

@@ -145,11 +145,14 @@ func (bs *BlockSyncer) statusMsgRoutine() {
 			height := msg.LatestHeight
 			bufferHeight := msg.BufferedEndHeight
 			bs.lock.Lock()
-			if height != -1 {
-				bs.remoteHeight = max(height, bs.remoteHeight)
-				log.WithField("Remote height", height).Traceln("Sync remote height.")
 
+			if height == -1 {
+				bs.lock.Unlock()
+				continue
 			}
+
+			bs.remoteHeight = max(height, bs.remoteHeight)
+			log.WithField("Remote height", height).Traceln("Sync remote height.")
 
 			if bufferHeight != -1 && bs.status == blockSyncing {
 				bs.targetHeight = max(bufferHeight, bs.targetHeight)
