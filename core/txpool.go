@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	maxTxPackageCount = 1001 // 交易池打包的最多交易数量
+	maxTxPackageCount = 5001 // 交易池打包的最多交易数量
 )
 
 var (
@@ -86,12 +86,12 @@ func (pool *TxPool) Add(transaction *common.Transaction) {
 	// todo: 在当前版本下先直接加锁打包
 	pool.lock.Lock()
 	defer pool.lock.Unlock()
-	defer metrics.TxPoolMetricsInc()
 
 	txHash := hex.EncodeToString(transaction.Body.Hash[:])
 	pool.txs.Store(txHash, transaction)
 	//pool.txs[tx]
 	pool.txQueue = append(pool.txQueue, txHash)
+	metrics.TxPoolMetricsInc()
 }
 
 func (pool *TxPool) Contain(hash string) bool {

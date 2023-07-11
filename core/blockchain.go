@@ -25,6 +25,7 @@ const (
 	maxTransactionCache   = 32768
 	maxBlockProcessList   = 12
 	maxBlockChannel       = 128
+	maxDbChannel          = 256
 	transactionStartIndex = 3
 )
 
@@ -82,7 +83,7 @@ func NewBlockchain(db *utils.LevelDB) *BlockChain {
 	// 使用数据库实例 db 实例化一个 Blockchain 对象
 	chain := &BlockChain{
 		db:            db,
-		dbWriterQueue: make(chan *common.Block),
+		dbWriterQueue: make(chan *common.Block, maxDbChannel),
 
 		blockHeightMap: blockHeightMap,
 		blockCache:     blockCache,

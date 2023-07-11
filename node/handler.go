@@ -19,9 +19,10 @@ import (
 type msgHandler func(h *Handler, msg *p2p.Message, p *Peer)
 
 const (
-	maxKnownBlock       = 1024
-	maxKnownTransaction = 32768
-	ProtocolId          = protocol.ID("/chronos/1.0.0")
+	maxKnownBlock          = 1024
+	maxKnownTransaction    = 32768
+	maxSyncerStatusChannel = 512
+	ProtocolId             = protocol.ID("/chronos/1.0.0")
 )
 
 var handlerMap = map[p2p.StatusCode]msgHandler{

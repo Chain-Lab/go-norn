@@ -77,7 +77,7 @@ func NewBlockSyncer(config *BlockSyncerConfig) *BlockSyncer {
 
 		chain:     config.Chain,
 		status:    syncPaused,
-		statusMsg: make(chan *p2p.SyncStatusMsg),
+		statusMsg: make(chan *p2p.SyncStatusMsg, maxSyncerStatusChannel),
 	}
 
 	return &syncer

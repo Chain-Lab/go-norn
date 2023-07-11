@@ -30,6 +30,7 @@ import (
 // ./chronos -d ./data2 -c config2.yml --metrics -b /ip4/127.0.0.1/tcp/31258/p2p/12D3KooWJtvSD3yzu1XpKxr3eKutgjJXgky266AdnUJSg25ZXuVr
 // ./chronos -d ./data2 -c config2.yml --metrics --delta 40000 -b /ip4/127.0.0.1/tcp/31258/p2p/12D3KooWJtvSD3yzu1XpKxr3eKutgjJXgky266AdnUJSg25ZXuVr
 // ./chronos_arm64 -d ./data2 -c config2.yml --metrics --pprof -b
+// ./chronos -d ./data2 -c config2.yml --metrics --pprof -b
 // arm64： CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -o chronos_arm64
 // pprof 性能分析：
 // go tool pprof -http=:8080 cpu.profile
@@ -135,8 +136,8 @@ func main() {
 
 	host.SetStreamHandler(node.ProtocolId, node.HandleStream)
 	// 打印节点的 id 信息
-	log.Infof("Node address: /ip4/127.0.0.1/tcp/%v/p2p/%s", port, host.ID().String())
-	//log.Infof("Node address: /ip4/192.168.31.119/tcp/%v/p2p/%s", port, host.ID().String())
+	//log.Infof("Node address: /ip4/127.0.0.1/tcp/%v/p2p/%s", port, host.ID().String())
+	log.Infof("Node address: /ip4/192.168.31.119/tcp/%v/p2p/%s", port, host.ID().String())
 
 	var kdht *dht.IpfsDHT
 

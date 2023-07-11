@@ -14,7 +14,8 @@ import (
 )
 
 const (
-	pingInterval = 15 * time.Second
+	pingInterval    = 15 * time.Second
+	messageQueueCap = 5000
 	//bufferSize   = 50 * 1024 * 1024
 )
 
@@ -44,7 +45,7 @@ func NewPeer(id peer.ID, s *network.Stream, msgQueue chan *Message) (*Peer, erro
 		//rw:       bufio.NewReadWriter(bufio.NewReaderSize(*s, bufferSize), bufio.NewWriterSize(*s, bufferSize)),
 		rw:        bufio.NewReadWriter(bufio.NewReader(*s), bufio.NewWriter(*s)),
 		msgQueue:  msgQueue,
-		sendQueue: make(chan *Message),
+		sendQueue: make(chan *Message, messageQueueCap),
 		stopped:   false,
 	}
 
