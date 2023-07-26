@@ -67,7 +67,7 @@ func (tx *Transaction) Verify() bool {
 
 	if bytes.Compare(txHashBytes, byteHash) != 0 {
 		log.WithFields(log.Fields{
-			"hash":  hex.EncodeToString(byteHash),
+			"hash":  hex.EncodeToString(byteHash)[:8],
 			"local": hex.EncodeToString(txHashBytes),
 		}).Debugln("Transaction hash not match.")
 		return false

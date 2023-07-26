@@ -11,10 +11,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"go-chronos/common"
 	"go-chronos/core"
-	"go-chronos/crypto"
 	"go-chronos/p2p"
-	"go-chronos/utils"
-	"math/big"
 	"sync"
 	"time"
 )
@@ -37,7 +34,7 @@ const (
 )
 
 const (
-	checkInterval        = 50 * time.Millisecond
+	checkInterval        = 200 * time.Millisecond
 	requestBlockInterval = 3 * time.Second
 )
 
@@ -48,9 +45,10 @@ type BlockSyncerConfig struct {
 type BlockSyncer struct {
 	peerSet []*Peer
 
-	remoteHeight     int64               // 目前其他节点的最高高度
-	targetHeight     int64               // 到达 buffer 同步状态后的目标高度
-	knownHeight      int64               // 目前已知节点中的最新高度
+	remoteHeight int64 // 目前其他节点的最高高度
+	targetHeight int64 // 到达 buffer 同步状态后的目标高度
+	knownHeight  int64 // 目前已知节点中的最新高度
+	//dbLatestHeight   int64               // 数据库中存储的最高区块高度
 	requestTimestamp map[int64]time.Time // 区块请求的时间戳
 	blockMap         map[int64]*common.Block
 	peerReqTime      map[peer.ID]time.Time
@@ -96,7 +94,7 @@ func (bs *BlockSyncer) Start() {
 
 // Run 同步协程，每秒触发检查是否有空闲的 peer，如果有，就由该 peer 去拉取区块
 func (bs *BlockSyncer) run() {
-	ticker := time.NewTicker(checkInterval)
+	ticker := time.NewTicker(50 * time.Millisecond)
 	log.Traceln("Start block syncer routine.")
 	for {
 		select {
@@ -117,7 +115,7 @@ func (bs *BlockSyncer) run() {
 				}
 
 				height := bs.selectBlockHeight()
-
+				//log.Infof("Select to get block #%d", height)
 				if height < 0 {
 					continue
 				}
@@ -131,6 +129,7 @@ func (bs *BlockSyncer) run() {
 		bs.lock.RLock()
 		if bs.status == synced {
 			bs.lock.RUnlock()
+			log.Infoln("Block syncer exit.")
 			break
 		}
 		bs.lock.RUnlock()
@@ -159,6 +158,8 @@ func (bs *BlockSyncer) statusMsgRoutine() {
 				log.WithField("Buffer height", bufferHeight).Traceln("Sync buffer height.")
 			}
 
+			dbLatestHeight := bs.chain.Height()
+
 			if bs.remoteHeight == bs.knownHeight {
 				//log.WithFields(log.Fields{
 				//	"remote": bs.remoteHeight,
@@ -167,24 +168,24 @@ func (bs *BlockSyncer) statusMsgRoutine() {
 				bs.status = bufferSyncing
 			}
 
-			if bs.knownHeight == bs.targetHeight {
+			if dbLatestHeight == bs.targetHeight {
 				log.Infoln("Reach target block height.")
 				// 非创世区块节点在这里才到达同步完成的状态
-				go func() {
-					// todo: 处理报错
-					block, _ := bs.chain.GetLatestBlock()
-					bytesParams := block.Header.Params
-					params, _ := utils.DeserializeGeneralParams(bytesParams)
-
-					seed := new(big.Int)
-					pi := new(big.Int)
-
-					seed.SetBytes(params.Result)
-					pi.SetBytes(params.Proof)
-
-					calculator := crypto.GetCalculatorInstance()
-					calculator.AppendNewSeed(seed, pi)
-				}()
+				//go func() {
+				//	// todo: 处理报错
+				//	block, _ := bs.chain.GetLatestBlock()
+				//	bytesParams := block.Header.Params
+				//	params, _ := utils.DeserializeGeneralParams(bytesParams)
+				//
+				//	seed := new(big.Int)
+				//	pi := new(big.Int)
+				//
+				//	seed.SetBytes(params.Result)
+				//	pi.SetBytes(params.Proof)
+				//
+				//	calculator := crypto.GetCalculatorInstance()
+				//	calculator.AppendNewSeed(seed, pi)
+				//}()
 
 				bs.status = synced
 			}
@@ -214,6 +215,12 @@ func (bs *BlockSyncer) blockProcessRoutine() {
 
 			for height := knownHeight; height <= remoteHeight; height++ {
 				if bs.blockMap[height] != nil {
+					//log.WithFields(log.Fields{
+					//	"height": height,
+					//	"target": bs.targetHeight,
+					//	"remote": bs.remoteHeight,
+					//	"known":  bs.knownHeight,
+					//}).Info("Append block to buffer.")
 					bs.insertBlock(height)
 				} else {
 					break
@@ -223,6 +230,7 @@ func (bs *BlockSyncer) blockProcessRoutine() {
 
 		bs.lock.RLock()
 		if bs.status == synced {
+			log.Infoln("Block sync finished, exit block process routine.")
 			bs.lock.RUnlock()
 			break
 		}
@@ -276,9 +284,10 @@ func (bs *BlockSyncer) insertBlock(height int64) {
 	bs.lock.Lock()
 	defer bs.lock.Unlock()
 
-	block, ok := bs.blockMap[height]
+	block, _ := bs.blockMap[height]
 
-	if !ok {
+	if block == nil {
+		log.Warningln("Block in map is nil.")
 		return
 	}
 

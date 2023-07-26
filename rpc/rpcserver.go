@@ -30,7 +30,7 @@ func RPCServerStart() {
 	pb.RegisterTransactionServer(s, &transactionService{})
 	reflection.Register(s)
 
-	log.Infoln("RPC server started.")
+	log.Traceln("RPC server started.")
 
 	err = s.Serve(lis)
 	if err != nil {

@@ -24,6 +24,10 @@ var (
 		Name: "core_transaction_verify_time",
 		Help: "Transaction verify time usage.",
 	})
+	blockBufferCountMetric = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "core_block_buffer_count",
+		Help: "Block buffer count",
+	})
 )
 
 func TxPoolMetricsInc() {
@@ -40,4 +44,12 @@ func PackageBlockMetricsSet(usage float64) {
 
 func VerifyTransactionMetricsSet(usage float64) {
 	verifyTransactionMetric.Set(usage)
+}
+
+func BlockBufferCountMetricsDec() {
+	blockBufferCountMetric.Dec()
+}
+
+func BlockBufferCountMetricsInc() {
+	blockBufferCountMetric.Inc()
 }

@@ -26,6 +26,7 @@ var (
 func VRFCalculate(curve elliptic.Curve, msg []byte) ([]byte, *big.Int, *big.Int, error) {
 	N := curve.Params().N
 	prvHex := config.String("consensus.prv")
+	//prvHex := "f8bc37201dfa59c1b62ce77a168c168e2a525ebad8e18c131be8ab4be6b5a5cb"
 	prv, err := decodePrivateKeyFromHexString(prvHex)
 	if err != nil {
 		log.WithField("error", err).Fatalln("Load private key failed.")
@@ -92,6 +93,7 @@ func VRFCheckRemoteConsensus(key *ecdsa.PublicKey, vdfMsg []byte, s *big.Int, t 
 	verified, err := VRFVerify(elliptic.P256(), key, vdfMsg, s, t, value)
 	if !verified || err != nil {
 		// 验证过程中出错， 认为验证失败
+		//log.WithError(err).Warning("Verify remote consensus failed.")
 		return false, nil
 	}
 

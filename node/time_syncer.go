@@ -20,7 +20,7 @@ type SyncStatus int8
 const (
 	syncInterval       = 5 * time.Second  // 时间同步间隔
 	autoSyncInterval   = 30 * time.Second // 自动重启任务间隔
-	confirmThreshold   = 5                // 时间同步确认阈值
+	confirmThreshold   = 2                // 时间同步确认阈值
 	availableThreshold = 1000             // 1000 ms 容忍范围
 )
 

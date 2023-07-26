@@ -12,7 +12,6 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"go-chronos/core"
 	"go-chronos/metrics"
-	"go-chronos/node"
 	"go-chronos/rpc/pb"
 	"go-chronos/utils"
 )
@@ -60,8 +59,8 @@ func (s *transactionService) SubmitTransaction(ctx context.Context, in *pb.Submi
 	// 获取交易池实例，然后添加交易
 	pool := core.GetTxPoolInst()
 	pool.Add(transaction)
-	handler := node.GetHandlerInst()
-	handler.AddTransaction(transaction)
+	//handler := node.GetHandlerInst()
+	//handler.AddTransaction(transaction)
 
 	//log.Infoln("Append transaction successful.")
 	resp.Status = pb.SubmitTransactionStatus_SUCCESS.Enum()

@@ -58,9 +58,11 @@ func handleNewBlockMsg(h *Handler, msg *p2p.Message, p *Peer) {
 	}
 
 	if verifyBlockVRF(block) {
+		log.WithField("status", status).Debugln("Receive block from p2p.")
 		h.chain.AppendBlockTask(block)
 		h.blockBroadcastQueue <- block
 	} else {
+		//log.Infoln(hex.EncodeToString(block.Header.PublicKey[:]))
 		log.Warning("Block VRF verify failed.")
 	}
 }
@@ -260,6 +262,11 @@ func verifyBlockVRF(block *common.Block) bool {
 
 	if err != nil || !verified {
 		log.Debugln("Verify VRF failed.")
+		//log.Infoln(hex.EncodeToString(s.Bytes()))
+		//log.Infoln(hex.EncodeToString(t.Bytes()))
+		//log.Infoln(hex.EncodeToString(params.Result))
+		//log.Infoln(hex.EncodeToString(params.RandomNumber[:]))
+		//log.Infoln(hex.EncodeToString(block.Header.PublicKey[:]))
 		return false
 	}
 

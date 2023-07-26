@@ -151,7 +151,7 @@ func (h *Handler) packageBlockRoutine() {
 		select {
 		case <-ticker.C:
 			if !h.Synced() {
-				//log.Infoln("Waiting for node synced.")
+				log.Infoln("Waiting for node synced.")
 				continue
 			}
 
@@ -341,7 +341,7 @@ func (h *Handler) Synced() bool {
 	status := h.blockSyncer.getStatus()
 	if status == synced && h.timeSyncer.synced() {
 		h.startRoutine.Do(func() {
-			log.Traceln("Block && time sync finish!")
+			log.Infoln("Block && time sync finish!")
 			go h.broadcastBlock()
 			go h.broadcastTransaction()
 		})

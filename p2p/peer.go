@@ -67,6 +67,8 @@ func (p *Peer) Run() {
 
 	p.wg.Add(2)
 	go p.pingLoop()
+
+	// 不可多协程并发写，存在问题
 	go p.readLoop(readErr)
 	go p.writeLoop()
 	return
@@ -182,7 +184,7 @@ func (p *Peer) Send(msgCode StatusCode, payload []byte) {
 }
 
 func (p *Peer) writeLoop() {
-	log.Infoln("Start write loop.")
+	log.Traceln("Start write loop.")
 	for {
 		if p.stopped {
 			break

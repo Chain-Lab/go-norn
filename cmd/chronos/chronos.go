@@ -27,11 +27,15 @@ import (
 
 // 测试指令：
 // ./chronos -d ./data1 -g -c config1.yml
-// ./chronos -d ./data2 -c config2.yml --metrics -b /ip4/127.0.0.1/tcp/31258/p2p/12D3KooWJtvSD3yzu1XpKxr3eKutgjJXgky266AdnUJSg25ZXuVr
+// ./chronos -d ./data -g -c config.yml
+// ./chronos -d ./data -c config.yml --metrics -b /ip4/43.134.123.140/tcp/31258/p2p/QmNuqv3q7kzxtquzbnDEYLuNmPrwB2G1ZHRmzEH6dTFFbS
+// nohup ./chronos -d ./data -c config.yml --metrics -b /ip4/43.134.29.89/tcp/31258/p2p/QmcCGvGWyACcyadfXmXoYw6E8WjdfnBvvotyh3cFNTfTCA >> output 2>&1 &
 // ./chronos -d ./data2 -c config2.yml --metrics --delta 40000 -b /ip4/127.0.0.1/tcp/31258/p2p/12D3KooWJtvSD3yzu1XpKxr3eKutgjJXgky266AdnUJSg25ZXuVr
-// ./chronos_arm64 -d ./data2 -c config2.yml --metrics --pprof -b
+// ./chronos -d ./data2 -c config2.yml --metrics --pprof -b /ip4/127.0.0.1/tcp/31258/p2p/QmYwdCNHr1fKyURJWC6Pi5889ei6gm3kL9VczVfgxPRXgi
+// ./chronos -d ./data3 -c config3.yml --metrics --pprof -b /ip4/127.0.0.1/tcp/31258/p2p/QmYwdCNHr1fKyURJWC6Pi5889ei6gm3kL9VczVfgxPRXgi
 // ./chronos -d ./data2 -c config2.yml --metrics --pprof -b
 // arm64： CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -o chronos_arm64
+// amd64： CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o chronos_amd64
 // pprof 性能分析：
 // go tool pprof -http=:8080 cpu.profile
 func main() {
@@ -135,9 +139,17 @@ func main() {
 	}
 
 	host.SetStreamHandler(node.ProtocolId, node.HandleStream)
+	//addrs, err := net.InterfaceAddrs()
+	//if err != nil {
+	//	log.WithError(err).Errorln("Get location address failed.")
+	//	return
+	//}
+
+	//ip := addrs[2].(*net.IPNet).IP.String()
+
 	// 打印节点的 id 信息
-	//log.Infof("Node address: /ip4/127.0.0.1/tcp/%v/p2p/%s", port, host.ID().String())
-	log.Infof("Node address: /ip4/192.168.31.119/tcp/%v/p2p/%s", port, host.ID().String())
+	log.Infof("Node address: /ip4/127.0.0.1/tcp/%v/p2p/%s", port, host.ID().String())
+	//log.Infof("Node address: /ip4/%s/tcp/%v/p2p/%s", ip, port, host.ID().String())
 
 	var kdht *dht.IpfsDHT
 

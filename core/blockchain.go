@@ -287,8 +287,8 @@ func (bc *BlockChain) GetBlockByHeight(height int64) (*common.Block, error) {
 	}
 
 	// 查询缓存里面是否有区块的信息
-	value, ok := bc.blockHeightMap.Get(height)
-	if ok {
+	value, _ := bc.blockHeightMap.Get(height)
+	if value != nil {
 		blockHash := common.Hash(value.([32]byte))
 		block, err := bc.GetBlockByHash(&blockHash)
 
@@ -349,7 +349,7 @@ func (bc *BlockChain) InsertBlock(block *common.Block) {
 	// 获取对应哈希的区块，如果区块存在，说明链上已经存在该区块
 	_, err := bc.GetBlockByHash(&blockHash)
 	if err == nil {
-		log.WithField("hash", block.BlockHash()).Warning("Block exists.")
+		log.WithField("hash", block.BlockHash()[:8]).Warning("Block exists.")
 		return
 	}
 
@@ -362,7 +362,10 @@ func (bc *BlockChain) InsertBlock(block *common.Block) {
 		}
 
 		if !isPrevBlock(latestBlock, block) {
-			log.Errorln("Block error, prev block hash not match.")
+			log.WithFields(log.Fields{
+				"prev":   block.PrevBlockHash()[:8],
+				"latest": latestBlock.BlockHash()[:8],
+			}).Errorln("Block error, prev block hash not match.")
 			return
 		}
 	} else {
@@ -387,7 +390,7 @@ func (bc *BlockChain) InsertBlock(block *common.Block) {
 	//fmt.Printf("Data size %d bytes.", len(values[0]))
 
 	log.WithFields(log.Fields{
-		"hash":    hex.EncodeToString(block.Header.BlockHash[:]),
+		"hash":    hex.EncodeToString(block.Header.BlockHash[:])[:8],
 		"height":  block.Header.Height,
 		"count":   len(block.Transactions),
 		"address": hex.EncodeToString(block.Header.PublicKey[:])[:8],
@@ -415,7 +418,7 @@ func (bc *BlockChain) InsertBlock(block *common.Block) {
 		if err != nil {
 			log.WithFields(log.Fields{
 				"error": err,
-				"hash":  hex.EncodeToString(tx.Body.Hash[:]),
+				"hash":  hex.EncodeToString(tx.Body.Hash[:])[:8],
 			}).Errorln("Encode transaction failed.")
 			return
 		}
@@ -454,7 +457,7 @@ func (bc *BlockChain) AppendBlockTask(block *common.Block) {
 		return
 	}
 
-	//log.Infoln("Append block to buffer.")
+	log.Debugln("Append block to buffer.")
 	bc.buffer.AppendBlock(block)
 }
 
@@ -526,5 +529,6 @@ func (bc *BlockChain) genesisInitialization(block *common.Block) {
 
 		// 初始化
 		crypto.CalculatorInitialization(pp, order, genesisParams.TimeParam)
+		log.Infoln("Genesis params initialization.")
 	}
 }

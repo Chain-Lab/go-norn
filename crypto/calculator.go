@@ -149,12 +149,12 @@ func (c *Calculator) run() {
 		select {
 		case seed := <-c.seedChannel:
 			c.changeLock.Lock()
-			log.Debugf("Start new VDF calculate.")
+			log.Infoln("Start new VDF calculate.")
 
 			c.changed = false
-			c.changeLock.Unlock()
 			c.seed = seed
 			c.proof = <-c.prevProofChannel
+			c.changeLock.Unlock()
 
 			result, pi := c.calculate(seed)
 
