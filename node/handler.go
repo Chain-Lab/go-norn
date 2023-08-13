@@ -3,6 +3,7 @@ package node
 import (
 	"crypto/elliptic"
 	"encoding/hex"
+	"github.com/gookit/config/v2"
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
@@ -12,6 +13,8 @@ import (
 	"go-chronos/core"
 	"go-chronos/crypto"
 	"go-chronos/p2p"
+	"go-chronos/utils"
+	"net"
 	"sync"
 	"time"
 )
@@ -22,7 +25,8 @@ const (
 	maxKnownBlock          = 1024
 	maxKnownTransaction    = 32768
 	maxSyncerStatusChannel = 512
-	ProtocolId             = protocol.ID("/chronos/1.0.0")
+	ProtocolId             = protocol.ID("/chronos/1.0.0/p2p")
+	TxProtocolId           = protocol.ID("/chronos/1.0.0/transaction")
 )
 
 var handlerMap = map[p2p.StatusCode]msgHandler{
@@ -54,6 +58,7 @@ type HandlerConfig struct {
 
 type Handler struct {
 	peerSet []*Peer
+	peers   map[peer.ID]*Peer
 
 	blockBroadcastQueue chan *common.Block
 	txBroadcastQueue    chan *common.Transaction
@@ -76,10 +81,14 @@ func HandleStream(s network.Stream) {
 	//ctx := GetPeerContext()
 	handler := GetHandlerInst()
 	conn := s.Conn()
-	//peer, err := NewPeer(ctx, conn.RemotePeer(), &conn)
-	_, err := handler.NewPeer(conn.RemotePeer(), &s)
+
+	//addr, _ := peer.AddrInfoFromP2pAddr(conn.RemoteMultiaddr())
+	//log.Infoln(addr)
+
+	_, err := handler.NewPeer("", conn.RemotePeer(), &s)
 
 	log.Infoln("Receive new stream, handle stream.")
+	log.Infoln(conn.RemoteMultiaddr())
 
 	if err != nil {
 		log.WithField("error", err).Errorln("Handle stream error.")
@@ -111,6 +120,7 @@ func NewHandler(config *HandlerConfig) (*Handler, error) {
 	handler := &Handler{
 		// todo: 限制节点数量，Kad 应该限制了节点数量不超过20个
 		peerSet: make([]*Peer, 0, 40),
+		peers:   make(map[peer.ID]*Peer),
 
 		blockBroadcastQueue: make(chan *common.Block, 64),
 		txBroadcastQueue:    make(chan *common.Transaction, 8192),
@@ -198,14 +208,14 @@ func (h *Handler) packageBlockRoutine() {
 	}
 }
 
-func (h *Handler) NewPeer(peerId peer.ID, s *network.Stream) (*Peer, error) {
+func (h *Handler) NewPeer(addr string, peerId peer.ID, s *network.Stream) (*Peer, error) {
 	config := PeerConfig{
 		chain:   h.chain,
 		txPool:  h.txPool,
 		handler: h,
 	}
 
-	p, err := NewPeer(peerId, s, config)
+	p, err := NewPeer(addr, peerId, s, config)
 
 	if err != nil {
 		log.WithField("error", err).Errorln("Create peer failed.")
@@ -216,6 +226,7 @@ func (h *Handler) NewPeer(peerId peer.ID, s *network.Stream) (*Peer, error) {
 	h.peerSetLock.Unlock()
 
 	h.peerSet = append(h.peerSet, p)
+	h.peers[p.peerID] = p
 	h.blockSyncer.AddPeer(p)
 	return p, err
 }
@@ -381,6 +392,55 @@ func (h *Handler) removePeerIfStopped(idx int) {
 	p := h.peerSet[idx]
 	if p.Stopped() {
 		h.peerSet = append(h.peerSet[:idx], h.peerSet[idx+1:]...)
+		delete(h.peers, p.peerID)
+	}
+}
+
+func (h *Handler) TransactionUDP() {
+	port := config.Int("node.udp", 31259)
+	listen, err := net.ListenUDP("udp", &net.UDPAddr{
+		IP:   net.IPv4(0, 0, 0, 0),
+		Port: port,
+	})
+
+	if err != nil {
+		log.WithError(err).Warningln("Transaction UDP port listen failed.")
+		return
+	}
+
+	defer listen.Close()
+
+	for {
+		var data [10240]byte
+		n, _, err := listen.ReadFromUDP(data[:])
+		if err != nil {
+			log.WithError(err).Debugln("Receive tx failed.")
+			continue
+		}
+
+		// bm: BroadcastMessage
+		bm, err := utils.DeserializeBroadcastMessage(data[:n])
+
+		var id peer.ID
+		var txData []byte
+
+		if err != nil {
+			id = peer.ID(bm.ID)
+			txData = bm.Data
+		} else {
+			continue
+		}
+
+		// todo: 如何验证一个交易是非法的？当前的逻辑下可以使用 Verify 方法来校验
+		tx, err := utils.DeserializeTransaction(txData)
+		if err != nil {
+			peer := h.peers[id]
+			if peer != nil {
+				txHash := hex.EncodeToString(tx.Body.Hash[:])
+				peer.MarkTransaction(txHash)
+			}
+			h.AddTransaction(tx)
+		}
 	}
 }
 

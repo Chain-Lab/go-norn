@@ -47,9 +47,10 @@ type (
 )
 
 const (
-	PacketIdentifierSyncStatusMsg = 12064657818327214469
-	PacketIdentifierTimeSyncMsg   = 6014709404869090737
-	PacketIdentifierMessage       = 14302180353067076632
+	PacketIdentifierSyncStatusMsg    = 12064657818327214469
+	PacketIdentifierTimeSyncMsg      = 6014709404869090737
+	PacketIdentifierMessage          = 14302180353067076632
+	PacketIdentifierBroadcastMessage = 3104464370606199534
 )
 
 type SyncStatusMsg struct {
@@ -248,6 +249,92 @@ func (x *Message) Read(viewer *MessageViewer, reader *karmem.Reader) {
 	x.ReceiveAt = viewer.ReceiveAt()
 }
 
+type BroadcastMessage struct {
+	ID   []byte
+	Data []byte
+}
+
+func NewBroadcastMessage() BroadcastMessage {
+	return BroadcastMessage{}
+}
+
+func (x *BroadcastMessage) PacketIdentifier() PacketIdentifier {
+	return PacketIdentifierBroadcastMessage
+}
+
+func (x *BroadcastMessage) Reset() {
+	x.Read((*BroadcastMessageViewer)(unsafe.Pointer(&_Null)), _NullReader)
+}
+
+func (x *BroadcastMessage) WriteAsRoot(writer *karmem.Writer) (offset uint, err error) {
+	return x.Write(writer, 0)
+}
+
+func (x *BroadcastMessage) Write(writer *karmem.Writer, start uint) (offset uint, err error) {
+	offset = start
+	size := uint(32)
+	if offset == 0 {
+		offset, err = writer.Alloc(size)
+		if err != nil {
+			return 0, err
+		}
+	}
+	writer.Write4At(offset, uint32(28))
+	__IDSize := uint(1 * len(x.ID))
+	__IDOffset, err := writer.Alloc(__IDSize)
+	if err != nil {
+		return 0, err
+	}
+	writer.Write4At(offset+4, uint32(__IDOffset))
+	writer.Write4At(offset+4+4, uint32(__IDSize))
+	writer.Write4At(offset+4+4+4, 1)
+	__IDSlice := *(*[3]uint)(unsafe.Pointer(&x.ID))
+	__IDSlice[1] = __IDSize
+	__IDSlice[2] = __IDSize
+	writer.WriteAt(__IDOffset, *(*[]byte)(unsafe.Pointer(&__IDSlice)))
+	__DataSize := uint(1 * len(x.Data))
+	__DataOffset, err := writer.Alloc(__DataSize)
+	if err != nil {
+		return 0, err
+	}
+	writer.Write4At(offset+16, uint32(__DataOffset))
+	writer.Write4At(offset+16+4, uint32(__DataSize))
+	writer.Write4At(offset+16+4+4, 1)
+	__DataSlice := *(*[3]uint)(unsafe.Pointer(&x.Data))
+	__DataSlice[1] = __DataSize
+	__DataSlice[2] = __DataSize
+	writer.WriteAt(__DataOffset, *(*[]byte)(unsafe.Pointer(&__DataSlice)))
+
+	return offset, nil
+}
+
+func (x *BroadcastMessage) ReadAsRoot(reader *karmem.Reader) {
+	x.Read(NewBroadcastMessageViewer(reader, 0), reader)
+}
+
+func (x *BroadcastMessage) Read(viewer *BroadcastMessageViewer, reader *karmem.Reader) {
+	__IDSlice := viewer.ID(reader)
+	__IDLen := len(__IDSlice)
+	if __IDLen > cap(x.ID) {
+		x.ID = append(x.ID, make([]byte, __IDLen-len(x.ID))...)
+	}
+	x.ID = x.ID[:__IDLen]
+	copy(x.ID, __IDSlice)
+	for i := __IDLen; i < len(x.ID); i++ {
+		x.ID[i] = 0
+	}
+	__DataSlice := viewer.Data(reader)
+	__DataLen := len(__DataSlice)
+	if __DataLen > cap(x.Data) {
+		x.Data = append(x.Data, make([]byte, __DataLen-len(x.Data))...)
+	}
+	x.Data = x.Data[:__DataLen]
+	copy(x.Data, __DataSlice)
+	for i := __DataLen; i < len(x.Data); i++ {
+		x.Data[i] = 0
+	}
+}
+
 type SyncStatusMsgViewer struct {
 	_data [64]byte
 }
@@ -393,4 +480,53 @@ func (x *MessageViewer) ReceiveAt() (v int64) {
 		return v
 	}
 	return *(*int64)(unsafe.Add(unsafe.Pointer(&x._data), 21))
+}
+
+type BroadcastMessageViewer struct {
+	_data [32]byte
+}
+
+func NewBroadcastMessageViewer(reader *karmem.Reader, offset uint32) (v *BroadcastMessageViewer) {
+	if !reader.IsValidOffset(offset, 8) {
+		return (*BroadcastMessageViewer)(unsafe.Pointer(&_Null))
+	}
+	v = (*BroadcastMessageViewer)(unsafe.Add(reader.Pointer, offset))
+	if !reader.IsValidOffset(offset, v.size()) {
+		return (*BroadcastMessageViewer)(unsafe.Pointer(&_Null))
+	}
+	return v
+}
+
+func (x *BroadcastMessageViewer) size() uint32 {
+	return *(*uint32)(unsafe.Pointer(&x._data))
+}
+func (x *BroadcastMessageViewer) ID(reader *karmem.Reader) (v []byte) {
+	if 4+12 > x.size() {
+		return []byte{}
+	}
+	offset := *(*uint32)(unsafe.Add(unsafe.Pointer(&x._data), 4))
+	size := *(*uint32)(unsafe.Add(unsafe.Pointer(&x._data), 4+4))
+	if !reader.IsValidOffset(offset, size) {
+		return []byte{}
+	}
+	length := uintptr(size / 1)
+	slice := [3]uintptr{
+		uintptr(unsafe.Add(reader.Pointer, offset)), length, length,
+	}
+	return *(*[]byte)(unsafe.Pointer(&slice))
+}
+func (x *BroadcastMessageViewer) Data(reader *karmem.Reader) (v []byte) {
+	if 16+12 > x.size() {
+		return []byte{}
+	}
+	offset := *(*uint32)(unsafe.Add(unsafe.Pointer(&x._data), 16))
+	size := *(*uint32)(unsafe.Add(unsafe.Pointer(&x._data), 16+4))
+	if !reader.IsValidOffset(offset, size) {
+		return []byte{}
+	}
+	length := uintptr(size / 1)
+	slice := [3]uintptr{
+		uintptr(unsafe.Add(reader.Pointer, offset)), length, length,
+	}
+	return *(*[]byte)(unsafe.Pointer(&slice))
 }

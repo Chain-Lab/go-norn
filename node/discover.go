@@ -55,9 +55,10 @@ func Discover(ctx context.Context, h host.Host, dht *dht.IpfsDHT, rendezvous str
 						}).Debugln("Connect to node failed.")
 						continue
 					}
-
+					//log.Infoln("test")
+					//log.Infoln(len(p.Addrs))
 					s, err := h.NewStream(ctx, p.ID, ProtocolId)
-					_, err = handler.NewPeer(p.ID, &s)
+					_, err = handler.NewPeer("", p.ID, &s)
 					if err != nil {
 						log.WithField("error", err).Errorln("Create new peer failed.")
 						continue

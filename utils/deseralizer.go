@@ -20,6 +20,13 @@ func DeserializeTransaction(byteTxData []byte) (*common.Transaction, error) {
 	return transaction, nil
 }
 
+func DeserializeBroadcastMessage(byteTxData []byte) (*p2p.BroadcastMessage, error) {
+	transaction := new(p2p.BroadcastMessage)
+	transaction.ReadAsRoot(karmem.NewReader(byteTxData))
+
+	return transaction, nil
+}
+
 func DeserializeStatusMsg(byteMsgData []byte) (*p2p.SyncStatusMsg, error) {
 	msg := new(p2p.SyncStatusMsg)
 	msg.ReadAsRoot(karmem.NewReader(byteMsgData))

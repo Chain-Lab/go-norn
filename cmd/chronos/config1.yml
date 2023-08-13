@@ -9,6 +9,7 @@ p2p:
 
 node:
   port: 31258
+  udp: 31259
 
 rpc:
   address: 0.0.0.0:45555

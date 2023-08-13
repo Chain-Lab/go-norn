@@ -52,7 +52,7 @@ func NewKDHT(ctx context.Context, host host.Host, bootstrapPeers []multiaddr.Mul
 			if err != nil {
 				log.WithField("error", err).Errorln("Create new stream error.")
 			}
-			_, err = h.NewPeer(peerinfo.ID, &s)
+			_, err = h.NewPeer("", peerinfo.ID, &s)
 			log.Printf("Connection established with bootstrap node: %q", *peerinfo)
 		}
 	}
