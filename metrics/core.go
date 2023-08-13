@@ -46,8 +46,8 @@ func VerifyTransactionMetricsSet(usage float64) {
 	verifyTransactionMetric.Set(usage)
 }
 
-func BlockBufferCountMetricsDec() {
-	blockBufferCountMetric.Dec()
+func BlockBufferCountMetricsDec(value int) {
+	blockBufferCountMetric.Sub((float64(value)))
 }
 
 func BlockBufferCountMetricsInc() {

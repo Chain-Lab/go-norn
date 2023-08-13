@@ -10,17 +10,18 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
-	"github.com/gookit/config/v2"
+	"crypto/sha256"
 	log "github.com/sirupsen/logrus"
 	"math/big"
 )
 
 const (
-	CONSENSUS_FLOOR = 0.0 // 共识要求的最低概率
+	ConsensusFloor = 0.1 // 共识要求的最低概率
 )
 
 var (
 	tt260 = BigPow(2, 260)
+	tt256 = BigPow(2, 256)
 )
 
 func VRFCalculate(curve elliptic.Curve, msg []byte) ([]byte, *big.Int, *big.Int, error) {
@@ -34,7 +35,11 @@ func VRFCalculate(curve elliptic.Curve, msg []byte) ([]byte, *big.Int, *big.Int,
 	}
 
 	// todo: 消息需要哈希一下，避免由于输入消息过短出现安全问题
-	xM, yM := curve.ScalarBaseMult(msg)
+	sha2 := sha256.New()
+	sha2.Write(msg)
+	digest := sha2.Sum(nil)
+
+	xM, yM := curve.ScalarBaseMult(digest)
 	r, err := rand.Int(rand.Reader, N)
 
 	if err != nil {
@@ -69,16 +74,21 @@ func VRFCalculate(curve elliptic.Curve, msg []byte) ([]byte, *big.Int, *big.Int,
 
 // VRFCheckOutputConsensus 检查一个 VRF 的输出是否满足共识
 func VRFCheckOutputConsensus(randomOutput []byte) bool {
+	sha2 := sha256.New()
+	sha2.Write(randomOutput)
+	digest := sha2.Sum(nil)
+
 	r := new(big.Int)
-	r.SetBytes(randomOutput)
+	r.SetBytes(digest)
 
 	base := new(big.Int)
 	base.SetInt64(1000)
 	r = r.Mul(r, base)
-	r = r.Div(r, tt260)
+	r = r.Div(r, tt256)
 
 	prob := float64(r.Int64()) / 1000.0
-	return prob > CONSENSUS_FLOOR
+	log.Infof("VRF consensus prob = %f", prob)
+	return prob > ConsensusFloor
 }
 
 // VRFCheckLocalConsensus 检查当前节点是否是一个共识节点
@@ -104,8 +114,10 @@ func VRFVerify(curve elliptic.Curve, key *ecdsa.PublicKey, msg []byte, s *big.In
 	N := curve.Params().N
 	xR, yR := elliptic.UnmarshalCompressed(curve, value) // random number -> point V
 
-	// todo: 消息需要哈希一下，避免由于输入消息过短出现安全问题
-	xM, yM := curve.ScalarBaseMult(msg) // message -> point M
+	sha2 := sha256.New()
+	sha2.Write(msg)
+	digest := sha2.Sum(nil)
+	xM, yM := curve.ScalarBaseMult(digest) // message -> point M
 
 	xTm, yTm := curve.ScalarMult(xM, yM, t.Bytes()) // t * M
 	xTo, yTo := curve.ScalarBaseMult(t.Bytes())

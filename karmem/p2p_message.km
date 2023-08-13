@@ -49,3 +49,8 @@ struct Message table {
     Payload []byte;
     ReceiveAt int64;
 }
+
+struct BroadcastMessage table {
+    ID []byte;
+    Data []byte;
+}

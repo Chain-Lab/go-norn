@@ -123,3 +123,16 @@ func SerializeTimeSyncMsg(msg *p2p.TimeSyncMsg) ([]byte, error) {
 	result := writer.Bytes()
 	return result, err
 }
+
+func SerializeBroadcastMessage(msg *p2p.BroadcastMessage) ([]byte, error) {
+	writer := karmem.NewWriter(KARMEM_CAP)
+
+	_, err := msg.WriteAsRoot(writer)
+	if err != nil {
+		log.WithError(err).Debugln("Time sync message serialize failed.")
+		return nil, err
+	}
+
+	result := writer.Bytes()
+	return result, err
+}

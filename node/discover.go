@@ -5,9 +5,9 @@ import (
 	"github.com/libp2p/go-libp2p-kad-dht"
 	"github.com/libp2p/go-libp2p/core/discovery"
 	"github.com/libp2p/go-libp2p/core/host"
-	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/p2p/discovery/routing"
 	log "github.com/sirupsen/logrus"
+	"go-chronos/metrics"
 	"time"
 )
 
@@ -46,7 +46,10 @@ func Discover(ctx context.Context, h host.Host, dht *dht.IpfsDHT, rendezvous str
 				if p.ID == h.ID() {
 					continue
 				}
-				if h.Network().Connectedness(p.ID) != network.Connected {
+
+				peer := handler.peers[p.ID]
+				//if h.Network().Connectedness(p.ID) != network.Connected {
+				if peer == nil || peer.Stopped() {
 					_, err := h.Network().DialPeer(ctx, p.ID)
 					if err != nil {
 						log.WithFields(log.Fields{
@@ -55,13 +58,18 @@ func Discover(ctx context.Context, h host.Host, dht *dht.IpfsDHT, rendezvous str
 						}).Debugln("Connect to node failed.")
 						continue
 					}
-
 					s, err := h.NewStream(ctx, p.ID, ProtocolId)
-					_, err = handler.NewPeer(p.ID, &s)
+					_, err = handler.NewPeer("", p.ID, &s)
 					if err != nil {
 						log.WithField("error", err).Errorln("Create new peer failed.")
 						continue
 					}
+
+					log.Infof("Connect to peer: %s", p.ID)
+					metrics.ConnectedNodeInc()
+				} else {
+					//log.Infoln(h.Network().ConnsToPeer(p.ID))
+					log.Debugf("%s connected", p.ID)
 				}
 			}
 		}

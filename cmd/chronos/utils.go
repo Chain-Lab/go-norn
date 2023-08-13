@@ -13,6 +13,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"go-chronos/common"
 	"go-chronos/crypto"
+	metrics2 "go-chronos/metrics"
 	"go-chronos/node"
 	karmem "karmem.org/golang"
 	"time"
@@ -23,10 +24,10 @@ func NewKDHT(ctx context.Context, host host.Host, bootstrapPeers []multiaddr.Mul
 	var options []dht.Option
 
 	// 如果没有引导节点，以服务器模式 ModeServer 启动
-	if len(bootstrapPeers) == 0 {
-		options = append(options, dht.Mode(dht.ModeServer))
-		log.Infoln("Start node as a bootstrap server.")
-	}
+	//if len(bootstrapPeers) == 0 {
+	options = append(options, dht.Mode(dht.ModeServer))
+	//log.Infoln("Start node as a bootstrap server.")
+	//}
 
 	// 生成一个 DHT 实例
 	kdht, err := dht.New(ctx, host, options...)
@@ -52,7 +53,8 @@ func NewKDHT(ctx context.Context, host host.Host, bootstrapPeers []multiaddr.Mul
 			if err != nil {
 				log.WithField("error", err).Errorln("Create new stream error.")
 			}
-			_, err = h.NewPeer(peerinfo.ID, &s)
+			_, err = h.NewPeer("", peerinfo.ID, &s)
+			metrics2.ConnectedNodeInc()
 			log.Printf("Connection established with bootstrap node: %q", *peerinfo)
 		}
 	}

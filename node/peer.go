@@ -30,6 +30,7 @@ type PeerConfig struct {
 type Peer struct {
 	peer   *p2p.Peer
 	peerID peer.ID
+	addr   string
 
 	knownBlocks     *lru.Cache
 	queuedBlocks    chan *common.Block
@@ -49,7 +50,7 @@ type Peer struct {
 	// todo： 还需要将区块、交易传出给上层结构处理的管道
 }
 
-func NewPeer(peerId peer.ID, s *network.Stream, config PeerConfig) (*Peer, error) {
+func NewPeer(addr string, peerId peer.ID, s *network.Stream, config PeerConfig) (*Peer, error) {
 	msgQueue := make(chan *p2p.Message, messageQueueCap)
 	pp, err := p2p.NewPeer(peerId, s, msgQueue)
 

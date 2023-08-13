@@ -363,6 +363,7 @@ func (bc *BlockChain) InsertBlock(block *common.Block) {
 
 		if !isPrevBlock(latestBlock, block) {
 			log.WithFields(log.Fields{
+				"height": block.Header.Height,
 				"prev":   block.PrevBlockHash()[:8],
 				"latest": latestBlock.BlockHash()[:8],
 			}).Errorln("Block error, prev block hash not match.")

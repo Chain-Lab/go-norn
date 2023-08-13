@@ -69,22 +69,25 @@ func NewBlockBuffer(latest *common.Block, popChan chan *common.Block) (*BlockBuf
 		bufferedHeight:    latest.Header.Height,
 	}
 
-	go buffer.Run()
+	go buffer.Process()
 	go buffer.secondProcess()
 
 	return buffer, nil
 }
 
-// Run 是 BlockBuffer 的线程函数，它依次接收区块进行处理
-func (b *BlockBuffer) Run() {
+// Process 是 BlockBuffer 的线程函数，它依次接收区块进行处理
+func (b *BlockBuffer) Process() {
 	for {
 		select {
 		case block := <-b.blockChan:
+
+			// 取得区块和其前一个区块的哈希值
 			prevBlockHash := block.PrevBlockHash()
 			blockHash := block.BlockHash()
 
 			blockHeight := block.Header.Height
 
+			// 如果当前区块低于最高区块高度，终止处理
 			if blockHeight < b.latestBlockHeight {
 				log.Warningln("Block height too low.")
 				break
@@ -103,33 +106,40 @@ func (b *BlockBuffer) Run() {
 			b.knownBlocks.Add(blockHash, nil)
 
 			// todo: 这里对前一个区块是否在视图中的逻辑判断存在问题
+			// 根据前一个区块的哈希值查询到区块列表，如果存在则继续
 			b.updateLock.Lock()
 			list, _ := b.nextBlockMap[prevBlockHash]
 			if list == nil {
 				log.WithField("prev", prevBlockHash).Infoln("List is nil.")
 				if prevBlockHash != b.latestBlockHash {
-					// 前一个区块不在视图中，放到等待队列中
-					// 这里保证了 nextBlockMap 能形成树形结构
-					// [230725] upd: 第二队列的处理可能存在线程不安全问题，暂时移除，所有区块由当前的协程处理
+					// 前一个区块不在视图中，放到等待队列中，这里保证了 nextBlockMap 能形成树形结构
 					log.Infoln("Pop block to second channel.")
 					b.secondChan <- block
 					b.updateLock.Unlock()
 					break
 				}
+				// 前一个区块在视图中，创建新的列表
 				list = make(blockList, 0, 15)
 			}
 
+			// 获取这个区块高度下已经选定的区块
 			selected, _ := b.selectedBlock[blockHeight]
+			prevSelected, _ := b.selectedBlock[blockHeight-1]
 			replaced := false
 			metrics.BlockBufferCountMetricsInc()
 
-			if selected == nil {
+			//log.Infoln(b.latestBlock.BlockHash())
+			//log.Infoln(block.PrevBlockHash())
+			if selected == nil && ((prevSelected != nil && prevSelected.BlockHash() == block.PrevBlockHash()) ||
+				b.latestBlock.BlockHash() == block.PrevBlockHash()) {
 				// 如果某个高度下不存在选取的区块， 则默认设置为当前的区块
 				b.selectedBlock[blockHeight] = block
-			} else {
+				replaced = true
+			} else if selected != nil {
 				// 否则对区块进行比较，并且返回是否进行替换
 				b.selectedBlock[blockHeight], replaced = compareBlock(selected, block)
 			}
+
 			if replaced {
 				// 如果对该高度下的区块进行了替换，则需要更新视图
 				b.updateTreeView(blockHeight)
@@ -144,13 +154,14 @@ func (b *BlockBuffer) Run() {
 				log.WithField("height", blockHeight).Debugln("Extend buffer height by main queue.")
 				b.bufferedHeight = blockHeight
 				processList = make(blockList, 0, 15)
-
-				if block.Header.Height-b.latestBlockHeight > maxBufferSize {
-					b.popChan <- b.PopSelectedBlock()
-				}
 			}
 
 			b.blockProcessList[blockHeight] = append(processList, block)
+
+			if block.Header.Height-b.latestBlockHeight > maxBufferSize {
+				b.popChan <- b.PopSelectedBlock()
+			}
+
 			b.updateLock.Unlock()
 		}
 	}
@@ -208,8 +219,14 @@ func (b *BlockBuffer) secondProcess() {
 
 			replaced := false
 			selected, _ := b.selectedBlock[blockHeight]
-			if selected == nil {
+			prevSelected, _ := b.selectedBlock[blockHeight-1]
+			metrics.BlockBufferCountMetricsInc()
+
+			if selected == nil && ((prevSelected != nil && prevSelected.BlockHash() == block.PrevBlockHash()) ||
+				b.latestBlock.BlockHash() == block.PrevBlockHash()) {
+				// 如果某个高度下不存在选取的区块， 则默认设置为当前的区块
 				b.selectedBlock[blockHeight] = block
+				replaced = true
 			} else {
 				b.selectedBlock[blockHeight], replaced = compareBlock(selected, block)
 			}
@@ -225,12 +242,14 @@ func (b *BlockBuffer) secondProcess() {
 				log.WithField("height", blockHeight).Debugln("Extend buffer height by second queue.")
 				b.bufferedHeight = blockHeight
 				processList = make(blockList, 0, 15)
-				if block.Header.Height-b.latestBlockHeight > maxBufferSize {
-					b.popChan <- b.PopSelectedBlock()
-				}
 			}
 
 			b.blockProcessList[blockHeight] = append(processList, block)
+
+			if block.Header.Height-b.latestBlockHeight > maxBufferSize {
+				b.popChan <- b.PopSelectedBlock()
+			}
+
 			block = nil
 			b.updateLock.Unlock()
 
@@ -261,6 +280,7 @@ func (b *BlockBuffer) PopSelectedBlock() *common.Block {
 
 	b.latestBlockHash = selected.BlockHash()
 	b.latestBlockHeight = height
+	b.latestBlock = selected
 	return selected
 }
 
@@ -296,8 +316,8 @@ func (b *BlockBuffer) updateTreeView(start int64) {
 	log.Traceln("Start update buffer tree view.")
 
 	// 从高度 start 开始往后更新
-	prevBlock := b.selectedBlock[start]
-	prevBlockHash := prevBlock.BlockHash()
+	prevBlock := b.selectedBlock[start]    // 前一个区块
+	prevBlockHash := prevBlock.BlockHash() // 前一个区块的哈希值
 	height := start
 
 	for {
@@ -305,9 +325,10 @@ func (b *BlockBuffer) updateTreeView(start int64) {
 		if height > b.bufferedHeight {
 			break
 		}
-		height++
+		height++ // 处理下一个区块
 
 		if prevBlock == nil {
+			// 如果前一个区块为空，则继续，并且设置当前高度下的区块为 nil
 			b.selectedBlock[height] = nil
 			continue
 		}
@@ -338,9 +359,10 @@ func (b *BlockBuffer) deleteLayer(layer int64) {
 		lst, _ := b.nextBlockMap[blockHash]
 		// 这里删除的原理是删除前面的 map 让区块由系统回收
 		if lst != nil {
+			metrics.BlockBufferCountMetricsDec(len(lst))
 			delete(b.nextBlockMap, blockHash)
 		}
-		metrics.BlockBufferCountMetricsDec()
+		//metrics.BlockBufferCountMetricsDec(1)
 	}
 
 	// 再删除高度对应的区块列表，使得blocks没有指向的指针，由 golang 进行回收
@@ -366,8 +388,13 @@ func (b *BlockBuffer) selectBlockFromList(list []*common.Block) *common.Block {
 }
 
 // compareBlock 对比区块优先级，后面考虑一下处理异常
+// upd [230813]: 对比的前提是两者的前一个区块是同一个区块，否则无法保证连续
 // todo： 将优先级策略写入到创世区块中
 func compareBlock(origin *common.Block, block *common.Block) (*common.Block, bool) {
+	if block.PrevBlockHash() != origin.PrevBlockHash() {
+		return origin, false
+	}
+
 	if len(origin.Transactions) == len(block.Transactions) {
 		if origin.Header.Timestamp < block.Header.Timestamp {
 			return origin, false

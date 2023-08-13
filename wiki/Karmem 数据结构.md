@@ -67,6 +67,7 @@ struct BlockHeader table {
     Height int64;					// 当前区块的高度
     PublicKey [33]byte;				// 当前区块生成者的公钥
     Params []byte;					// 区块附带的参数信息，创世参数或普通参数
+    // 预留状态、合约代码的结构
 }
 
 // 区块所的结构
