@@ -41,27 +41,35 @@ func main() {
 
 		prv, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 
+		ticker := time.NewTicker(time.Microsecond * 2000)
+		reconnect := false
 		for {
-			tx := buildTransaction(prv)
-			bytesTransaction, err := utils.SerializeTransaction(tx)
+			select {
+			case <-ticker.C:
+				tx := buildTransaction(prv)
+				bytesTransaction, err := utils.SerializeTransaction(tx)
 
-			if err != nil {
-				continue
+				if err != nil {
+					continue
+				}
+
+				encodedTransaction := hex.EncodeToString(bytesTransaction)
+				resp, err := c.SubmitTransaction(ctx, &pb.SubmitTransactionReq{
+					//_, err = c.SubmitTransaction(ctx, &pb.SubmitTransactionReq{
+					SignedTransaction: proto.String(encodedTransaction),
+				})
+
+				if resp.GetStatus() == pb.SubmitTransactionStatus_Default {
+					// 断线重连，如果返回状态为 default 说明本次 rpc 连接断开（原因？）
+					reconnect = true
+				}
 			}
 
-			encodedTransaction := hex.EncodeToString(bytesTransaction)
-			resp, err := c.SubmitTransaction(ctx, &pb.SubmitTransactionReq{
-				//_, err = c.SubmitTransaction(ctx, &pb.SubmitTransactionReq{
-				SignedTransaction: proto.String(encodedTransaction),
-			})
-
-			if resp.GetStatus() == pb.SubmitTransactionStatus_Default {
-				// 断线重连，如果返回状态为 default 说明本次 rpc 连接断开（原因？）
+			if reconnect {
 				conn.Close()
 				cancel()
 				break
 			}
-
 			//log.Infoln(resp.GetStatus())
 		}
 	}

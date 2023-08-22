@@ -120,7 +120,7 @@ func TestBlockBuffer(t *testing.T) {
 	log.SetLevel(log.TraceLevel)
 	genesisBlock := testCreateBlock(nil, nil)
 	buffer, err := NewBlockBuffer(genesisBlock, nil)
-	go buffer.Run()
+	go buffer.Process()
 	go buffer.secondProcess()
 
 	if err != nil {

@@ -124,16 +124,22 @@ func (b *BlockBuffer) Process() {
 
 			// 获取这个区块高度下已经选定的区块
 			selected, _ := b.selectedBlock[blockHeight]
+			prevSelected, _ := b.selectedBlock[blockHeight-1]
 			replaced := false
 			metrics.BlockBufferCountMetricsInc()
 
-			if selected == nil {
+			//log.Infoln(b.latestBlock.BlockHash())
+			//log.Infoln(block.PrevBlockHash())
+			if selected == nil && ((prevSelected != nil && prevSelected.BlockHash() == block.PrevBlockHash()) ||
+				b.latestBlock.BlockHash() == block.PrevBlockHash()) {
 				// 如果某个高度下不存在选取的区块， 则默认设置为当前的区块
 				b.selectedBlock[blockHeight] = block
-			} else {
+				replaced = true
+			} else if selected != nil {
 				// 否则对区块进行比较，并且返回是否进行替换
 				b.selectedBlock[blockHeight], replaced = compareBlock(selected, block)
 			}
+
 			if replaced {
 				// 如果对该高度下的区块进行了替换，则需要更新视图
 				b.updateTreeView(blockHeight)
@@ -213,8 +219,13 @@ func (b *BlockBuffer) secondProcess() {
 
 			replaced := false
 			selected, _ := b.selectedBlock[blockHeight]
-			if selected == nil {
+			prevSelected, _ := b.selectedBlock[blockHeight-1]
+
+			if selected == nil && ((prevSelected != nil && prevSelected.BlockHash() == block.PrevBlockHash()) ||
+				b.latestBlock.BlockHash() == block.PrevBlockHash()) {
+				// 如果某个高度下不存在选取的区块， 则默认设置为当前的区块
 				b.selectedBlock[blockHeight] = block
+				replaced = true
 			} else {
 				b.selectedBlock[blockHeight], replaced = compareBlock(selected, block)
 			}
@@ -268,6 +279,7 @@ func (b *BlockBuffer) PopSelectedBlock() *common.Block {
 
 	b.latestBlockHash = selected.BlockHash()
 	b.latestBlockHeight = height
+	b.latestBlock = selected
 	return selected
 }
 
