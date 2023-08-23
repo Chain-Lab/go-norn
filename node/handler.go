@@ -166,6 +166,11 @@ func (h *Handler) packageBlockRoutine() {
 	for {
 		select {
 		case <-ticker.C:
+			timestamp := h.timeSyncer.GetLogicClock()
+			if (timestamp/1000)%5 != 0 {
+				continue
+			}
+
 			if !h.Synced() {
 				log.Infoln("Waiting for node synced.")
 				continue
@@ -199,7 +204,6 @@ func (h *Handler) packageBlockRoutine() {
 
 			txs := h.txPool.Package()
 			//log.Infof("Package %d txs.", len(txs))
-			timestamp := h.timeSyncer.GetLogicClock()
 			newBlock, err := h.chain.PackageNewBlock(txs, timestamp, &params)
 
 			if err != nil {
