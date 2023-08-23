@@ -222,6 +222,7 @@ func (p *Peer) writeLoop() {
 					}).Errorln("Send data to peer errored.")
 				p.stopped = true
 				log.Warning("Peer closed.")
+				metrics.ConnectedNodeDec()
 				break
 			}
 

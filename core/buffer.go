@@ -220,6 +220,7 @@ func (b *BlockBuffer) secondProcess() {
 			replaced := false
 			selected, _ := b.selectedBlock[blockHeight]
 			prevSelected, _ := b.selectedBlock[blockHeight-1]
+			metrics.BlockBufferCountMetricsInc()
 
 			if selected == nil && ((prevSelected != nil && prevSelected.BlockHash() == block.PrevBlockHash()) ||
 				b.latestBlock.BlockHash() == block.PrevBlockHash()) {
@@ -361,7 +362,7 @@ func (b *BlockBuffer) deleteLayer(layer int64) {
 			metrics.BlockBufferCountMetricsDec(len(lst))
 			delete(b.nextBlockMap, blockHash)
 		}
-		metrics.BlockBufferCountMetricsDec(1)
+		//metrics.BlockBufferCountMetricsDec(1)
 	}
 
 	// 再删除高度对应的区块列表，使得blocks没有指向的指针，由 golang 进行回收

@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	CONSENSUS_FLOOR = 0.0 // 共识要求的最低概率
+	ConsensusFloor = 0.2 // 共识要求的最低概率
 )
 
 var (
@@ -78,7 +78,8 @@ func VRFCheckOutputConsensus(randomOutput []byte) bool {
 	r = r.Div(r, tt260)
 
 	prob := float64(r.Int64()) / 1000.0
-	return prob > CONSENSUS_FLOOR
+	log.Infof("VRF consensus prob = %f", prob)
+	return prob > ConsensusFloor
 }
 
 // VRFCheckLocalConsensus 检查当前节点是否是一个共识节点

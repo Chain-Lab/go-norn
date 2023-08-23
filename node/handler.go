@@ -12,6 +12,7 @@ import (
 	"go-chronos/common"
 	"go-chronos/core"
 	"go-chronos/crypto"
+	"go-chronos/metrics"
 	"go-chronos/p2p"
 	"go-chronos/utils"
 	"net"
@@ -74,6 +75,7 @@ type Handler struct {
 	startRoutine sync.Once
 
 	peerSetLock sync.RWMutex
+	genesis     bool
 }
 
 // HandleStream 用于在收到对端连接时候处理 stream, 在这里构建 peer 用于通信
@@ -94,6 +96,8 @@ func HandleStream(s network.Stream) {
 		log.WithField("error", err).Errorln("Handle stream error.")
 		return
 	}
+
+	metrics.ConnectedNodeInc()
 }
 
 func NewHandler(config *HandlerConfig) (*Handler, error) {
@@ -133,6 +137,8 @@ func NewHandler(config *HandlerConfig) (*Handler, error) {
 
 		blockSyncer: bs,
 		timeSyncer:  ts,
+
+		genesis: config.Genesis,
 	}
 
 	go handler.packageBlockRoutine()
@@ -223,7 +229,7 @@ func (h *Handler) NewPeer(addr string, peerId peer.ID, s *network.Stream) (*Peer
 	}
 
 	h.peerSetLock.Lock()
-	h.peerSetLock.Unlock()
+	defer h.peerSetLock.Unlock()
 
 	h.peerSet = append(h.peerSet, p)
 	h.peers[p.peerID] = p
