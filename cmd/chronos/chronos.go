@@ -27,12 +27,13 @@ import (
 
 // 测试指令：
 // ./chronos -d ./data1 -g -c config1.yml
-// ./chronos -d ./data -g -c config.yml
+// ./chronos -d ./data -g --metrics -c config.yml
 // ./chronos -d ./data -c config.yml --metrics -b /ip4/43.134.123.140/tcp/31258/p2p/QmNuqv3q7kzxtquzbnDEYLuNmPrwB2G1ZHRmzEH6dTFFbS
 // nohup ./chronos -d ./data -c config.yml --metrics -b /ip4/43.134.29.89/tcp/31258/p2p/QmcCGvGWyACcyadfXmXoYw6E8WjdfnBvvotyh3cFNTfTCA >> output 2>&1 &
 // ./chronos -d ./data2 -c config2.yml --metrics --delta 40000 -b /ip4/127.0.0.1/tcp/31258/p2p/12D3KooWJtvSD3yzu1XpKxr3eKutgjJXgky266AdnUJSg25ZXuVr
 // ./chronos -d ./data2 -c config2.yml --metrics --pprof -b /ip4/127.0.0.1/tcp/31258/p2p/QmYwdCNHr1fKyURJWC6Pi5889ei6gm3kL9VczVfgxPRXgi
 // ./chronos -d ./data3 -c config3.yml --metrics --pprof -b /ip4/127.0.0.1/tcp/31258/p2p/QmYwdCNHr1fKyURJWC6Pi5889ei6gm3kL9VczVfgxPRXgi
+// ./chronos -d ./data -c config.yml --metrics -b /ip4/43.133.62.181/tcp/31258/p2p/QmQUX8uxwVSdEftA6xih8rZG3yzP7qAccExvTLKF7Dak45
 // ./chronos -d ./data2 -c config2.yml --metrics --pprof -b
 // arm64： CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -o chronos_arm64
 // amd64： CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o chronos_amd64
@@ -73,12 +74,14 @@ func main() {
 	if metrics {
 		metricPort := ":" + config.String("metrics.port")
 		http.Handle("/metrics", promhttp.Handler())
+		metrics2.RoutineCreateHistogramObserve(0)
 		go metrics2.RegularMetricsRoutine()
 		go http.ListenAndServe(metricPort, nil)
 		log.Infof("Metric server start on localhost%s", metricPort)
 	}
 
 	// RPC 协程服务开启
+	metrics2.RoutineCreateHistogramObserve(2)
 	go rpc.RPCServerStart()
 	port := config.Int("node.port")
 
@@ -163,7 +166,7 @@ func main() {
 		maddr, err := multiaddr.NewMultiaddr(bootstrap)
 
 		if err != nil {
-			log.WithField("error", err).Errorln("Covert address to multiple addrerss failed.")
+			log.WithField("error", err).Errorln("Covert address to multiple address failed.")
 			return
 		}
 		kdht, err = NewKDHT(ctx, host, []multiaddr.Multiaddr{maddr})
@@ -174,13 +177,16 @@ func main() {
 	}
 
 	// 节点发现协程
+	metrics2.RoutineCreateHistogramObserve(3)
 	go node.Discover(ctx, host, kdht, "Chronos network.")
 
 	if genesis {
 		log.Infof("Create genesis block after 10s...")
+		metrics2.RoutineCreateHistogramObserve(4)
 		go func() {
 			ticker := time.NewTicker(10 * time.Second)
 
+			// 在 10s 后创建创世区块
 			select {
 			case <-ticker.C:
 				log.Infof("Create genesis block.")

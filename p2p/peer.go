@@ -49,6 +49,7 @@ func NewPeer(id peer.ID, s *network.Stream, msgQueue chan *Message) (*Peer, erro
 		stopped:   false,
 	}
 
+	metrics.RoutineCreateHistogramObserve(13)
 	go p.Run()
 
 	return &p, nil
@@ -66,6 +67,7 @@ func (p *Peer) Run() {
 	log.WithField("peer", p.peerID).Infoln("Start run peer instance.")
 
 	p.wg.Add(2)
+	metrics.RoutineCreateHistogramObserve(12)
 	go p.pingLoop()
 
 	// 不可多协程并发写，存在问题
@@ -160,6 +162,7 @@ func (p *Peer) handle(msg *Message) {
 	case msg.Code == StatusCodePongMsg:
 		return
 	default:
+		metrics.RecvQueueCountInc()
 		p.msgQueue <- msg
 	}
 	return

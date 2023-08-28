@@ -11,6 +11,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"go-chronos/common"
 	"go-chronos/core"
+	"go-chronos/metrics"
 	"go-chronos/p2p"
 	"sync"
 	"time"
@@ -34,7 +35,7 @@ const (
 )
 
 const (
-	checkInterval        = 200 * time.Millisecond
+	checkInterval        = 100 * time.Millisecond
 	requestBlockInterval = 3 * time.Second
 )
 
@@ -82,6 +83,7 @@ func NewBlockSyncer(config *BlockSyncerConfig) *BlockSyncer {
 }
 
 func (bs *BlockSyncer) Start() {
+	metrics.RoutineCreateHistogramObserve(11)
 	go bs.run()
 	go bs.statusMsgRoutine()
 	go bs.blockProcessRoutine()
@@ -94,10 +96,11 @@ func (bs *BlockSyncer) Start() {
 
 // Run 同步协程，每秒触发检查是否有空闲的 peer，如果有，就由该 peer 去拉取区块
 func (bs *BlockSyncer) run() {
-	ticker := time.NewTicker(50 * time.Millisecond)
+	ticker := time.NewTicker(500 * time.Millisecond)
 	log.Traceln("Start block syncer routine.")
 	for {
 		select {
+		// 每隔 100 ms 检查一次是否存在空闲的 peer，如果有则进行区块的拉取
 		case <-ticker.C:
 			bs.peerStatusLock.Lock()
 			for idx := range bs.peerSet {
@@ -120,6 +123,7 @@ func (bs *BlockSyncer) run() {
 					continue
 				}
 
+				metrics.RoutineCreateHistogramObserve(14)
 				go requestSyncGetBlock(height, p)
 			}
 			bs.peerStatusLock.Unlock()

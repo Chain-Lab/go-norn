@@ -18,8 +18,9 @@ import (
 type SyncStatus int8
 
 const (
-	syncInterval       = 5 * time.Second  // 时间同步间隔
-	autoSyncInterval   = 30 * time.Second // 自动重启任务间隔
+	//syncInterval       = 5 * time.Second  // 时间同步间隔
+	syncInterval       = 3 * time.Second  // 时间同步间隔
+	autoSyncInterval   = 10 * time.Second // 自动重启任务间隔
 	confirmThreshold   = 2                // 时间同步确认阈值
 	availableThreshold = 1000             // 1000 ms 容忍范围
 )
@@ -53,6 +54,7 @@ func NewTimeSyncer(genesis bool, delta int64) *TimeSyncer {
 
 // syncRoutine 时间同步协程函数，每隔 syncInterval 选择节点发出一次同步请求
 func (ts *TimeSyncer) syncRoutine() {
+	log.Infoln("Start time syncer routine.")
 	ts.timer = time.NewTimer(syncInterval)
 	ts.autoTimer = time.NewTimer(autoSyncInterval)
 	for {
@@ -70,7 +72,9 @@ func (ts *TimeSyncer) syncRoutine() {
 				RspTime:    0,
 				RecRspTime: 0,
 			}
+			metrics.RoutineCreateHistogramObserve(26)
 			go requestTimeSync(msg, peer)
+			log.Infoln("Request to remote time sync.")
 		case <-ts.autoTimer.C:
 			ts.timer.Reset(syncInterval)
 		}
@@ -80,6 +84,7 @@ func (ts *TimeSyncer) syncRoutine() {
 // todo: 添加上下文
 func (ts *TimeSyncer) Start() {
 	if !ts.genesis {
+		metrics.RoutineCreateHistogramObserve(27)
 		go ts.syncRoutine()
 	} else {
 		ts.status = SYNCED
@@ -103,18 +108,19 @@ func (ts *TimeSyncer) ProcessSyncRequest(msg *p2p.TimeSyncMsg, p *Peer) {
 		msg.Code = -1
 	}
 
+	metrics.RoutineCreateHistogramObserve(28)
 	go respondTimeSync(msg, p)
 }
 
 func (ts *TimeSyncer) ProcessSyncRespond(msg *p2p.TimeSyncMsg, p *Peer) {
-	if msg.Code != 0 {
-		log.Debugln("Remote peer respond time sync error.")
-		return
-	}
 	ts.autoTimer.Stop()
 	ts.autoTimer.Reset(autoSyncInterval)
 
 	defer ts.timer.Reset(syncInterval)
+	if msg.Code != 0 {
+		log.Warningln("Remote peer respond time sync error.")
+		return
+	}
 
 	// 计算本地节点和请求同步对节点之间的时间差
 	delta := (msg.RspTime-msg.RecRspTime)/2 + (msg.RecReqTime-msg.ReqTime)/2
@@ -143,7 +149,7 @@ func (ts *TimeSyncer) ProcessSyncRespond(msg *p2p.TimeSyncMsg, p *Peer) {
 	// 如果连续确认 confirmThreshold 次后在容忍范围，则认为时间的同步完成
 	if ts.status == CONFIRMING && ts.confirmTimes == confirmThreshold {
 		ts.status = SYNCED
-		log.Debugf("Time syncer sync finished.")
+		log.Infoln("Time syncer sync finished.")
 	}
 }
 

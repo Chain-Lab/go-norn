@@ -84,7 +84,7 @@ func testCreateTransactionList() []common.Transaction {
 // testRandomCreateLayer 随机创建一个高度下的区块，包括随机的交易和随机的区块数量
 func testRandomCreateLayer(b *BlockBuffer) {
 	counts := mrand.Intn(5) + 1
-	best := b.GetPriorityLeaf()
+	best := b.GetPriorityLeaf(100)
 	log.Tracef("Get prority leaf height = %d", best.Header.Height)
 
 	blocks := make([]*common.Block, 0, counts)

@@ -24,6 +24,7 @@ func Discover(ctx context.Context, h host.Host, dht *dht.IpfsDHT, rendezvous str
 		"ttl": ttl,
 	}).Infoln("Routing discovery start.")
 
+	// 每 5s 通过 Kademlia 获取对端节点列表
 	ticker := time.NewTicker(5 * time.Second)
 	defer ticker.Stop()
 
@@ -65,7 +66,7 @@ func Discover(ctx context.Context, h host.Host, dht *dht.IpfsDHT, rendezvous str
 						continue
 					}
 
-					log.Infof("Connect to peer: %s", p.ID)
+					log.Debugln("Connect to peer: %s", p.ID)
 					metrics.ConnectedNodeInc()
 				} else {
 					//log.Infoln(h.Network().ConnsToPeer(p.ID))

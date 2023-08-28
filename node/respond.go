@@ -7,6 +7,16 @@ import (
 	"go-chronos/utils"
 )
 
+func respondGetBlockBodies(block *common.Block, p *Peer) {
+	bytesBlockData, err := utils.SerializeBlock(block)
+
+	if err != nil {
+		log.WithField("error", err).Debugln("Serialize block to bytes failed.")
+		return
+	}
+
+	p.peer.Send(p2p.StatusCodeBlockBodiesMsg, bytesBlockData)
+}
 func respondGetPooledTransaction(tx *common.Transaction, p *Peer) {
 	bytesTransactionData, err := utils.SerializeTransaction(tx)
 

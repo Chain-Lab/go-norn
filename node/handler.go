@@ -15,6 +15,7 @@ import (
 	"go-chronos/metrics"
 	"go-chronos/p2p"
 	"go-chronos/utils"
+	"math"
 	"net"
 	"sync"
 	"time"
@@ -26,6 +27,7 @@ const (
 	maxKnownBlock          = 1024
 	maxKnownTransaction    = 32768
 	maxSyncerStatusChannel = 512
+	packageBlockInterval   = 2
 	ProtocolId             = protocol.ID("/chronos/1.0.0/p2p")
 	TxProtocolId           = protocol.ID("/chronos/1.0.0/transaction")
 )
@@ -35,6 +37,7 @@ var handlerMap = map[p2p.StatusCode]msgHandler{
 	p2p.StatusCodeNewBlockMsg:                   handleNewBlockMsg,
 	p2p.StatusCodeNewBlockHashesMsg:             handleNewBlockHashMsg,
 	p2p.StatusCodeBlockBodiesMsg:                handleBlockMsg,
+	p2p.StatusCodeGetBlockBodiesMsg:             handleGetBlockBodiesMsg,
 	p2p.StatusCodeTransactionsMsg:               handleTransactionMsg,
 	p2p.StatusCodeNewPooledTransactionHashesMsg: handleNewPooledTransactionHashesMsg,
 	p2p.StatusCodeGetPooledTransactionMsg:       handleGetPooledTransactionMsg,
@@ -141,6 +144,7 @@ func NewHandler(config *HandlerConfig) (*Handler, error) {
 		genesis: config.Genesis,
 	}
 
+	metrics.RoutineCreateHistogramObserve(15)
 	go handler.packageBlockRoutine()
 	bs.Start()
 	ts.Start()
@@ -167,7 +171,8 @@ func (h *Handler) packageBlockRoutine() {
 		select {
 		case <-ticker.C:
 			timestamp := h.timeSyncer.GetLogicClock()
-			if (timestamp/1000)%5 != 0 {
+			// 如果逻辑时间距离 2s 则进行区块的打包
+			if (timestamp/1000)%packageBlockInterval != 0 {
 				continue
 			}
 
@@ -204,7 +209,7 @@ func (h *Handler) packageBlockRoutine() {
 
 			txs := h.txPool.Package()
 			//log.Infof("Package %d txs.", len(txs))
-			newBlock, err := h.chain.PackageNewBlock(txs, timestamp, &params)
+			newBlock, err := h.chain.PackageNewBlock(txs, timestamp, &params, packageBlockInterval)
 
 			if err != nil {
 				log.WithField("error", err).Debugln("Package new block failed.")
@@ -294,8 +299,8 @@ func (h *Handler) broadcastTransaction() {
 
 			//todo: 这里是由于获取新区块的逻辑还没有，所以先全部广播
 			//  在后续完成对应的逻辑后，再修改这里的逻辑来降低广播的时间复杂度
-			//countBroadcastBody := int(math.Sqrt(float64(peersCount)))
-			countBroadcastBody := peersCount
+			countBroadcastBody := int(math.Sqrt(float64(peersCount)))
+			//countBroadcastBody := peersCount
 
 			for idx := 0; idx < countBroadcastBody; idx++ {
 				peers[idx].AsyncSendTransaction(tx)
@@ -363,6 +368,7 @@ func (h *Handler) Synced() bool {
 	if status == synced && h.timeSyncer.synced() {
 		h.startRoutine.Do(func() {
 			log.Infoln("Block && time sync finish!")
+			metrics.RoutineCreateHistogramObserve(16)
 			go h.broadcastBlock()
 			go h.broadcastTransaction()
 		})

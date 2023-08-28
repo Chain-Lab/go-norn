@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/hex"
+	"encoding/json"
 	"flag"
 	"fmt"
 	log "github.com/sirupsen/logrus"
@@ -57,6 +58,7 @@ func main() {
 
 	var timestamps []int64
 	var txs []int
+	packageAddr := make(map[string]int64)
 
 	prevBlock, err := chain.GetBlockByHeight(0)
 
@@ -87,9 +89,24 @@ func main() {
 		txs = append(txs, len(block.Transactions))
 		total += len(block.Transactions)
 		prevBlock = block
+
+		addr := hex.EncodeToString(block.Header.PublicKey[:])[:8]
+		_, ok := packageAddr[addr]
+		if !ok {
+			packageAddr[addr] = 0
+		}
+		packageAddr[addr] += 1
 	}
 
 	fmt.Printf("timestamp: %v\n", timestamps)
 	fmt.Printf("counts: %v\n", txs)
 	fmt.Printf("total: %d\n", total)
+
+	packageAddrs, err := json.Marshal(packageAddr)
+
+	if err != nil {
+		log.Println("Marshal packageAddr failed.")
+	} else {
+		fmt.Println("packageAddr: ", string(packageAddrs))
+	}
 }

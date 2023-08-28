@@ -11,6 +11,7 @@ import (
 	"encoding/hex"
 	log "github.com/sirupsen/logrus"
 	"go-chronos/common"
+	"go-chronos/metrics"
 	"math/big"
 	"sync"
 )
@@ -73,6 +74,7 @@ func CalculatorInitialization(pp *big.Int, order *big.Int, t int64) {
 			changed: false,
 		}
 
+		metrics.RoutineCreateHistogramObserve(10)
 		go calculatorInst.run()
 	})
 }
@@ -244,7 +246,7 @@ func GenerateGenesisParams() (*common.GenesisParams, error) {
 	}
 
 	genesisParams.Order = [128]byte(order.Bytes())
-	genesisParams.TimeParam = 1000000000
+	genesisParams.TimeParam = 1000000
 	//genesisParams.TimeParam = 1000
 	genesisParams.VerifyParam = [32]byte(pp.Bytes())
 	genesisParams.Seed = [32]byte(seed.Bytes())

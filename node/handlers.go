@@ -12,6 +12,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"go-chronos/common"
 	"go-chronos/crypto"
+	"go-chronos/metrics"
 	"go-chronos/p2p"
 	"go-chronos/utils"
 	"math/big"
@@ -53,6 +54,7 @@ func handleNewBlockMsg(h *Handler, msg *p2p.Message, p *Peer) {
 	p.MarkBlock(strHash)
 
 	if block.Header.Height == 0 {
+		metrics.RoutineCreateHistogramObserve(18)
 		go h.chain.InsertBlock(block)
 		return
 	}
@@ -80,6 +82,7 @@ func handleNewBlockHashMsg(h *Handler, msg *p2p.Message, p *Peer) {
 		return
 	}
 
+	metrics.RoutineCreateHistogramObserve(19)
 	go requestBlockWithHash(blockHash, p)
 }
 
@@ -106,6 +109,7 @@ func handleBlockMsg(h *Handler, msg *p2p.Message, p *Peer) {
 	log.WithField("height", block.Header.Height).Infoln("Receive block.")
 
 	if block.Header.Height == 0 {
+		metrics.RoutineCreateHistogramObserve(20)
 		go h.chain.InsertBlock(block)
 		return
 	}
@@ -153,9 +157,27 @@ func handleNewPooledTransactionHashesMsg(h *Handler, msg *p2p.Message, p *Peer) 
 		return
 	}
 
+	metrics.RoutineCreateHistogramObserve(21)
 	go requestTransactionWithHash(txHash, p)
 }
 
+func handleGetBlockBodiesMsg(h *Handler, msg *p2p.Message, p *Peer) {
+	status := h.blockSyncer.getStatus()
+	if status != synced {
+		return
+	}
+
+	blockHash := common.Hash(msg.Payload)
+
+	block, err := h.chain.GetBlockByHash(&blockHash)
+	if err != nil {
+		log.WithError(err).Debugln("Get block by hash failed")
+		return
+	}
+
+	metrics.RoutineCreateHistogramObserve(30)
+	go respondGetBlockBodies(block, p)
+}
 func handleGetPooledTransactionMsg(h *Handler, msg *p2p.Message, p *Peer) {
 	status := h.blockSyncer.getStatus()
 	if status != synced {
@@ -167,11 +189,19 @@ func handleGetPooledTransactionMsg(h *Handler, msg *p2p.Message, p *Peer) {
 
 	tx := h.txPool.Get(strHash)
 
+	if tx == nil {
+		log.Debugln("Get transaction from pool failed.")
+		return
+	}
+
+	metrics.RoutineCreateHistogramObserve(22)
 	go respondGetPooledTransaction(tx, p)
 }
 
 func handleSyncStatusReq(h *Handler, msg *p2p.Message, p *Peer) {
 	message := h.StatusMessage()
+
+	metrics.RoutineCreateHistogramObserve(23)
 	go respondGetSyncStatus(message, p)
 }
 
@@ -200,6 +230,7 @@ func handleSyncGetBlocksMsg(h *Handler, msg *p2p.Message, p *Peer) {
 		return
 	}
 
+	metrics.RoutineCreateHistogramObserve(24)
 	go respondSyncGetBlock(block, p)
 }
 
@@ -233,7 +264,7 @@ func handleTimeSyncRsp(h *Handler, msg *p2p.Message, p *Peer) {
 	tMsg.RecRspTime = h.timeSyncer.GetLogicClock()
 
 	if err != nil {
-		log.WithError(err).Debugln("Time sync message deserialize failed.")
+		log.WithError(err).Warning("Time sync message deserialize failed.")
 		return
 	}
 

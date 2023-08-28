@@ -24,6 +24,17 @@ var (
 		Name: "node_connect_count",
 		Help: "The count of connected node.",
 	})
+	RoutineCreateHistogram = promauto.NewHistogram(prometheus.HistogramOpts{
+		Name: "routine_create_summary",
+		Help: "The summary for create new routine.",
+		Buckets: []float64{
+			0.0, 1.0, 2.0, 3.0, 4.0,
+			5.0, 6.0, 7.0, 8.0, 9.0, 10.0,
+			11.0, 12.0, 13.0, 14.0, 15.0,
+			16.0, 17.0, 18.0, 19.0, 20.0,
+			21.0, 22.0, 23.0, 24.0, 25.0,
+			26.0, 27.0, 28.0, 29.0, 30.0},
+	})
 )
 
 func TimeSyncDeltaSet(value float64) {
@@ -40,4 +51,8 @@ func ConnectedNodeInc() {
 
 func ConnectedNodeDec() {
 	connectNodeCount.Dec()
+}
+
+func RoutineCreateHistogramObserve(value float64) {
+	RoutineCreateHistogram.Observe(value)
 }
