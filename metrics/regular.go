@@ -29,6 +29,7 @@ func RegularMetricsRoutine() {
 	ticker := time.NewTicker(1 * time.Second)
 	for {
 		select {
+		// 每 1s 通过 metrics 记录 cpu 占用信息
 		case <-ticker.C:
 			cpuPercentGauge.Set(getCpuPercent())
 		}

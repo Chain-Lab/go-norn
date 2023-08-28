@@ -8,6 +8,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"go-chronos/common"
 	"go-chronos/core"
+	"go-chronos/metrics"
 	"go-chronos/p2p"
 )
 
@@ -88,6 +89,8 @@ func NewPeer(addr string, peerId peer.ID, s *network.Stream, config PeerConfig) 
 		msgQueue:        msgQueue,
 	}
 
+	log.Infof("Starting 4 (+2) broadcast routine...")
+	metrics.RoutineCreateHistogramObserve(25)
 	go p.broadcastBlock()
 	go p.broadcastBlockHash()
 	go p.broadcastTransaction()
@@ -158,6 +161,7 @@ func (p *Peer) Handle() {
 			handle := handlerMap[msg.Code]
 
 			if handle != nil {
+				metrics.RoutineCreateHistogramObserve(17)
 				go handle(p.handler, msg, p)
 			}
 		}

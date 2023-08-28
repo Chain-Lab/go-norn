@@ -24,6 +24,7 @@ func Discover(ctx context.Context, h host.Host, dht *dht.IpfsDHT, rendezvous str
 		"ttl": ttl,
 	}).Infoln("Routing discovery start.")
 
+	// 每 5s 通过 Kademlia 获取对端节点列表
 	ticker := time.NewTicker(5 * time.Second)
 	defer ticker.Stop()
 

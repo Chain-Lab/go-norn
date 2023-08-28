@@ -69,6 +69,7 @@ func NewBlockBuffer(latest *common.Block, popChan chan *common.Block) (*BlockBuf
 		bufferedHeight:    latest.Header.Height,
 	}
 
+	metrics.RoutineCreateHistogramObserve(8)
 	go buffer.Process()
 	go buffer.secondProcess()
 
@@ -227,7 +228,7 @@ func (b *BlockBuffer) secondProcess() {
 				// 如果某个高度下不存在选取的区块， 则默认设置为当前的区块
 				b.selectedBlock[blockHeight] = block
 				replaced = true
-			} else {
+			} else if selected != nil {
 				b.selectedBlock[blockHeight], replaced = compareBlock(selected, block)
 			}
 

@@ -11,12 +11,13 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/sha256"
+	"github.com/gookit/config/v2"
 	log "github.com/sirupsen/logrus"
 	"math/big"
 )
 
 const (
-	ConsensusFloor = 0.1 // 共识要求的最低概率
+	ConsensusFloor = 0.3 // 共识要求的最低概率
 )
 
 var (
@@ -87,7 +88,7 @@ func VRFCheckOutputConsensus(randomOutput []byte) bool {
 	r = r.Div(r, tt256)
 
 	prob := float64(r.Int64()) / 1000.0
-	log.Infof("VRF consensus prob = %f", prob)
+	log.Debugf("VRF consensus prob = %f", prob)
 	return prob > ConsensusFloor
 }
 

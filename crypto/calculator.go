@@ -11,6 +11,7 @@ import (
 	"encoding/hex"
 	log "github.com/sirupsen/logrus"
 	"go-chronos/common"
+	"go-chronos/metrics"
 	"math/big"
 	"sync"
 )
@@ -73,6 +74,7 @@ func CalculatorInitialization(pp *big.Int, order *big.Int, t int64) {
 			changed: false,
 		}
 
+		metrics.RoutineCreateHistogramObserve(10)
 		go calculatorInst.run()
 	})
 }
