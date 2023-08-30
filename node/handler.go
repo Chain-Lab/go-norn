@@ -27,6 +27,7 @@ const (
 	maxKnownBlock          = 1024
 	maxKnownTransaction    = 32768
 	maxSyncerStatusChannel = 512
+	packageBlockInterval   = 3
 	ProtocolId             = protocol.ID("/chronos/1.0.0/p2p")
 	TxProtocolId           = protocol.ID("/chronos/1.0.0/transaction")
 )
@@ -171,7 +172,7 @@ func (h *Handler) packageBlockRoutine() {
 		case <-ticker.C:
 			timestamp := h.timeSyncer.GetLogicClock()
 			// 如果逻辑时间距离 2s 则进行区块的打包
-			if (timestamp/1000)%5 != 0 {
+			if (timestamp/1000)%packageBlockInterval != 0 {
 				continue
 			}
 
@@ -208,7 +209,7 @@ func (h *Handler) packageBlockRoutine() {
 
 			txs := h.txPool.Package()
 			//log.Infof("Package %d txs.", len(txs))
-			newBlock, err := h.chain.PackageNewBlock(txs, timestamp, &params)
+			newBlock, err := h.chain.PackageNewBlock(txs, timestamp, &params, packageBlockInterval)
 
 			if err != nil {
 				log.WithField("error", err).Debugln("Package new block failed.")

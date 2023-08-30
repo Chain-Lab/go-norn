@@ -57,6 +57,7 @@ type BlockChain struct {
 
 	// genesisParams 当前所维护的链的创世区块参数
 	genesisParams *common.GenesisParams
+	genesisTime   int64
 }
 
 // NewBlockchain 创建一个 BlockChain 实，需要传入一个 LevelDB 实例 db
@@ -124,7 +125,7 @@ func (bc *BlockChain) BlockProcessRoutine() {
 }
 
 // PackageNewBlock 打包新的区块，传入交易序列
-func (bc *BlockChain) PackageNewBlock(txs []common.Transaction, timestamp int64, params *common.GeneralParams) (*common.Block, error) {
+func (bc *BlockChain) PackageNewBlock(txs []common.Transaction, timestamp int64, params *common.GeneralParams, packageInterval int64) (*common.Block, error) {
 	packageStart := time.Now()
 
 	// 对传入的区块参数进行序列化
@@ -137,7 +138,8 @@ func (bc *BlockChain) PackageNewBlock(txs []common.Transaction, timestamp int64,
 	}
 
 	// 从区块缓冲视图中找到当前视图下最优的区块，具体的选取方法需要查阅文档 （wiki/区块缓冲视图.md）
-	bestBlock := bc.buffer.GetPriorityLeaf()
+	nowHeight := (timestamp-bc.genesisTime)/1000/packageInterval + 1
+	bestBlock := bc.buffer.GetPriorityLeaf(nowHeight)
 	publicKey, err := hex.DecodeString(config.String("consensus.pub"))
 
 	if err != nil {
@@ -151,7 +153,7 @@ func (bc *BlockChain) PackageNewBlock(txs []common.Transaction, timestamp int64,
 	block := common.Block{
 		Header: common.BlockHeader{
 			//Timestamp:     handler.GetLogicClock(),
-			Timestamp:     time.Now().UnixMilli(),
+			Timestamp:     timestamp,
 			PrevBlockHash: bestBlock.Header.BlockHash,
 			BlockHash:     [32]byte{},
 			MerkleRoot:    [32]byte(merkleRoot),
@@ -522,6 +524,7 @@ func (bc *BlockChain) genesisInitialization(block *common.Block) {
 		// 对区块中的参数进行反序列化
 		genesisParams, _ := utils.DeserializeGenesisParams(block.Header.Params)
 		bc.genesisParams = genesisParams
+		bc.genesisTime = block.Header.Timestamp
 
 		pp := new(big.Int)
 		order := new(big.Int)

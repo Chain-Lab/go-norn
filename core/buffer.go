@@ -292,7 +292,7 @@ func (b *BlockBuffer) AppendBlock(block *common.Block) {
 }
 
 // GetPriorityLeaf 获取当前视图下的最优树叶
-func (b *BlockBuffer) GetPriorityLeaf() *common.Block {
+func (b *BlockBuffer) GetPriorityLeaf(nowHeight int64) *common.Block {
 	log.Traceln("Start get priority leaf.")
 	b.updateLock.RLock()
 	defer b.updateLock.RUnlock()
@@ -303,7 +303,7 @@ func (b *BlockBuffer) GetPriorityLeaf() *common.Block {
 	}).Traceln("Start scan all selected.")
 
 	for height := b.bufferedHeight; height > b.latestBlockHeight; height-- {
-		if b.selectedBlock[height] != nil {
+		if b.selectedBlock[height] != nil && height < nowHeight {
 			log.WithField("height", height).Trace("Return leaf block.")
 			return b.selectedBlock[height]
 		}
