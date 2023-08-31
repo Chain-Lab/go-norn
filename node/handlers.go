@@ -189,6 +189,11 @@ func handleGetPooledTransactionMsg(h *Handler, msg *p2p.Message, p *Peer) {
 
 	tx := h.txPool.Get(strHash)
 
+	if tx == nil {
+		log.Debugln("Get transaction from pool failed.")
+		return
+	}
+
 	metrics.RoutineCreateHistogramObserve(22)
 	go respondGetPooledTransaction(tx, p)
 }
