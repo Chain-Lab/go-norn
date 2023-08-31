@@ -90,7 +90,12 @@ func main() {
 		total += len(block.Transactions)
 		prevBlock = block
 
-		packageAddr[string(block.Header.PublicKey[:8])] += 1
+		addr := hex.EncodeToString(block.Header.PublicKey[:])[:8]
+		_, ok := packageAddr[addr]
+		if !ok {
+			packageAddr[addr] = 0
+		}
+		packageAddr[addr] += 1
 	}
 
 	fmt.Printf("timestamp: %v\n", timestamps)

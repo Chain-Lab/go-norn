@@ -27,7 +27,7 @@ const (
 	maxKnownBlock          = 1024
 	maxKnownTransaction    = 32768
 	maxSyncerStatusChannel = 512
-	packageBlockInterval   = 3
+	packageBlockInterval   = 1
 	ProtocolId             = protocol.ID("/chronos/1.0.0/p2p")
 	TxProtocolId           = protocol.ID("/chronos/1.0.0/transaction")
 )
