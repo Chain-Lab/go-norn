@@ -20,3 +20,9 @@
 # Go workspace file
 go.work
 .idea
+
+.DS_Store
+cmd/chronos/data*
+*.profile
+
+data/

@@ -1,0 +1,45 @@
+karmem structs @packed(true) @golang.package(`core`);
+
+struct TransactionBody table {
+    Hash [32]byte;
+    Signature [<73]byte;
+    Address [20]byte;
+    Public [33]byte;
+    Data []byte;
+    Expire int64;
+    Timestamp int64;
+}
+
+struct Transaction inline {
+    Body TransactionBody;
+}
+
+struct GenesisParams table {
+    Order [128]byte;
+    TimeParam int64;
+    Seed [32]byte;
+    VerifyParam [32]byte;
+}
+
+struct GeneralParams table {
+    Result []byte;
+    Proof []byte;
+    RandomNumber [33]byte;
+    S []byte;
+    T []byte;
+}
+
+struct BlockHeader table {
+    Timestamp int64;
+    PrevBlockHash [32]byte;
+    BlockHash [32]byte;
+    MerkleRoot [32]byte;
+    Height int64;
+    PublicKey [33]byte;
+    Params []byte;
+}
+
+struct Block table {
+    Header BlockHeader;
+    Transactions []Transaction;
+}
