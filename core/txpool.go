@@ -20,7 +20,7 @@ var (
 type TxPool struct {
 	txQueue []string
 	txs     sync.Map
-	//txs    map[common.Hash]*common.Transaction
+
 	flags  sync.Map
 	height int
 	lock   sync.RWMutex
