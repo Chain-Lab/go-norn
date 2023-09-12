@@ -9,28 +9,34 @@ import (
 )
 
 const (
-	maxTxPackageCount = 5001 // 交易池打包的最多交易数量
+	maxTxPackageCount = 5000 // 交易池打包的最多交易数量
 )
 
 var (
 	txOnce     sync.Once // 只实例化一次交易池，golang 下的单例模式
-	txPoolInst *TxPool
+	txPoolInst *TxPool   = nil
 )
 
 type TxPool struct {
-	txQueue []string
-	txs     sync.Map
+	chain        *BlockChain
+	txQueue      chan string
+	waitingQueue chan *common.Transaction
+	txs          sync.Map
 
 	flags  sync.Map
 	height int
-	lock   sync.RWMutex
 }
 
-func GetTxPoolInst() *TxPool {
+func NewTxPool(chain *BlockChain) *TxPool {
 	txOnce.Do(func() {
+		//lock := &sync.RWMutex{}
+
 		txPoolInst = &TxPool{
-			//txQueue: make([]*common.Hash, 0, 8192),
-			txQueue: make([]string, 0, 8192),
+			chain:   chain,
+			txQueue: make(chan string, 8192),
+			//packing:  false,
+			//lock:     lock,
+			//packCond: sync.NewCond(lock),
 			//txs:     sync.Map{},
 			//txs: make(map[common.Hash]*common.Transaction),
 		}
@@ -38,30 +44,62 @@ func GetTxPoolInst() *TxPool {
 	return txPoolInst
 }
 
+func GetTxPoolInst() *TxPool {
+	return txPoolInst
+}
+
+//func (pool *TxPool) setPackStart() {
+//	log.Infoln("Set packing to true.")
+//	pool.packing = true
+//}
+//
+//func (pool *TxPool) setPackStop() {
+//	pool.packing = false
+//}
+
 // Package 用于打包交易，这里返回的是 Transaction 的切片
 // todo： 需要具体观察打包交易时的效率问题
 func (pool *TxPool) Package() []common.Transaction {
-	pool.lock.Lock()
-	defer pool.lock.Unlock()
+	log.Infoln("Start package transaction...")
+	//pool.setPackStart()
+	//pool.lock.Lock()
+	//log.Infoln("pool locked")
+	//defer pool.packCond.Broadcast()
+	//defer pool.setPackStop()
+	//defer pool.lock.Unlock()
 
 	count := 0
 	result := make([]common.Transaction, 0)
-	log.Debugln("Start package txpool.")
+	log.Infoln("Start package tx pool.")
+	for idx := 0; idx < maxTxPackageCount; idx++ {
+		//log.Infof("transaction queue length: %d", len(pool.txQueue))
+		if len(pool.txQueue) == 0 || count > maxTxPackageCount {
+			log.Infoln("transaction queue is empty or package finish")
+			break
+		}
 
-	// 初期测试，直接返回空切片
+		//log.Infof("Package block index %d", idx)
 
-	for idx := range pool.txQueue {
-		txHash := pool.txQueue[idx]
-		//log.Infoln(&txHash)
-		value, hit := pool.txs.Load(txHash)
-		pool.txs.Delete(txHash)
-		//tx := pool.txs[txHash]
-		if !hit {
-			//log.Infoln("Map not hit.")
+		txHash := <-pool.txQueue
+		commonHash, err := hex.DecodeString(txHash)
+		if err != nil {
+			log.Errorln("Decode transaction hash failed.")
 			continue
 		}
 
-		tx := value.(*common.Transaction)
+		tx, err := pool.chain.GetTransactionByHash(common.Hash(commonHash))
+		if tx != nil {
+			log.Debugln("Transaction already in database.")
+			continue
+		}
+
+		value, hit := pool.txs.Load(txHash)
+		pool.txs.Delete(txHash)
+		if !hit {
+			continue
+		}
+
+		tx = value.(*common.Transaction)
 		if !tx.Verify() {
 			log.Errorln("Verify failed.")
 			continue
@@ -70,27 +108,24 @@ func (pool *TxPool) Package() []common.Transaction {
 		result = append(result, *tx)
 		count++
 		metrics.TxPoolMetricsDec()
-
-		if count >= maxTxPackageCount-1 {
-			break
-		}
 	}
-
-	pool.txQueue = pool.txQueue[count:]
-
 	return result
 }
 
 func (pool *TxPool) Add(transaction *common.Transaction) {
 	// todo: 还是需要和 Package 的锁相关联，保证 Package 能抢到锁
 	// todo: 在当前版本下先直接加锁打包
-	pool.lock.Lock()
-	defer pool.lock.Unlock()
+	//pool.lock.Lock()
+	//defer pool.lock.Unlock()
+	//
+	//for pool.packing {
+	//	pool.packCond.Wait()
+	//}
 
 	txHash := hex.EncodeToString(transaction.Body.Hash[:])
 	pool.txs.Store(txHash, transaction)
 	//pool.txs[tx]
-	pool.txQueue = append(pool.txQueue, txHash)
+	pool.txQueue <- txHash
 	metrics.TxPoolMetricsInc()
 }
 

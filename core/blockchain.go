@@ -21,7 +21,7 @@ import (
 )
 
 const (
-	maxBlockCache         = 1024
+	maxBlockCache         = 128
 	maxTransactionCache   = 32768
 	maxBlockProcessList   = 12
 	maxBlockChannel       = 128

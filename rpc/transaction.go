@@ -59,6 +59,13 @@ func (s *transactionService) SubmitTransaction(ctx context.Context, in *pb.Submi
 
 	// 获取交易池实例，然后添加交易
 	pool := core.GetTxPoolInst()
+
+	if pool == nil {
+		resp.Status = pb.SubmitTransactionStatus_FORMAT_ERROR.Enum()
+		resp.Error = proto.String("Submit error, pool not exits.")
+		return resp, err
+	}
+
 	pool.Add(transaction)
 	handler := node.GetHandlerInst()
 	handler.AddTransaction(transaction)
