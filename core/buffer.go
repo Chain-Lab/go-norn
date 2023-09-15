@@ -34,7 +34,9 @@ type BlockBuffer struct {
 	blockMark        map[string]uint8        // 第二队列处理区块的标记信息
 	nextBlockMap     map[string]blockList    // 每个区块哈希对应的下一个区块列表
 	selectedBlock    map[int64]*common.Block // 每个高度在当前视图下的最优区块
-	knownBlocks      *lru.Cache              // 区块是否在最近处理过的缓存信息
+
+	// (string -> *common.Block)
+	knownBlocks *lru.Cache // 区块是否在最近处理过的缓存信息,
 
 	latestBlockHash   string        // 最新区块哈希，需要注意初始化和维护
 	latestBlockHeight int64         // 当前 db 中存储的最新区块的高度
@@ -104,7 +106,7 @@ func (b *BlockBuffer) Process() {
 			if b.knownBlocks.Contains(blockHash) {
 				break
 			}
-			b.knownBlocks.Add(blockHash, nil)
+			b.knownBlocks.Add(blockHash, block)
 
 			// todo: 这里对前一个区块是否在视图中的逻辑判断存在问题
 			// 根据前一个区块的哈希值查询到区块列表，如果存在则继续
@@ -310,6 +312,29 @@ func (b *BlockBuffer) GetPriorityLeaf(nowHeight int64) *common.Block {
 	}
 	log.Traceln("All height is nil, return latest block.")
 	return b.latestBlock
+}
+
+// GetKnownBlock 根据哈希值从 LRU 缓存获取对应的区块
+func (b *BlockBuffer) GetKnownBlock(hash string) *common.Block {
+	if !b.knownBlocks.Contains(hash) {
+		log.Debugln("Block not exist")
+		return nil
+	}
+
+	value, ok := b.knownBlocks.Get(hash)
+
+	if !ok {
+		log.Debugln("Block not exist")
+		return nil
+	}
+
+	block, ok := value.(*common.Block)
+	if !ok {
+		log.Debugln("Block not exist")
+		return nil
+	}
+
+	return block
 }
 
 // updateTreeView 更新缓存树上的每个高度的最优区块

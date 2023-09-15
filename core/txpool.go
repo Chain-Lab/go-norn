@@ -60,7 +60,7 @@ func GetTxPoolInst() *TxPool {
 // Package 用于打包交易，这里返回的是 Transaction 的切片
 // todo： 需要具体观察打包交易时的效率问题
 func (pool *TxPool) Package() []common.Transaction {
-	log.Infoln("Start package transaction...")
+	log.Debugln("Start package transaction...")
 	//pool.setPackStart()
 	//pool.lock.Lock()
 	//log.Infoln("pool locked")
@@ -70,17 +70,18 @@ func (pool *TxPool) Package() []common.Transaction {
 
 	count := 0
 	result := make([]common.Transaction, 0)
-	log.Infoln("Start package tx pool.")
+	log.Debugln("Start package tx pool.")
 	for idx := 0; idx < maxTxPackageCount; idx++ {
 		//log.Infof("transaction queue length: %d", len(pool.txQueue))
 		if len(pool.txQueue) == 0 || count > maxTxPackageCount {
-			log.Infoln("transaction queue is empty or package finish")
+			log.Debugln("transaction queue is empty or package finish")
 			break
 		}
 
 		//log.Infof("Package block index %d", idx)
 
 		txHash := <-pool.txQueue
+		metrics.TxPoolMetricsDec()
 		commonHash, err := hex.DecodeString(txHash)
 		if err != nil {
 			log.Errorln("Decode transaction hash failed.")
@@ -89,6 +90,7 @@ func (pool *TxPool) Package() []common.Transaction {
 
 		tx, err := pool.chain.GetTransactionByHash(common.Hash(commonHash))
 		if tx != nil {
+			pool.txs.Delete(txHash)
 			log.Debugln("Transaction already in database.")
 			continue
 		}
@@ -107,7 +109,6 @@ func (pool *TxPool) Package() []common.Transaction {
 		// todo： 这里是传值还是传指针？
 		result = append(result, *tx)
 		count++
-		metrics.TxPoolMetricsDec()
 	}
 	return result
 }
@@ -132,6 +133,11 @@ func (pool *TxPool) Add(transaction *common.Transaction) {
 func (pool *TxPool) Contain(hash string) bool {
 	_, hit := pool.txs.Load(hash)
 	return hit
+}
+
+func (pool *TxPool) RemoveTx(hash common.Hash) {
+	txHash := hex.EncodeToString(hash[:])
+	pool.txs.Delete(txHash)
 }
 
 func (pool *TxPool) Get(hash string) *common.Transaction {

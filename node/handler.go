@@ -271,10 +271,8 @@ func (h *Handler) broadcastBlock() {
 
 			peersCount := len(peers)
 			//countBroadcastBlock := int(math.Sqrt(float64(peersCount)))
-			//todo: 这里是由于获取新区块的逻辑还没有，所以先全部广播
-			//  在后续完成对应的逻辑后，再修改这里的逻辑来降低广播的时间复杂度
-			countBroadcastBlock := peersCount
-			//log.WithField("count", countBroadcastBlock).Infoln("Broadcast block.")
+			countBroadcastBlock := 0
+			log.WithField("count", countBroadcastBlock).Infoln("Broadcast block.")
 
 			for idx := 0; idx < countBroadcastBlock; idx++ {
 				peers[idx].AsyncSendNewBlock(block)

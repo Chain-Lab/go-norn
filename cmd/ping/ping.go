@@ -76,7 +76,7 @@ func main() {
 
 	host.SetStreamHandler("/ping/1.0.0", node.HandleStream)
 
-	log.Infof("Node address: /ip4/127.0.0.1/tcp/%v/p2p/%s", *sourcePort, host.ID().String())
+	//log.Infof("Node address: /ip4/127.0.0.1/tcp/%v/p2p/%s", *sourcePort, host.ID().String())
 
 	if err != nil {
 		log.WithField("error", err).Errorln("Create p2p host failed.")

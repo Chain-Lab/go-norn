@@ -106,7 +106,7 @@ func handleBlockMsg(h *Handler, msg *p2p.Message, p *Peer) {
 	h.markBlock(strHash)
 	p.MarkBlock(strHash)
 
-	log.WithField("height", block.Header.Height).Infoln("Receive block.")
+	//log.WithField("height", block.Header.Height).Infoln("Receive block.")
 
 	if block.Header.Height == 0 {
 		metrics.RoutineCreateHistogramObserve(20)
@@ -169,9 +169,9 @@ func handleGetBlockBodiesMsg(h *Handler, msg *p2p.Message, p *Peer) {
 
 	blockHash := common.Hash(msg.Payload)
 
-	block, err := h.chain.GetBlockByHash(&blockHash)
-	if err != nil {
-		log.WithError(err).Debugln("Get block by hash failed")
+	block := h.chain.GetBlockFromBuffer(blockHash)
+	if block == nil {
+		log.Debugln("Get block by hash failed")
 		return
 	}
 
