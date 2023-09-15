@@ -6,9 +6,12 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/sha256"
+	"github.com/libp2p/go-libp2p"
 	dht "github.com/libp2p/go-libp2p-kad-dht"
 	"github.com/libp2p/go-libp2p/core/host"
+	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
+	rcmgr "github.com/libp2p/go-libp2p/p2p/host/resource-manager"
 	"github.com/multiformats/go-multiaddr"
 	log "github.com/sirupsen/logrus"
 	"go-chronos/common"
@@ -47,15 +50,19 @@ func NewKDHT(ctx context.Context, host host.Host, bootstrapPeers []multiaddr.Mul
 		peerinfo, _ := peer.AddrInfoFromP2pAddr(peerAddr)
 		if err := host.Connect(ctx, *peerinfo); err != nil {
 			log.Printf("Error while connecting to node %q: %-v", peerinfo, err)
+			continue
 		} else {
 			s, err := host.NewStream(ctx, peerinfo.ID, node.ProtocolId)
 
 			if err != nil {
-				log.WithField("error", err).Errorln("Create new stream error.")
+				log.WithField("error", err).Debugln("Create new stream error.")
+				continue
 			}
+
 			_, err = h.NewPeer("", peerinfo.ID, &s)
+
 			metrics2.ConnectedNodeInc()
-			log.Printf("Connection established with bootstrap node: %q", *peerinfo)
+			log.Infoln("Connection established with bootstrap node: %q", *peerinfo)
 		}
 	}
 
@@ -74,6 +81,34 @@ func sendTransaction(h *node.Handler) {
 		h.AddTransaction(tx)
 		//}
 	}
+}
+
+func buildResourceManager() *network.ResourceManager {
+	scalingLimits := rcmgr.DefaultLimits
+
+	libp2p.SetDefaultServiceLimits(&scalingLimits)
+
+	scaledDefaultLimits := scalingLimits.AutoScale()
+
+	cfg := rcmgr.PartialLimitConfig{
+		System: rcmgr.ResourceLimits{
+			//Conns: 20,
+			Streams: 40,
+		},
+	}
+
+	limits := cfg.Build(scaledDefaultLimits)
+
+	limiter := rcmgr.NewFixedLimiter(limits)
+
+	rm, err := rcmgr.NewResourceManager(limiter)
+
+	if err != nil {
+		log.Errorln("Build resource manager failed.")
+		return nil
+	}
+
+	return &rm
 }
 
 func buildTransaction(key *ecdsa.PrivateKey) *common.Transaction {

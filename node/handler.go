@@ -83,6 +83,7 @@ type Handler struct {
 
 // HandleStream 用于在收到对端连接时候处理 stream, 在这里构建 peer 用于通信
 func HandleStream(s network.Stream) {
+
 	//ctx := GetPeerContext()
 	handler := GetHandlerInst()
 	conn := s.Conn()
@@ -224,13 +225,13 @@ func (h *Handler) packageBlockRoutine() {
 }
 
 func (h *Handler) NewPeer(addr string, peerId peer.ID, s *network.Stream) (*Peer, error) {
-	config := PeerConfig{
+	cfg := PeerConfig{
 		chain:   h.chain,
 		txPool:  h.txPool,
 		handler: h,
 	}
 
-	p, err := NewPeer(addr, peerId, s, config)
+	p, err := NewPeer(addr, peerId, s, cfg)
 
 	if err != nil {
 		log.WithField("error", err).Errorln("Create peer failed.")
@@ -270,9 +271,9 @@ func (h *Handler) broadcastBlock() {
 			peers := h.getPeersWithoutBlock(blockHash)
 
 			peersCount := len(peers)
-			//countBroadcastBlock := int(math.Sqrt(float64(peersCount)))
-			countBroadcastBlock := 0
-			log.WithField("count", countBroadcastBlock).Infoln("Broadcast block.")
+			countBroadcastBlock := int(math.Sqrt(float64(peersCount)))
+			//countBroadcastBlock := 0
+			//log.WithField("count", countBroadcastBlock).Infoln("Broadcast block.")
 
 			for idx := 0; idx < countBroadcastBlock; idx++ {
 				peers[idx].AsyncSendNewBlock(block)

@@ -17,6 +17,7 @@ var (
 	trace     bool
 	pp        bool
 	metrics   bool
+	random    bool
 )
 
 func init() {
@@ -29,6 +30,7 @@ func init() {
 	flag.BoolVar(&trace, "trace", false, "Track log level")
 	flag.BoolVar(&pp, "pprof", false, "Track with pprof")
 	flag.BoolVar(&metrics, "metrics", false, "Open metrics service")
+	flag.BoolVar(&random, "random", false, "Random time start")
 	flag.Int64Var(&delta, "delta", 0, "Initial time delta (for test)")
 
 	flag.Usage = usage

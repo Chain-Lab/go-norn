@@ -115,7 +115,7 @@ func (p *Peer) readLoop(errc chan<- error) {
 		//log.Infof("Read byte code data: %v", dataBytes)
 
 		if err != nil {
-			log.WithField("error", err).Errorln("Read bytes error.")
+			log.WithField("error", err).Debugln("Read bytes error.")
 			errc <- err
 			return
 		}
@@ -222,9 +222,9 @@ func (p *Peer) writeLoop() {
 						"error":  err,
 						"length": length,
 						"code":   msg.Code,
-					}).Errorln("Send data to peer errored.")
+					}).Debugln("Send data to peer errored.")
 				p.stopped = true
-				log.Warning("Peer closed.")
+				log.Debugln("Peer closed.")
 				metrics.ConnectedNodeDec()
 				break
 			}

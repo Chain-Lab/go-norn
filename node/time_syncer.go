@@ -62,6 +62,11 @@ func (ts *TimeSyncer) syncRoutine() {
 		case <-ts.timer.C:
 			handler := GetHandlerInst()
 			peersLen := len(handler.peerSet)
+
+			if peersLen <= 0 {
+				continue
+			}
+
 			r := rand.New(rand.NewSource(time.Now().UnixMilli()))
 			peer := handler.peerSet[r.Intn(peersLen)]
 

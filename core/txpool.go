@@ -69,7 +69,7 @@ func (pool *TxPool) Package() []common.Transaction {
 	//defer pool.lock.Unlock()
 
 	count := 0
-	result := make([]common.Transaction, 0)
+	result := make([]common.Transaction, 0, maxTxPackageCount)
 	log.Debugln("Start package tx pool.")
 	for idx := 0; idx < maxTxPackageCount; idx++ {
 		//log.Infof("transaction queue length: %d", len(pool.txQueue))

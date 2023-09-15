@@ -46,11 +46,13 @@ func NewKDHT(ctx context.Context, host host.Host, bootstrapPeers []multiaddr.Mul
 		peerinfo, _ := peer.AddrInfoFromP2pAddr(peerAddr)
 		if err := host.Connect(ctx, *peerinfo); err != nil {
 			log.Printf("Error while connecting to node %q: %-v", peerinfo, err)
+			continue
 		} else {
 			s, err := host.NewStream(ctx, peerinfo.ID, node.ProtocolId)
 
 			if err != nil {
-				log.WithField("error", err).Errorln("Create new stream error.")
+				log.WithField("error", err).Debugln("Create new stream error.")
+				continue
 			}
 			_, err = h.NewPeer("", peerinfo.ID, &s)
 			log.Printf("Connection established with bootstrap node: %q", *peerinfo)

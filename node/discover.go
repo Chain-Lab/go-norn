@@ -5,6 +5,7 @@ import (
 	"github.com/libp2p/go-libp2p-kad-dht"
 	"github.com/libp2p/go-libp2p/core/discovery"
 	"github.com/libp2p/go-libp2p/core/host"
+	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/p2p/discovery/routing"
 	log "github.com/sirupsen/logrus"
 	"go-chronos/metrics"
@@ -36,7 +37,8 @@ func Discover(ctx context.Context, h host.Host, dht *dht.IpfsDHT, rendezvous str
 			return
 		case <-ticker.C:
 			dht.RefreshRoutingTable()
-			peers, err := routingDiscovery.FindPeers(ctx, rendezvous, discovery.Limit(20))
+			peers, err := routingDiscovery.FindPeers(ctx, rendezvous,
+				discovery.Limit(40))
 
 			if err != nil {
 				log.WithField("error", err).Errorln("Find peers failed.")
@@ -47,30 +49,36 @@ func Discover(ctx context.Context, h host.Host, dht *dht.IpfsDHT, rendezvous str
 				if p.ID == h.ID() {
 					continue
 				}
-
 				peer := handler.peers[p.ID]
-				//if h.Network().Connectedness(p.ID) != network.Connected {
 				if peer == nil || peer.Stopped() {
-					_, err := h.Network().DialPeer(ctx, p.ID)
+					if h.Network().Connectedness(p.ID) != network.Connected {
+						_, err := h.Network().DialPeer(ctx, p.ID)
+						if err != nil {
+							log.WithFields(log.Fields{
+								"peerID": p.ID,
+								"error":  err,
+							}).Debugln("Connect to node failed.")
+							continue
+						}
+					} else {
+						//log.Infoln(h.Network().ConnsToPeer(p.ID))
+						log.Debugf("%s connected", p.ID)
+					}
+
+					s, err := h.NewStream(ctx, p.ID, ProtocolId)
 					if err != nil {
-						log.WithFields(log.Fields{
-							"peerID": p.ID,
-							"error":  err,
-						}).Debugln("Connect to node failed.")
+						log.WithError(err).Debugln("Create new stream failed.")
 						continue
 					}
-					s, err := h.NewStream(ctx, p.ID, ProtocolId)
+
 					_, err = handler.NewPeer("", p.ID, &s)
 					if err != nil {
-						log.WithField("error", err).Errorln("Create new peer failed.")
+						log.WithError(err).Debugln("Create new peer failed.")
 						continue
 					}
 
 					log.Debugln("Connect to peer: %s", p.ID)
 					metrics.ConnectedNodeInc()
-				} else {
-					//log.Infoln(h.Network().ConnsToPeer(p.ID))
-					log.Debugf("%s connected", p.ID)
 				}
 			}
 		}
