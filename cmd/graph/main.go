@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"github.com/chain-lab/go-chronos/core"
+	"github.com/chain-lab/go-chronos/utils"
 	log "github.com/sirupsen/logrus"
-	"go-chronos/core"
-	"go-chronos/utils"
 	"os"
 )
 

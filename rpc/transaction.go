@@ -9,12 +9,12 @@ package rpc
 import (
 	"context"
 	"encoding/hex"
+	"github.com/chain-lab/go-chronos/core"
+	"github.com/chain-lab/go-chronos/metrics"
+	"github.com/chain-lab/go-chronos/node"
+	"github.com/chain-lab/go-chronos/rpc/pb"
+	"github.com/chain-lab/go-chronos/utils"
 	"github.com/gogo/protobuf/proto"
-	"go-chronos/core"
-	"go-chronos/metrics"
-	"go-chronos/node"
-	"go-chronos/rpc/pb"
-	"go-chronos/utils"
 )
 
 type transactionService struct {
@@ -67,7 +67,7 @@ func (s *transactionService) SubmitTransaction(ctx context.Context, in *pb.Submi
 	}
 
 	pool.Add(transaction)
-	handler := node.GetHandlerInst()
+	handler := node.GetP2PManager()
 	handler.AddTransaction(transaction)
 
 	//log.Infoln("Append transaction successful.")

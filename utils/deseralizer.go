@@ -1,8 +1,8 @@
 package utils
 
 import (
-	"go-chronos/common"
-	"go-chronos/p2p"
+	"github.com/chain-lab/go-chronos/common"
+	"github.com/chain-lab/go-chronos/p2p"
 	karmem "karmem.org/golang"
 )
 

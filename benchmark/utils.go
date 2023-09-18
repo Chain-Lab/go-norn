@@ -10,9 +10,9 @@ import (
 	"crypto/ecdsa"
 	"crypto/rand"
 	"crypto/sha256"
+	"github.com/chain-lab/go-chronos/common"
+	"github.com/chain-lab/go-chronos/crypto"
 	log "github.com/sirupsen/logrus"
-	"go-chronos/common"
-	"go-chronos/crypto"
 	karmem "karmem.org/golang"
 	"time"
 )

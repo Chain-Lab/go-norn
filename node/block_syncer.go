@@ -7,12 +7,12 @@
 package node
 
 import (
+	"github.com/chain-lab/go-chronos/common"
+	"github.com/chain-lab/go-chronos/core"
+	"github.com/chain-lab/go-chronos/metrics"
+	"github.com/chain-lab/go-chronos/p2p"
 	"github.com/libp2p/go-libp2p/core/peer"
 	log "github.com/sirupsen/logrus"
-	"go-chronos/common"
-	"go-chronos/core"
-	"go-chronos/metrics"
-	"go-chronos/p2p"
 	"sync"
 	"time"
 )

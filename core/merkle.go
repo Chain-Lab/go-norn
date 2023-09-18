@@ -2,7 +2,7 @@ package core
 
 import (
 	"crypto/sha256"
-	"go-chronos/common"
+	"github.com/chain-lab/go-chronos/common"
 	"math"
 )
 

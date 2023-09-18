@@ -4,8 +4,8 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
+	"github.com/chain-lab/go-chronos/common"
 	log "github.com/sirupsen/logrus"
-	"go-chronos/common"
 	"time"
 )
 

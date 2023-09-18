@@ -7,9 +7,9 @@
 package node
 
 import (
+	"github.com/chain-lab/go-chronos/metrics"
+	"github.com/chain-lab/go-chronos/p2p"
 	log "github.com/sirupsen/logrus"
-	"go-chronos/metrics"
-	"go-chronos/p2p"
 	"math/rand"
 	"sync"
 	"time"
@@ -60,7 +60,7 @@ func (ts *TimeSyncer) syncRoutine() {
 	for {
 		select {
 		case <-ts.timer.C:
-			handler := GetHandlerInst()
+			handler := GetP2PManager()
 			peersLen := len(handler.peerSet)
 
 			if peersLen <= 0 {

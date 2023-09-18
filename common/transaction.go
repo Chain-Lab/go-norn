@@ -6,8 +6,8 @@ import (
 	"crypto/elliptic"
 	"crypto/sha256"
 	"encoding/hex"
+	"github.com/chain-lab/go-chronos/metrics"
 	log "github.com/sirupsen/logrus"
-	"go-chronos/metrics"
 	karmem "karmem.org/golang"
 	"time"
 )

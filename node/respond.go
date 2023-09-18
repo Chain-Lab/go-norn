@@ -1,10 +1,10 @@
 package node
 
 import (
+	"github.com/chain-lab/go-chronos/common"
+	"github.com/chain-lab/go-chronos/p2p"
+	"github.com/chain-lab/go-chronos/utils"
 	log "github.com/sirupsen/logrus"
-	"go-chronos/common"
-	"go-chronos/p2p"
-	"go-chronos/utils"
 )
 
 func respondGetBlockBodies(block *common.Block, p *Peer) {

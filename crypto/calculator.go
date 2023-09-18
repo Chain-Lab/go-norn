@@ -9,9 +9,9 @@ package crypto
 import (
 	"crypto/rand"
 	"encoding/hex"
+	"github.com/chain-lab/go-chronos/common"
+	"github.com/chain-lab/go-chronos/metrics"
 	log "github.com/sirupsen/logrus"
-	"go-chronos/common"
-	"go-chronos/metrics"
 	"math/big"
 	"sync"
 )

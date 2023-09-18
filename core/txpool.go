@@ -2,9 +2,9 @@ package core
 
 import (
 	"encoding/hex"
+	"github.com/chain-lab/go-chronos/common"
+	"github.com/chain-lab/go-chronos/metrics"
 	log "github.com/sirupsen/logrus"
-	"go-chronos/common"
-	"go-chronos/metrics"
 	"sync"
 )
 

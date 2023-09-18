@@ -2,9 +2,9 @@ package node
 
 import (
 	"encoding/binary"
-	"go-chronos/common"
-	"go-chronos/p2p"
-	"go-chronos/utils"
+	"github.com/chain-lab/go-chronos/common"
+	"github.com/chain-lab/go-chronos/p2p"
+	"github.com/chain-lab/go-chronos/utils"
 )
 
 func requestBlockWithHash(blockHash common.Hash, p *Peer) {

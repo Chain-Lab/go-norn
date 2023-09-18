@@ -4,14 +4,14 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"github.com/chain-lab/go-chronos/node"
+	"github.com/chain-lab/go-chronos/p2p"
 	"github.com/libp2p/go-libp2p"
 	dht "github.com/libp2p/go-libp2p-kad-dht"
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/multiformats/go-multiaddr"
 	log "github.com/sirupsen/logrus"
-	"go-chronos/node"
-	"go-chronos/p2p"
 )
 
 // !! 这部分代码只是初期测试 kademlia 使用，由于后续底层代码结构变动

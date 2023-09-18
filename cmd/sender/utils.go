@@ -6,14 +6,14 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/sha256"
+	"github.com/chain-lab/go-chronos/common"
+	"github.com/chain-lab/go-chronos/crypto"
+	"github.com/chain-lab/go-chronos/node"
 	dht "github.com/libp2p/go-libp2p-kad-dht"
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/multiformats/go-multiaddr"
 	log "github.com/sirupsen/logrus"
-	"go-chronos/common"
-	"go-chronos/crypto"
-	"go-chronos/node"
 	karmem "karmem.org/golang"
 	"time"
 )
@@ -39,7 +39,7 @@ func NewKDHT(ctx context.Context, host host.Host, bootstrapPeers []multiaddr.Mul
 		return nil, err
 	}
 
-	h := node.GetHandlerInst()
+	pm := node.GetP2PManager()
 
 	// 遍历引导节点数组并尝试连接
 	for _, peerAddr := range bootstrapPeers {
@@ -54,7 +54,7 @@ func NewKDHT(ctx context.Context, host host.Host, bootstrapPeers []multiaddr.Mul
 				log.WithField("error", err).Debugln("Create new stream error.")
 				continue
 			}
-			_, err = h.NewPeer("", peerinfo.ID, &s)
+			_, err = pm.NewPeer(peerinfo.ID, &s)
 			log.Printf("Connection established with bootstrap node: %q", *peerinfo)
 		}
 	}
@@ -62,7 +62,7 @@ func NewKDHT(ctx context.Context, host host.Host, bootstrapPeers []multiaddr.Mul
 	return kdht, nil
 }
 
-func sendTransaction(h *node.Handler) {
+func sendTransaction(h *node.P2PManager) {
 	//log.Infof("Start send transactions.")
 	prv, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	//ticket := time.NewTicker(1 * time.Millisecond)

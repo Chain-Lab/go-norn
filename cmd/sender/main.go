@@ -12,12 +12,12 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"encoding/hex"
+	"github.com/chain-lab/go-chronos/rpc/pb"
+	"github.com/chain-lab/go-chronos/utils"
 	"github.com/gogo/protobuf/proto"
 	"github.com/gookit/config/v2"
 	"github.com/gookit/config/v2/yaml"
 	log "github.com/sirupsen/logrus"
-	"go-chronos/rpc/pb"
-	"go-chronos/utils"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"time"
@@ -41,7 +41,7 @@ func main() {
 
 		prv, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 
-		ticker := time.NewTicker(time.Microsecond * 2000)
+		ticker := time.NewTicker(time.Microsecond * 100)
 		reconnect := false
 		for {
 			select {

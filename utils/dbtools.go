@@ -1,7 +1,7 @@
 package utils
 
 import (
-	"go-chronos/common"
+	"github.com/chain-lab/go-chronos/common"
 	"strconv"
 )
 

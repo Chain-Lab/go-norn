@@ -1,9 +1,9 @@
 package node
 
 import (
+	"github.com/chain-lab/go-chronos/p2p"
+	"github.com/chain-lab/go-chronos/utils"
 	log "github.com/sirupsen/logrus"
-	"go-chronos/p2p"
-	"go-chronos/utils"
 	"time"
 )
 

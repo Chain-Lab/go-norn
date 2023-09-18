@@ -2,14 +2,14 @@ package node
 
 import (
 	"encoding/hex"
+	"github.com/chain-lab/go-chronos/common"
+	"github.com/chain-lab/go-chronos/core"
+	"github.com/chain-lab/go-chronos/metrics"
+	"github.com/chain-lab/go-chronos/p2p"
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
 	log "github.com/sirupsen/logrus"
-	"go-chronos/common"
-	"go-chronos/core"
-	"go-chronos/metrics"
-	"go-chronos/p2p"
 )
 
 const (
@@ -25,7 +25,7 @@ const (
 type PeerConfig struct {
 	chain   *core.BlockChain
 	txPool  *core.TxPool
-	handler *Handler
+	handler *P2PManager
 }
 
 type Peer struct {
@@ -39,7 +39,7 @@ type Peer struct {
 
 	chain       *core.BlockChain
 	txPool      *core.TxPool
-	handler     *Handler
+	handler     *P2PManager
 	knownTxs    *lru.Cache
 	txBroadcast chan *common.Transaction
 	txAnnounce  chan common.Hash
@@ -51,7 +51,7 @@ type Peer struct {
 	// todo： 还需要将区块、交易传出给上层结构处理的管道
 }
 
-func NewPeer(addr string, peerId peer.ID, s *network.Stream, config PeerConfig) (*Peer, error) {
+func NewPeer(peerId peer.ID, s *network.Stream, config PeerConfig) (*Peer, error) {
 	msgQueue := make(chan *p2p.Message, messageQueueCap)
 	pp, err := p2p.NewPeer(peerId, s, msgQueue)
 

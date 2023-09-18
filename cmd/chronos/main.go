@@ -5,6 +5,11 @@ import (
 	"encoding/hex"
 	"flag"
 	"fmt"
+	"github.com/chain-lab/go-chronos/core"
+	metrics2 "github.com/chain-lab/go-chronos/metrics"
+	"github.com/chain-lab/go-chronos/node"
+	"github.com/chain-lab/go-chronos/rpc"
+	"github.com/chain-lab/go-chronos/utils"
 	"github.com/gookit/config/v2"
 	"github.com/libp2p/go-libp2p"
 	dht "github.com/libp2p/go-libp2p-kad-dht"
@@ -12,11 +17,7 @@ import (
 	"github.com/multiformats/go-multiaddr"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	log "github.com/sirupsen/logrus"
-	"go-chronos/core"
-	metrics2 "go-chronos/metrics"
-	"go-chronos/node"
-	"go-chronos/rpc"
-	"go-chronos/utils"
+	"math/rand"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
@@ -43,6 +44,14 @@ func main() {
 	flag.Parse()
 
 	var f *os.File
+
+	if random {
+		r := rand.New(rand.NewSource(time.Now().UnixMilli()))
+		sleepTime := r.Intn(120)
+		log.Infof("Random sleep for %d s", sleepTime)
+		time.Sleep(time.Duration(sleepTime) * time.Second)
+	}
+
 	if pp {
 		fileName := fmt.Sprintf("cpu-%d.profile", time.Now().UnixMilli())
 		f, _ := os.OpenFile(fileName, os.O_CREATE|os.O_RDWR, 0644)
@@ -97,15 +106,15 @@ func main() {
 	}
 
 	chain := core.NewBlockchain(db)
-	txPool := core.GetTxPoolInst()
-	hConfig := node.HandlerConfig{
+	txPool := core.NewTxPool(chain)
+	hConfig := node.P2PManagerConfig{
 		TxPool:       txPool,
 		Chain:        chain,
 		Genesis:      genesis,
 		InitialDelta: delta,
 	}
 
-	h, err := node.NewHandler(&hConfig)
+	pm, err := node.NewP2PManager(&hConfig)
 	if err != nil {
 		log.WithField("error", err).Errorln("Create handler failed.")
 		return
@@ -133,26 +142,24 @@ func main() {
 		return
 	}
 
+	rm := buildResourceManager()
+	if rm == nil {
+		return
+	}
+
 	host, err := libp2p.New(
 		libp2p.ListenAddrs(localMultiAddr),
 		libp2p.Identity(identity),
+		libp2p.ResourceManager(*rm),
 	)
 	if err != nil {
 		log.WithField("error", err).Errorln("Create local host failed.")
 	}
 
-	host.SetStreamHandler(node.ProtocolId, node.HandleStream)
-	//addrs, err := net.InterfaceAddrs()
-	//if err != nil {
-	//	log.WithError(err).Errorln("Get location address failed.")
-	//	return
-	//}
-
-	//ip := addrs[2].(*net.IPNet).IP.String()
+	host.SetStreamHandler(node.ProtocolId, pm.HandleStream)
 
 	// 打印节点的 id 信息
 	log.Infof("Node address: /ip4/127.0.0.1/tcp/%v/p2p/%s", port, host.ID().String())
-	//log.Infof("Node address: /ip4/%s/tcp/%v/p2p/%s", ip, port, host.ID().String())
 
 	var kdht *dht.IpfsDHT
 
@@ -178,7 +185,7 @@ func main() {
 
 	// 节点发现协程
 	metrics2.RoutineCreateHistogramObserve(3)
-	go node.Discover(ctx, host, kdht, "Chronos network.")
+	go pm.Discover(ctx, host, kdht, "Chronos network.")
 
 	if genesis {
 		log.Infof("Create genesis block after 10s...")
@@ -195,7 +202,7 @@ func main() {
 				// 创建创世区块时默认已经完成同步
 				// todo：这里存在一个问题，如果在未同步时添加创世区块选项，会默认设置完成同步
 				//  所以还需要检查创世区块的创建状态
-				h.SetSynced()
+				pm.SetSynced()
 			}
 		}()
 	}

@@ -7,10 +7,10 @@
 package core
 
 import (
+	"github.com/chain-lab/go-chronos/common"
+	"github.com/chain-lab/go-chronos/metrics"
 	lru "github.com/hashicorp/golang-lru"
 	log "github.com/sirupsen/logrus"
-	"go-chronos/common"
-	"go-chronos/metrics"
 	"sync"
 	"time"
 )

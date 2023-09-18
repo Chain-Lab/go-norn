@@ -6,6 +6,10 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/sha256"
+	"github.com/chain-lab/go-chronos/common"
+	"github.com/chain-lab/go-chronos/crypto"
+	metrics2 "github.com/chain-lab/go-chronos/metrics"
+	"github.com/chain-lab/go-chronos/node"
 	"github.com/libp2p/go-libp2p"
 	dht "github.com/libp2p/go-libp2p-kad-dht"
 	"github.com/libp2p/go-libp2p/core/host"
@@ -14,10 +18,6 @@ import (
 	rcmgr "github.com/libp2p/go-libp2p/p2p/host/resource-manager"
 	"github.com/multiformats/go-multiaddr"
 	log "github.com/sirupsen/logrus"
-	"go-chronos/common"
-	"go-chronos/crypto"
-	metrics2 "go-chronos/metrics"
-	"go-chronos/node"
 	karmem "karmem.org/golang"
 	"time"
 )
@@ -43,7 +43,7 @@ func NewKDHT(ctx context.Context, host host.Host, bootstrapPeers []multiaddr.Mul
 		return nil, err
 	}
 
-	h := node.GetHandlerInst()
+	pm := node.GetP2PManager()
 
 	// 遍历引导节点数组并尝试连接
 	for _, peerAddr := range bootstrapPeers {
@@ -59,7 +59,7 @@ func NewKDHT(ctx context.Context, host host.Host, bootstrapPeers []multiaddr.Mul
 				continue
 			}
 
-			_, err = h.NewPeer("", peerinfo.ID, &s)
+			_, err = pm.NewPeer(peerinfo.ID, &s)
 
 			metrics2.ConnectedNodeInc()
 			log.Infoln("Connection established with bootstrap node: %q", *peerinfo)
@@ -69,7 +69,7 @@ func NewKDHT(ctx context.Context, host host.Host, bootstrapPeers []multiaddr.Mul
 	return kdht, nil
 }
 
-func sendTransaction(h *node.Handler) {
+func sendTransaction(pm *node.P2PManager) {
 	//log.Infof("Start send transactions.")
 	prv, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	//ticket := time.NewTicker(1 * time.Millisecond)
@@ -78,7 +78,7 @@ func sendTransaction(h *node.Handler) {
 		//select {
 		//case <-ticket.C:
 		tx := buildTransaction(prv)
-		h.AddTransaction(tx)
+		pm.AddTransaction(tx)
 		//}
 	}
 }

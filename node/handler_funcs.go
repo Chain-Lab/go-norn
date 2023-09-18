@@ -1,7 +1,7 @@
 /**
   @author: decision
   @date: 2023/3/15
-  @note: 一系列的消息处理函数
+  @note: 一系列的消息处理函数 handlers
 **/
 
 package node
@@ -9,16 +9,16 @@ package node
 import (
 	"encoding/binary"
 	"encoding/hex"
+	"github.com/chain-lab/go-chronos/common"
+	"github.com/chain-lab/go-chronos/crypto"
+	"github.com/chain-lab/go-chronos/metrics"
+	"github.com/chain-lab/go-chronos/p2p"
+	"github.com/chain-lab/go-chronos/utils"
 	log "github.com/sirupsen/logrus"
-	"go-chronos/common"
-	"go-chronos/crypto"
-	"go-chronos/metrics"
-	"go-chronos/p2p"
-	"go-chronos/utils"
 	"math/big"
 )
 
-func handleStatusMsg(h *Handler, msg *p2p.Message, p *Peer) {
+func handleStatusMsg(pm *P2PManager, msg *p2p.Message, p *Peer) {
 	payload := msg.Payload
 	height := int64(binary.LittleEndian.Uint64(payload))
 
@@ -30,7 +30,7 @@ func handleStatusMsg(h *Handler, msg *p2p.Message, p *Peer) {
 }
 
 // handleNewBlockMsg 接收对端节点的新区块
-func handleNewBlockMsg(h *Handler, msg *p2p.Message, p *Peer) {
+func handleNewBlockMsg(pm *P2PManager, msg *p2p.Message, p *Peer) {
 	status := h.blockSyncer.getStatus()
 	if status == blockSyncing || status == syncPaused {
 		return
@@ -69,7 +69,7 @@ func handleNewBlockMsg(h *Handler, msg *p2p.Message, p *Peer) {
 	}
 }
 
-func handleNewBlockHashMsg(h *Handler, msg *p2p.Message, p *Peer) {
+func handleNewBlockHashMsg(pm *P2PManager, msg *p2p.Message, p *Peer) {
 	status := h.blockSyncer.getStatus()
 	if status == blockSyncing || status == syncPaused {
 		return
@@ -86,7 +86,7 @@ func handleNewBlockHashMsg(h *Handler, msg *p2p.Message, p *Peer) {
 	go requestBlockWithHash(blockHash, p)
 }
 
-func handleBlockMsg(h *Handler, msg *p2p.Message, p *Peer) {
+func handleBlockMsg(pm *P2PManager, msg *p2p.Message, p *Peer) {
 	status := h.blockSyncer.getStatus()
 	log.WithField("status", status).Traceln("Receive block.")
 	if status != synced {
@@ -119,7 +119,7 @@ func handleBlockMsg(h *Handler, msg *p2p.Message, p *Peer) {
 	}
 }
 
-func handleTransactionMsg(h *Handler, msg *p2p.Message, p *Peer) {
+func handleTransactionMsg(pm *P2PManager, msg *p2p.Message, p *Peer) {
 	status := h.blockSyncer.getStatus()
 	if status != synced {
 		return
@@ -145,7 +145,7 @@ func handleTransactionMsg(h *Handler, msg *p2p.Message, p *Peer) {
 	h.txBroadcastQueue <- transaction
 }
 
-func handleNewPooledTransactionHashesMsg(h *Handler, msg *p2p.Message, p *Peer) {
+func handleNewPooledTransactionHashesMsg(pm *P2PManager, msg *p2p.Message, p *Peer) {
 	status := h.blockSyncer.getStatus()
 	// todo: 修改这里的条件判断为统一的函数
 	if status != synced {
@@ -161,7 +161,7 @@ func handleNewPooledTransactionHashesMsg(h *Handler, msg *p2p.Message, p *Peer) 
 	go requestTransactionWithHash(txHash, p)
 }
 
-func handleGetBlockBodiesMsg(h *Handler, msg *p2p.Message, p *Peer) {
+func handleGetBlockBodiesMsg(pm *P2PManager, msg *p2p.Message, p *Peer) {
 	status := h.blockSyncer.getStatus()
 	if status != synced {
 		return
@@ -178,7 +178,7 @@ func handleGetBlockBodiesMsg(h *Handler, msg *p2p.Message, p *Peer) {
 	metrics.RoutineCreateHistogramObserve(30)
 	go respondGetBlockBodies(block, p)
 }
-func handleGetPooledTransactionMsg(h *Handler, msg *p2p.Message, p *Peer) {
+func handleGetPooledTransactionMsg(pm *P2PManager, msg *p2p.Message, p *Peer) {
 	status := h.blockSyncer.getStatus()
 	if status != synced {
 		return
@@ -198,14 +198,14 @@ func handleGetPooledTransactionMsg(h *Handler, msg *p2p.Message, p *Peer) {
 	go respondGetPooledTransaction(tx, p)
 }
 
-func handleSyncStatusReq(h *Handler, msg *p2p.Message, p *Peer) {
+func handleSyncStatusReq(pm *P2PManager, msg *p2p.Message, p *Peer) {
 	message := h.StatusMessage()
 
 	metrics.RoutineCreateHistogramObserve(23)
 	go respondGetSyncStatus(message, p)
 }
 
-func handleSyncStatusMsg(h *Handler, msg *p2p.Message, p *Peer) {
+func handleSyncStatusMsg(pm *P2PManager, msg *p2p.Message, p *Peer) {
 	payload := msg.Payload
 
 	statusMessage, _ := utils.DeserializeStatusMsg(payload)
@@ -213,7 +213,7 @@ func handleSyncStatusMsg(h *Handler, msg *p2p.Message, p *Peer) {
 }
 
 // handleSyncGetBlocksMsg 处理获取某个高度的区块
-func handleSyncGetBlocksMsg(h *Handler, msg *p2p.Message, p *Peer) {
+func handleSyncGetBlocksMsg(pm *P2PManager, msg *p2p.Message, p *Peer) {
 	status := h.blockSyncer.getStatus()
 	if status != synced {
 		return
@@ -234,7 +234,7 @@ func handleSyncGetBlocksMsg(h *Handler, msg *p2p.Message, p *Peer) {
 	go respondSyncGetBlock(block, p)
 }
 
-func handleSyncBlockMsg(h *Handler, msg *p2p.Message, p *Peer) {
+func handleSyncBlockMsg(pm *P2PManager, msg *p2p.Message, p *Peer) {
 	payload := msg.Payload
 	block, err := utils.DeserializeBlock(payload)
 
@@ -245,7 +245,7 @@ func handleSyncBlockMsg(h *Handler, msg *p2p.Message, p *Peer) {
 	h.appendBlockToSyncer(block)
 }
 
-func handleTimeSyncReq(h *Handler, msg *p2p.Message, p *Peer) {
+func handleTimeSyncReq(pm *P2PManager, msg *p2p.Message, p *Peer) {
 	payload := msg.Payload
 	tMsg, err := utils.DeserializeTimeSyncMsg(payload)
 	tMsg.RecReqTime = h.timeSyncer.GetLogicClock()
@@ -258,7 +258,7 @@ func handleTimeSyncReq(h *Handler, msg *p2p.Message, p *Peer) {
 	h.timeSyncer.ProcessSyncRequest(tMsg, p)
 }
 
-func handleTimeSyncRsp(h *Handler, msg *p2p.Message, p *Peer) {
+func handleTimeSyncRsp(pm *P2PManager, msg *p2p.Message, p *Peer) {
 	payload := msg.Payload
 	tMsg, err := utils.DeserializeTimeSyncMsg(payload)
 	tMsg.RecRspTime = h.timeSyncer.GetLogicClock()

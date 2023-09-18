@@ -1,4 +1,4 @@
-module go-chronos
+module github.com/chain-lab/go-chronos
 
 go 1.20
 
