@@ -8,7 +8,6 @@ import (
 	"crypto/sha256"
 	"github.com/chain-lab/go-chronos/common"
 	"github.com/chain-lab/go-chronos/crypto"
-	metrics2 "github.com/chain-lab/go-chronos/metrics"
 	"github.com/chain-lab/go-chronos/node"
 	"github.com/libp2p/go-libp2p"
 	dht "github.com/libp2p/go-libp2p-kad-dht"
@@ -23,6 +22,8 @@ import (
 )
 
 func NewKDHT(ctx context.Context, host host.Host, bootstrapPeers []multiaddr.Multiaddr) (*dht.IpfsDHT, error) {
+	// fixed(230918): 和 bootstrap 建立连接后不再创建新的流
+
 	// dht 的配置项
 	var options []dht.Option
 
@@ -43,8 +44,6 @@ func NewKDHT(ctx context.Context, host host.Host, bootstrapPeers []multiaddr.Mul
 		return nil, err
 	}
 
-	pm := node.GetP2PManager()
-
 	// 遍历引导节点数组并尝试连接
 	for _, peerAddr := range bootstrapPeers {
 		peerinfo, _ := peer.AddrInfoFromP2pAddr(peerAddr)
@@ -52,16 +51,6 @@ func NewKDHT(ctx context.Context, host host.Host, bootstrapPeers []multiaddr.Mul
 			log.Printf("Error while connecting to node %q: %-v", peerinfo, err)
 			continue
 		} else {
-			s, err := host.NewStream(ctx, peerinfo.ID, node.ProtocolId)
-
-			if err != nil {
-				log.WithField("error", err).Debugln("Create new stream error.")
-				continue
-			}
-
-			_, err = pm.NewPeer(peerinfo.ID, &s)
-
-			metrics2.ConnectedNodeInc()
 			log.Infoln("Connection established with bootstrap node: %q", *peerinfo)
 		}
 	}
@@ -93,7 +82,7 @@ func buildResourceManager() *network.ResourceManager {
 	cfg := rcmgr.PartialLimitConfig{
 		System: rcmgr.ResourceLimits{
 			//Conns: 20,
-			Streams: 40,
+			Streams: 50,
 		},
 	}
 

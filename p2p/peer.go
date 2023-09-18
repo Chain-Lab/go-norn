@@ -168,10 +168,6 @@ func (p *Peer) handle(msg *Message) {
 	return
 }
 
-func (p *Peer) disconnect() {
-
-}
-
 // Send 方法用于提供一个通用的消息发送接口
 func (p *Peer) Send(msgCode StatusCode, payload []byte) {
 	msg := Message{
@@ -195,13 +191,7 @@ func (p *Peer) writeLoop() {
 
 		select {
 		case msg := <-p.sendQueue:
-			//metrics.SendQueueCountDec()
-			//msgWriter := writerPool.Get().(*karmem.Writer)
 			msgWriter := karmem.NewWriter(1024)
-			//log.WithFields(log.Fields{
-			//	"code":    msg.Code,
-			//	"payload": hex.EncodeToString(msg.Payload),
-			//}).Debugln("Start write buffer.")
 
 			if _, err := msg.WriteAsRoot(msgWriter); err != nil {
 				log.WithField("error", err).Errorln("Encode data failed.")

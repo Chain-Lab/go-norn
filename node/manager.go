@@ -13,7 +13,6 @@ import (
 	"github.com/gookit/config/v2"
 	lru "github.com/hashicorp/golang-lru"
 	dht "github.com/libp2p/go-libp2p-kad-dht"
-	"github.com/libp2p/go-libp2p/core/discovery"
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
@@ -27,15 +26,6 @@ import (
 )
 
 type msgHandler func(pm *P2PManager, msg *p2p.Message, p *Peer)
-
-const (
-	maxKnownBlock          = 1024
-	maxKnownTransaction    = 32768
-	maxSyncerStatusChannel = 512
-	packageBlockInterval   = 2
-	ProtocolId             = protocol.ID("/chronos/1.0.0/p2p")
-	TxProtocolId           = protocol.ID("/chronos/1.0.0/transaction")
-)
 
 var handlerMap = map[p2p.StatusCode]msgHandler{
 	p2p.StatusCodeStatusMsg:                     handleStatusMsg,
@@ -58,6 +48,17 @@ var (
 	handlerInst *P2PManager = nil
 )
 
+const (
+	retryInterval          = 10 * time.Minute
+	streamLimit            = 20
+	maxKnownBlock          = 1024
+	maxKnownTransaction    = 32768
+	maxSyncerStatusChannel = 512
+	packageBlockInterval   = 2
+	ProtocolId             = protocol.ID("/chronos/1.0.0/p2p")
+	TxProtocolId           = protocol.ID("/chronos/1.0.0/transaction")
+)
+
 type P2PManagerConfig struct {
 	TxPool       *core.TxPool
 	Chain        *core.BlockChain
@@ -66,8 +67,10 @@ type P2PManagerConfig struct {
 }
 
 type P2PManager struct {
-	peerSet []*Peer
-	peers   map[peer.ID]*Peer
+	id         peer.ID
+	triedPeers map[peer.ID]time.Time // 尝试连接的节点和连接时间戳，在一定时间内不再进行尝试
+	peerSet    []*Peer               // 已建立连接的节点列表
+	peers      map[peer.ID]*Peer     // 节点 ID -> 节点对象
 
 	blockBroadcastQueue chan *common.Block
 	txBroadcastQueue    chan *common.Transaction
@@ -84,26 +87,6 @@ type P2PManager struct {
 
 	peerSetLock sync.RWMutex
 	genesis     bool
-}
-
-// HandleStream 用于在收到对端连接时候处理 stream, 在这里构建 peer 用于通信
-func (pm *P2PManager) HandleStream(s network.Stream) {
-	conn := s.Conn()
-
-	//addr, _ := peer.AddrInfoFromP2pAddr(conn.RemoteMultiaddr())
-	//log.Infoln(addr)
-
-	_, err := pm.NewPeer(conn.RemotePeer(), &s)
-
-	log.Infoln("Receive new stream, handle stream.")
-	log.Infoln(conn.RemoteMultiaddr())
-
-	if err != nil {
-		log.WithField("error", err).Errorln("Handle stream error.")
-		return
-	}
-
-	metrics.ConnectedNodeInc()
 }
 
 func NewP2PManager(config *P2PManagerConfig) (*P2PManager, error) {
@@ -129,8 +112,9 @@ func NewP2PManager(config *P2PManagerConfig) (*P2PManager, error) {
 
 	handler := &P2PManager{
 		// todo: 限制节点数量，Kad 应该限制了节点数量不超过20个
-		peerSet: make([]*Peer, 0, 40),
-		peers:   make(map[peer.ID]*Peer),
+		triedPeers: make(map[peer.ID]time.Time),
+		peerSet:    make([]*Peer, 0, 40),
+		peers:      make(map[peer.ID]*Peer),
 
 		blockBroadcastQueue: make(chan *common.Block, 64),
 		txBroadcastQueue:    make(chan *common.Transaction, 8192),
@@ -184,7 +168,6 @@ func (pm *P2PManager) packageBlockRoutine() {
 				continue
 			}
 
-			//log.Debugln("Start package block.")
 			latest, _ := pm.chain.GetLatestBlock()
 
 			if latest == nil {
@@ -240,9 +223,6 @@ func (pm *P2PManager) NewPeer(peerId peer.ID, s *network.Stream) (*Peer, error) 
 		return nil, err
 	}
 
-	pm.peerSetLock.Lock()
-	defer pm.peerSetLock.Unlock()
-
 	pm.peerSet = append(pm.peerSet, p)
 	pm.peers[p.peerID] = p
 	pm.blockSyncer.AddPeer(p)
@@ -274,14 +254,20 @@ func (pm *P2PManager) broadcastBlock() {
 
 			peersCount := len(peers)
 			countBroadcastBlock := int(math.Sqrt(float64(peersCount)))
-			//countBroadcastBlock := 0
-			//log.WithField("count", countBroadcastBlock).Infoln("Broadcast block.")
 
 			for idx := 0; idx < countBroadcastBlock; idx++ {
+				if pm.removePeerIfStopped(idx) {
+					continue
+				}
+
 				peers[idx].AsyncSendNewBlock(block)
 			}
 
 			for idx := countBroadcastBlock; idx < peersCount; idx++ {
+				if pm.removePeerIfStopped(idx) {
+					continue
+				}
+
 				peers[idx].AsyncSendNewBlockHash(block.Header.BlockHash)
 			}
 		}
@@ -304,10 +290,18 @@ func (pm *P2PManager) broadcastTransaction() {
 			//countBroadcastBody := peersCount
 
 			for idx := 0; idx < countBroadcastBody; idx++ {
+				if pm.removePeerIfStopped(idx) {
+					continue
+				}
+
 				peers[idx].AsyncSendTransaction(tx)
 			}
 
 			for idx := countBroadcastBody; idx < peersCount; idx++ {
+				if pm.removePeerIfStopped(idx) {
+					continue
+				}
+
 				peers[idx].AsyncSendTxHash(txHash)
 			}
 		}
@@ -364,26 +358,47 @@ func (pm *P2PManager) syncStatus() uint8 {
 	return pm.blockSyncer.status
 }
 
+// HandleStream 用于在收到对端连接时候处理 stream, 在这里构建 peer 用于通信
+func (pm *P2PManager) HandleStream(s network.Stream) {
+	pm.peerSetLock.Lock()
+	defer pm.peerSetLock.Unlock()
+
+	if len(pm.peerSet) > streamLimit {
+		_ = s.Close()
+		return
+	}
+
+	conn := s.Conn()
+
+	_, err := pm.NewPeer(conn.RemotePeer(), &s)
+
+	log.Infoln("Receive new stream, handle stream.")
+	log.Infoln(conn.RemoteMultiaddr())
+
+	if err != nil {
+		log.WithField("error", err).Errorln("Handle stream error.")
+		return
+	}
+
+	metrics.ConnectedNodeInc()
+}
+
 // Discover 基于 kademlia 协议发现其他节点
 func (pm *P2PManager) Discover(ctx context.Context, h host.Host,
 	dht *dht.IpfsDHT,
 	rendezvous string) {
 	var routingDiscovery = routing.NewRoutingDiscovery(dht)
-	ttl, err := routingDiscovery.Advertise(ctx, rendezvous)
+	_, err := routingDiscovery.Advertise(ctx, rendezvous)
 
 	if err != nil {
 		log.WithField("error", err).Errorln("Routing discovery start failed.")
 	}
 
-	log.WithFields(log.Fields{
-		"ttl": ttl,
-	}).Infoln("Routing discovery start.")
+	pm.id = h.ID()
 
-	// 每 5s 通过 Kademlia 获取对端节点列表
-	ticker := time.NewTicker(5 * time.Second)
+	// 每 500ms 通过 Kademlia 获取对端节点列表
+	ticker := time.NewTicker(500 * time.Millisecond)
 	defer ticker.Stop()
-
-	handler := GetP2PManager()
 
 	for {
 		select {
@@ -391,53 +406,69 @@ func (pm *P2PManager) Discover(ctx context.Context, h host.Host,
 			return
 		case <-ticker.C:
 			dht.RefreshRoutingTable()
-			peers, err := routingDiscovery.FindPeers(ctx, rendezvous,
-				discovery.Limit(40))
+			peers, err := routingDiscovery.FindPeers(ctx, rendezvous)
 
 			if err != nil {
-				log.WithField("error", err).Errorln("Find peers failed.")
+				log.WithField("error", err).Debugln("Find peers failed.")
 				continue
 			}
-
 			for p := range peers {
-				if p.ID == h.ID() {
-					continue
-				}
-				peer := handler.peers[p.ID]
-				if peer == nil || peer.Stopped() {
-					if h.Network().Connectedness(p.ID) != network.Connected {
-						_, err := h.Network().DialPeer(ctx, p.ID)
-						if err != nil {
-							log.WithFields(log.Fields{
-								"peerID": p.ID,
-								"error":  err,
-							}).Debugln("Connect to node failed.")
-							continue
-						}
-					} else {
-						//log.Infoln(h.Network().ConnsToPeer(p.ID))
-						log.Debugf("%s connected", p.ID)
-					}
-
-					s, err := h.NewStream(ctx, p.ID, ProtocolId)
-					if err != nil {
-						log.WithError(err).Debugln("Create new stream failed.")
-						continue
-					}
-
-					_, err = handler.NewPeer(p.ID, &s)
-					if err != nil {
-						log.WithError(err).Debugln("Create new peer failed.")
-						continue
-					}
-
-					log.Debugln("Connect to peer: %s", p.ID)
-					metrics.ConnectedNodeInc()
-				}
+				pm.CheckAndCreateStream(ctx, h, p)
 			}
 		}
 	}
 
+}
+
+func (pm *P2PManager) CheckAndCreateStream(ctx context.Context, h host.Host,
+	p peer.AddrInfo) {
+	pm.peerSetLock.Lock()
+	defer pm.peerSetLock.Unlock()
+	// 对端节点 ID 和本地节点 ID 相同
+	if len(pm.peers) >= streamLimit || p.ID == h.ID() {
+		return
+	}
+
+	// 如果在 retryInterval 内尝试连接过，跳过该节点
+	if tried, ok := pm.triedPeers[p.ID]; ok {
+		if time.Since(tried) < retryInterval {
+			return
+		}
+	}
+
+	// 如果节点已经连接，并且当前的状态正常
+	if remote, ok := pm.peers[p.ID]; ok {
+		if !remote.Stopped() {
+			return
+		}
+	}
+
+	// 如果没有连接，建立新的连接
+	if h.Network().Connectedness(p.ID) != network.Connected {
+		_, err := h.Network().DialPeer(ctx, p.ID)
+		if err != nil {
+			log.WithFields(log.Fields{
+				"peerID": p.ID,
+				"error":  err,
+			}).Debugln("Connect to node failed.")
+			return
+		}
+	}
+
+	stream, err := h.NewStream(ctx, p.ID, ProtocolId)
+	if err != nil {
+		log.WithError(err).Errorln("Create new stream failed: %d", err)
+		pm.triedPeers[p.ID] = time.Now()
+		return
+	}
+
+	_, err = pm.NewPeer(p.ID, &stream)
+	if err != nil {
+		log.WithError(err).Debugln("Create new peer failed.")
+		return
+	}
+
+	metrics.ConnectedNodeInc()
 }
 
 func (pm *P2PManager) Synced() bool {
@@ -478,7 +509,7 @@ func (pm *P2PManager) StatusMessage() *p2p.SyncStatusMsg {
 // removePeerIfStopped 移除断开连接的 Peer
 // todo: 这里的方法感觉有点复杂，以后需要优化
 // todo: 这里不能在遍历的时候进行移除
-func (pm *P2PManager) removePeerIfStopped(idx int) {
+func (pm *P2PManager) removePeerIfStopped(idx int) bool {
 	pm.peerSetLock.Lock()
 	defer pm.peerSetLock.Unlock()
 
@@ -486,7 +517,10 @@ func (pm *P2PManager) removePeerIfStopped(idx int) {
 	if p.Stopped() {
 		pm.peerSet = append(pm.peerSet[:idx], pm.peerSet[idx+1:]...)
 		delete(pm.peers, p.peerID)
+		return true
 	}
+
+	return false
 }
 
 // TransactionUDP 计划使用的交易广播独立网络，
@@ -536,6 +570,19 @@ func (pm *P2PManager) TransactionUDP() {
 			pm.AddTransaction(tx)
 		}
 	}
+}
+
+func (pm *P2PManager) GetConnectNodeInfo() (string, []string) {
+	pm.peerSetLock.RLock()
+	defer pm.peerSetLock.RUnlock()
+
+	result := make([]string, len(pm.peerSet))
+
+	for idx, p := range pm.peerSet {
+		result[idx] = p.peerID.String()
+	}
+
+	return pm.id.String(), result
 }
 
 func GetLogicClock() int64 {

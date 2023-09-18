@@ -188,11 +188,11 @@ func (b *BlockBuffer) secondProcess() {
 			blockHeight := block.Header.Height
 
 			if block.Header.Height <= b.latestBlockHeight {
-				block = nil
 				log.WithFields(log.Fields{
 					"height": block.Header.Height,
 					"latest": b.latestBlockHeight,
 				}).Warningln("Block height too low.")
+				block = nil
 				timer.Reset(secondQueueInterval)
 				break
 			}

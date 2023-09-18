@@ -142,15 +142,15 @@ func main() {
 		return
 	}
 
-	rm := buildResourceManager()
-	if rm == nil {
-		return
-	}
+	//rm := buildResourceManager()
+	//if rm == nil {
+	//	return
+	//}
 
 	host, err := libp2p.New(
 		libp2p.ListenAddrs(localMultiAddr),
 		libp2p.Identity(identity),
-		libp2p.ResourceManager(*rm),
+		//libp2p.ResourceManager(*rm),
 	)
 	if err != nil {
 		log.WithField("error", err).Errorln("Create local host failed.")

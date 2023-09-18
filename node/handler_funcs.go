@@ -23,15 +23,15 @@ func handleStatusMsg(pm *P2PManager, msg *p2p.Message, p *Peer) {
 	height := int64(binary.LittleEndian.Uint64(payload))
 
 	log.Debugf("Remote height = %d.", height)
-	//if height > h.chain.Height() {
-	//	log.WithField("height", h.chain.Height()+1).Debugln("Request block.")
-	//	requestBlockWithHeight(h.chain.Height()+1, p)
+	//if height > pm.chain.Height() {
+	//	log.WithField("height", pm.chain.Height()+1).Debugln("Request block.")
+	//	requestBlockWithHeight(pm.chain.Height()+1, p)
 	//}
 }
 
 // handleNewBlockMsg 接收对端节点的新区块
 func handleNewBlockMsg(pm *P2PManager, msg *p2p.Message, p *Peer) {
-	status := h.blockSyncer.getStatus()
+	status := pm.blockSyncer.getStatus()
 	if status == blockSyncing || status == syncPaused {
 		return
 	}
@@ -46,23 +46,23 @@ func handleNewBlockMsg(pm *P2PManager, msg *p2p.Message, p *Peer) {
 
 	blockHash := block.Header.BlockHash
 	strHash := hex.EncodeToString(blockHash[:])
-	if h.knownBlock.Contains(strHash) {
+	if pm.knownBlock.Contains(strHash) {
 		return
 	}
 
-	h.markBlock(strHash)
+	pm.markBlock(strHash)
 	p.MarkBlock(strHash)
 
 	if block.Header.Height == 0 {
 		metrics.RoutineCreateHistogramObserve(18)
-		go h.chain.InsertBlock(block)
+		go pm.chain.InsertBlock(block)
 		return
 	}
 
 	if verifyBlockVRF(block) {
 		log.WithField("status", status).Debugln("Receive block from p2p.")
-		h.chain.AppendBlockTask(block)
-		h.blockBroadcastQueue <- block
+		pm.chain.AppendBlockTask(block)
+		pm.blockBroadcastQueue <- block
 	} else {
 		//log.Infoln(hex.EncodeToString(block.Header.PublicKey[:]))
 		log.Warning("Block VRF verify failed.")
@@ -70,7 +70,7 @@ func handleNewBlockMsg(pm *P2PManager, msg *p2p.Message, p *Peer) {
 }
 
 func handleNewBlockHashMsg(pm *P2PManager, msg *p2p.Message, p *Peer) {
-	status := h.blockSyncer.getStatus()
+	status := pm.blockSyncer.getStatus()
 	if status == blockSyncing || status == syncPaused {
 		return
 	}
@@ -78,7 +78,7 @@ func handleNewBlockHashMsg(pm *P2PManager, msg *p2p.Message, p *Peer) {
 	payload := msg.Payload
 	blockHash := [32]byte(payload)
 
-	if h.knownBlock.Contains(blockHash) {
+	if pm.knownBlock.Contains(blockHash) {
 		return
 	}
 
@@ -87,7 +87,7 @@ func handleNewBlockHashMsg(pm *P2PManager, msg *p2p.Message, p *Peer) {
 }
 
 func handleBlockMsg(pm *P2PManager, msg *p2p.Message, p *Peer) {
-	status := h.blockSyncer.getStatus()
+	status := pm.blockSyncer.getStatus()
 	log.WithField("status", status).Traceln("Receive block.")
 	if status != synced {
 		return
@@ -103,24 +103,24 @@ func handleBlockMsg(pm *P2PManager, msg *p2p.Message, p *Peer) {
 
 	blockHash := block.Header.BlockHash
 	strHash := hex.EncodeToString(blockHash[:])
-	h.markBlock(strHash)
+	pm.markBlock(strHash)
 	p.MarkBlock(strHash)
 
 	//log.WithField("height", block.Header.Height).Infoln("Receive block.")
 
 	if block.Header.Height == 0 {
 		metrics.RoutineCreateHistogramObserve(20)
-		go h.chain.InsertBlock(block)
+		go pm.chain.InsertBlock(block)
 		return
 	}
 
 	if verifyBlockVRF(block) {
-		h.chain.AppendBlockTask(block)
+		pm.chain.AppendBlockTask(block)
 	}
 }
 
 func handleTransactionMsg(pm *P2PManager, msg *p2p.Message, p *Peer) {
-	status := h.blockSyncer.getStatus()
+	status := pm.blockSyncer.getStatus()
 	if status != synced {
 		return
 	}
@@ -135,25 +135,25 @@ func handleTransactionMsg(pm *P2PManager, msg *p2p.Message, p *Peer) {
 
 	txHash := hex.EncodeToString(transaction.Body.Hash[:])
 
-	if h.isKnownTransaction(transaction.Body.Hash) {
+	if pm.isKnownTransaction(transaction.Body.Hash) {
 		return
 	}
 
 	p.MarkTransaction(txHash)
-	h.markTransaction(txHash)
-	h.txPool.Add(transaction)
-	h.txBroadcastQueue <- transaction
+	pm.markTransaction(txHash)
+	pm.txPool.Add(transaction)
+	pm.txBroadcastQueue <- transaction
 }
 
 func handleNewPooledTransactionHashesMsg(pm *P2PManager, msg *p2p.Message, p *Peer) {
-	status := h.blockSyncer.getStatus()
+	status := pm.blockSyncer.getStatus()
 	// todo: 修改这里的条件判断为统一的函数
 	if status != synced {
 		return
 	}
 
 	txHash := common.Hash(msg.Payload)
-	if h.isKnownTransaction(txHash) {
+	if pm.isKnownTransaction(txHash) {
 		return
 	}
 
@@ -162,14 +162,14 @@ func handleNewPooledTransactionHashesMsg(pm *P2PManager, msg *p2p.Message, p *Pe
 }
 
 func handleGetBlockBodiesMsg(pm *P2PManager, msg *p2p.Message, p *Peer) {
-	status := h.blockSyncer.getStatus()
+	status := pm.blockSyncer.getStatus()
 	if status != synced {
 		return
 	}
 
 	blockHash := common.Hash(msg.Payload)
 
-	block := h.chain.GetBlockFromBuffer(blockHash)
+	block := pm.chain.GetBlockFromBuffer(blockHash)
 	if block == nil {
 		log.Debugln("Get block by hash failed")
 		return
@@ -179,7 +179,7 @@ func handleGetBlockBodiesMsg(pm *P2PManager, msg *p2p.Message, p *Peer) {
 	go respondGetBlockBodies(block, p)
 }
 func handleGetPooledTransactionMsg(pm *P2PManager, msg *p2p.Message, p *Peer) {
-	status := h.blockSyncer.getStatus()
+	status := pm.blockSyncer.getStatus()
 	if status != synced {
 		return
 	}
@@ -187,7 +187,7 @@ func handleGetPooledTransactionMsg(pm *P2PManager, msg *p2p.Message, p *Peer) {
 	txHash := common.Hash(msg.Payload)
 	strHash := hex.EncodeToString(txHash[:])
 
-	tx := h.txPool.Get(strHash)
+	tx := pm.txPool.Get(strHash)
 
 	if tx == nil {
 		log.Debugln("Get transaction from pool failed.")
@@ -199,7 +199,7 @@ func handleGetPooledTransactionMsg(pm *P2PManager, msg *p2p.Message, p *Peer) {
 }
 
 func handleSyncStatusReq(pm *P2PManager, msg *p2p.Message, p *Peer) {
-	message := h.StatusMessage()
+	message := pm.StatusMessage()
 
 	metrics.RoutineCreateHistogramObserve(23)
 	go respondGetSyncStatus(message, p)
@@ -209,12 +209,12 @@ func handleSyncStatusMsg(pm *P2PManager, msg *p2p.Message, p *Peer) {
 	payload := msg.Payload
 
 	statusMessage, _ := utils.DeserializeStatusMsg(payload)
-	h.blockSyncer.appendStatusMsg(statusMessage)
+	pm.blockSyncer.appendStatusMsg(statusMessage)
 }
 
 // handleSyncGetBlocksMsg 处理获取某个高度的区块
 func handleSyncGetBlocksMsg(pm *P2PManager, msg *p2p.Message, p *Peer) {
-	status := h.blockSyncer.getStatus()
+	status := pm.blockSyncer.getStatus()
 	if status != synced {
 		return
 	}
@@ -224,7 +224,7 @@ func handleSyncGetBlocksMsg(pm *P2PManager, msg *p2p.Message, p *Peer) {
 	height := int64(binary.LittleEndian.Uint64(payload))
 
 	// 从链上获取到区块
-	block, err := h.chain.GetBlockByHeight(height)
+	block, err := pm.chain.GetBlockByHeight(height)
 	if err != nil {
 		log.WithField("error", err).Debugln("Get block with height failed.")
 		return
@@ -242,33 +242,33 @@ func handleSyncBlockMsg(pm *P2PManager, msg *p2p.Message, p *Peer) {
 		log.WithField("error", err).Debugln("Block deserialize failed.")
 		return
 	}
-	h.appendBlockToSyncer(block)
+	pm.appendBlockToSyncer(block)
 }
 
 func handleTimeSyncReq(pm *P2PManager, msg *p2p.Message, p *Peer) {
 	payload := msg.Payload
 	tMsg, err := utils.DeserializeTimeSyncMsg(payload)
-	tMsg.RecReqTime = h.timeSyncer.GetLogicClock()
+	tMsg.RecReqTime = pm.timeSyncer.GetLogicClock()
 
 	if err != nil {
 		log.WithError(err).Debugln("Time sync message deserialize failed.")
 		return
 	}
 
-	h.timeSyncer.ProcessSyncRequest(tMsg, p)
+	pm.timeSyncer.ProcessSyncRequest(tMsg, p)
 }
 
 func handleTimeSyncRsp(pm *P2PManager, msg *p2p.Message, p *Peer) {
 	payload := msg.Payload
 	tMsg, err := utils.DeserializeTimeSyncMsg(payload)
-	tMsg.RecRspTime = h.timeSyncer.GetLogicClock()
+	tMsg.RecRspTime = pm.timeSyncer.GetLogicClock()
 
 	if err != nil {
 		log.WithError(err).Warning("Time sync message deserialize failed.")
 		return
 	}
 
-	h.timeSyncer.ProcessSyncRespond(tMsg, p)
+	pm.timeSyncer.ProcessSyncRespond(tMsg, p)
 }
 
 func verifyBlockVRF(block *common.Block) bool {
