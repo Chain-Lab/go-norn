@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+option go_package="rpc/pb";
+
+service Node {
+  rpc ConnectedNodeList(ConnectedNodeReq) returns (ConnectedNodeResp);
+}
+
+enum NodeStatusRespCodes {
+  DEFAULT = 0;
+  NODE_STATUS_SUCCESS = 100;
+}
+
+message ConnectedNodeReq {
+
+}
+
+message ConnectedNodeResp {
+  optional NodeStatusRespCodes code = 1;
+  optional string local = 2;
+  repeated string remote = 3;
+}

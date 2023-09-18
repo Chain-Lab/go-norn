@@ -28,6 +28,7 @@ func RPCServerStart() {
 	s := grpc.NewServer()
 	// 注册 RPC 处理的 Service
 	pb.RegisterTransactionServer(s, &transactionService{})
+	pb.RegisterNodeServer(s, &nodeService{})
 	reflection.Register(s)
 
 	log.Traceln("RPC server started.")
