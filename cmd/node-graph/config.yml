@@ -2,4 +2,3 @@ service:
   port: 7860
   interval: 5
   nodes:
-    - "localhost:45555"

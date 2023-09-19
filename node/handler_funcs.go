@@ -119,48 +119,6 @@ func handleBlockMsg(pm *P2PManager, msg *p2p.Message, p *Peer) {
 	}
 }
 
-func handleTransactionMsg(pm *P2PManager, msg *p2p.Message, p *Peer) {
-	status := pm.blockSyncer.getStatus()
-	if status != synced {
-		return
-	}
-
-	payload := msg.Payload
-	transaction, err := utils.DeserializeTransaction(payload)
-
-	if err != nil {
-		log.WithField("error", err).Debugln("Deserializer transaction failed.")
-		return
-	}
-
-	txHash := hex.EncodeToString(transaction.Body.Hash[:])
-
-	if pm.isKnownTransaction(transaction.Body.Hash) {
-		return
-	}
-
-	p.MarkTransaction(txHash)
-	pm.markTransaction(txHash)
-	pm.txPool.Add(transaction)
-	pm.txBroadcastQueue <- transaction
-}
-
-func handleNewPooledTransactionHashesMsg(pm *P2PManager, msg *p2p.Message, p *Peer) {
-	status := pm.blockSyncer.getStatus()
-	// todo: 修改这里的条件判断为统一的函数
-	if status != synced {
-		return
-	}
-
-	txHash := common.Hash(msg.Payload)
-	if pm.isKnownTransaction(txHash) {
-		return
-	}
-
-	metrics.RoutineCreateHistogramObserve(21)
-	go requestTransactionWithHash(txHash, p)
-}
-
 func handleGetBlockBodiesMsg(pm *P2PManager, msg *p2p.Message, p *Peer) {
 	status := pm.blockSyncer.getStatus()
 	if status != synced {
@@ -177,25 +135,6 @@ func handleGetBlockBodiesMsg(pm *P2PManager, msg *p2p.Message, p *Peer) {
 
 	metrics.RoutineCreateHistogramObserve(30)
 	go respondGetBlockBodies(block, p)
-}
-func handleGetPooledTransactionMsg(pm *P2PManager, msg *p2p.Message, p *Peer) {
-	status := pm.blockSyncer.getStatus()
-	if status != synced {
-		return
-	}
-
-	txHash := common.Hash(msg.Payload)
-	strHash := hex.EncodeToString(txHash[:])
-
-	tx := pm.txPool.Get(strHash)
-
-	if tx == nil {
-		log.Debugln("Get transaction from pool failed.")
-		return
-	}
-
-	metrics.RoutineCreateHistogramObserve(22)
-	go respondGetPooledTransaction(tx, p)
 }
 
 func handleSyncStatusReq(pm *P2PManager, msg *p2p.Message, p *Peer) {

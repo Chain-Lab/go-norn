@@ -107,11 +107,11 @@ func (ts *TimeSyncer) GetLogicClock() int64 {
 
 // ProcessSyncRequest 处理时间同步请求消息
 func (ts *TimeSyncer) ProcessSyncRequest(msg *p2p.TimeSyncMsg, p *Peer) {
-	if ts.status == SYNCED {
-		msg.RspTime = ts.GetLogicClock()
-	} else {
-		msg.Code = -1
-	}
+	//if ts.status == SYNCED {
+	msg.RspTime = ts.GetLogicClock()
+	//} else {
+	//	msg.Code = -1
+	//}
 
 	metrics.RoutineCreateHistogramObserve(28)
 	go respondTimeSync(msg, p)
