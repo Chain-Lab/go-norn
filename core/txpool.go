@@ -114,8 +114,6 @@ func (pool *TxPool) Package() []common.Transaction {
 }
 
 func (pool *TxPool) Add(transaction *common.Transaction) {
-	// todo: 还是需要和 Package 的锁相关联，保证 Package 能抢到锁
-	// todo: 在当前版本下先直接加锁打包
 	//pool.lock.Lock()
 	//defer pool.lock.Unlock()
 	//

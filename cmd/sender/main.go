@@ -37,7 +37,7 @@ func main() {
 
 		c := pb.NewTransactionClient(conn)
 
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		//ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 
 		prv, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 
@@ -50,24 +50,31 @@ func main() {
 				bytesTransaction, err := utils.SerializeTransaction(tx)
 
 				if err != nil {
+					//log.WithError(err).Errorln("")
 					continue
 				}
 
 				encodedTransaction := hex.EncodeToString(bytesTransaction)
-				resp, err := c.SubmitTransaction(ctx, &pb.SubmitTransactionReq{
+				resp, err := c.SubmitTransaction(context.Background(), &pb.SubmitTransactionReq{
 					//_, err = c.SubmitTransaction(ctx, &pb.SubmitTransactionReq{
 					SignedTransaction: proto.String(encodedTransaction),
 				})
 
+				if err != nil {
+					log.WithError(err).Errorln(
+						"Signed transaction send failed.")
+				}
+
 				if resp.GetStatus() == pb.SubmitTransactionStatus_Default {
 					// 断线重连，如果返回状态为 default 说明本次 rpc 连接断开（原因？）
+					log.Errorln("Receive code default.")
 					reconnect = true
 				}
 			}
 
 			if reconnect {
 				conn.Close()
-				cancel()
+				//cancel()
 				break
 			}
 			//log.Infoln(resp.GetStatus())

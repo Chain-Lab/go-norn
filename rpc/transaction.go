@@ -9,7 +9,6 @@ package rpc
 import (
 	"context"
 	"encoding/hex"
-	"github.com/chain-lab/go-chronos/core"
 	"github.com/chain-lab/go-chronos/metrics"
 	"github.com/chain-lab/go-chronos/node"
 	"github.com/chain-lab/go-chronos/rpc/pb"
@@ -58,17 +57,24 @@ func (s *transactionService) SubmitTransaction(ctx context.Context, in *pb.Submi
 	//}
 
 	// 获取交易池实例，然后添加交易
-	pool := core.GetTxPoolInst()
+	//pool := core.GetTxPoolInst()
+	//
+	//if pool == nil {
+	//	resp.Status = pb.SubmitTransactionStatus_FORMAT_ERROR.Enum()
+	//	resp.Error = proto.String("Submit error, pool not exits.")
+	//	return resp, err
+	//}
+	//
+	//pool.Add(transaction)
+	pm := node.GetP2PManager()
 
-	if pool == nil {
+	if pm == nil {
 		resp.Status = pb.SubmitTransactionStatus_FORMAT_ERROR.Enum()
 		resp.Error = proto.String("Submit error, pool not exits.")
 		return resp, err
 	}
 
-	pool.Add(transaction)
-	handler := node.GetP2PManager()
-	handler.AddTransaction(transaction)
+	pm.AddTransaction(transaction)
 
 	//log.Infoln("Append transaction successful.")
 	resp.Status = pb.SubmitTransactionStatus_SUCCESS.Enum()
