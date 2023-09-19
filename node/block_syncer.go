@@ -102,6 +102,7 @@ func (bs *BlockSyncer) run() {
 		select {
 		// 每隔 100 ms 检查一次是否存在空闲的 peer，如果有则进行区块的拉取
 		case <-ticker.C:
+			available := make([]*Peer, 0, len(bs.peerSet))
 			bs.peerStatusLock.Lock()
 			for idx := range bs.peerSet {
 				p := bs.peerSet[idx]
@@ -110,6 +111,8 @@ func (bs *BlockSyncer) run() {
 				if p.Stopped() {
 					continue
 				}
+
+				available = append(available, p)
 
 				id := p.peerID
 				if time.Since(bs.peerReqTime[id]) < requestBlockInterval {
@@ -126,6 +129,7 @@ func (bs *BlockSyncer) run() {
 				metrics.RoutineCreateHistogramObserve(14)
 				go requestSyncGetBlock(height, p)
 			}
+			bs.peerSet = available
 			bs.peerStatusLock.Unlock()
 		}
 

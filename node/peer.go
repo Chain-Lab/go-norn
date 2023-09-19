@@ -93,8 +93,6 @@ func NewPeer(peerId peer.ID, s *network.Stream, config PeerConfig) (*Peer, error
 	metrics.RoutineCreateHistogramObserve(25)
 	go p.broadcastBlock()
 	go p.broadcastBlockHash()
-	go p.broadcastTransaction()
-	go p.broadcastTxHash()
 	go p.sendStatus()
 	go p.Handle()
 
@@ -155,9 +153,6 @@ func (p *Peer) Handle() {
 
 		select {
 		case msg := <-p.msgQueue:
-			if msg.Code != p2p.StatusCodeTransactionsMsg {
-				log.Debugln("Receive code ", msg.Code)
-			}
 			handle := handlerMap[msg.Code]
 
 			if handle != nil {

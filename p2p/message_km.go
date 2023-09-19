@@ -30,7 +30,6 @@ const (
 	StatusCodeGetReceiptsMsg                StatusCode = 12
 	StatusCodeReceiptsMsg                   StatusCode = 13
 	StatusCodeNewPooledTransactionHashesMsg StatusCode = 14
-	StatusCodeGetPooledTransactionMsg       StatusCode = 15
 	StatusCodePooledTransactionsMsg         StatusCode = 16
 	StatusCodeSyncStatusReq                 StatusCode = 17
 	StatusCodeSyncStatusMsg                 StatusCode = 18

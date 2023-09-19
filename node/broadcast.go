@@ -40,39 +40,6 @@ func (p *Peer) broadcastBlockHash() {
 	}
 }
 
-func (p *Peer) broadcastTransaction() {
-	for {
-		if p.peer.Stopped() {
-			break
-		}
-
-		select {
-		case tx := <-p.txBroadcast:
-			// todo: 对序列化的一个优化的地方，添加 sync.Pool，需要针对不同场景来设计
-			byteTxData, err := utils.SerializeTransaction(tx)
-
-			if err != nil {
-				log.WithField("error", err).Debugln("Serialize block failed.")
-				break
-			}
-			p.peer.Send(p2p.StatusCodeTransactionsMsg, byteTxData)
-		}
-	}
-}
-
-func (p *Peer) broadcastTxHash() {
-	for {
-		if p.peer.Stopped() {
-			break
-		}
-
-		select {
-		case txHash := <-p.txAnnounce:
-			p.peer.Send(p2p.StatusCodeNewPooledTransactionHashesMsg, txHash[:])
-		}
-	}
-}
-
 func (p *Peer) sendStatus() {
 	ticker := time.NewTicker(490 * time.Millisecond)
 	for {
