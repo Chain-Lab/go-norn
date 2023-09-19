@@ -185,7 +185,7 @@ func main() {
 
 	// 节点发现协程
 	metrics2.RoutineCreateHistogramObserve(3)
-	go pm.Discover(ctx, host, kdht, "Chronos network.")
+	go pm.Discover(ctx, host, kdht, node.TxGossipTopic)
 
 	if genesis {
 		log.Infof("Create genesis block after 10s...")

@@ -19,6 +19,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-libp2p/core/protocol"
 	"github.com/libp2p/go-libp2p/p2p/discovery/routing"
+	dutil "github.com/libp2p/go-libp2p/p2p/discovery/util"
 	log "github.com/sirupsen/logrus"
 	"math"
 	"net"
@@ -277,6 +278,7 @@ func (pm *P2PManager) broadcastBlock() {
 }
 
 func (pm *P2PManager) broadcastTransaction() {
+	log.Infoln("P2P manger broadcast transaction routine start!")
 	for {
 		select {
 		case tx := <-pm.txBroadcastQueue:
@@ -284,18 +286,22 @@ func (pm *P2PManager) broadcastTransaction() {
 			txData, err := utils.SerializeTransaction(tx)
 			if err != nil {
 				// todo: 如果交易序列化失败先不处理
+				log.WithError(err).Errorln("Serialize transaction failed.")
 				continue
 			}
 
 			err = pm.txTopic.Publish(context.Background(), txData)
 			if err != nil {
+				log.WithError(err).Errorln("Public transaction failed.")
 				continue
 			}
 		}
 	}
 }
 
-func (pm *P2PManager) gossipTxSubscribe(ctx context.Context, sub *pubsub.Subscription, hostID peer.ID) {
+func (pm *P2PManager) gossipTxSubscribe(ctx context.Context,
+	sub *pubsub.Subscription, h host.Host) {
+	log.Infoln("P2P gossip transaction subscription routine start!")
 	for {
 		txMsg, err := sub.Next(ctx)
 
@@ -304,9 +310,10 @@ func (pm *P2PManager) gossipTxSubscribe(ctx context.Context, sub *pubsub.Subscri
 			continue
 		}
 
-		if txMsg.ReceivedFrom == hostID {
+		if txMsg.ReceivedFrom == h.ID() {
 			continue
 		}
+		//log.Infoln("Receive message from gossip.")
 
 		status := pm.blockSyncer.getStatus()
 		if status != synced {
@@ -408,37 +415,36 @@ func (pm *P2PManager) HandleStream(s network.Stream) {
 func (pm *P2PManager) Discover(ctx context.Context, h host.Host,
 	dht *dht.IpfsDHT,
 	rendezvous string) {
+	var err error
 	var routingDiscovery = routing.NewRoutingDiscovery(dht)
-	_, err := routingDiscovery.Advertise(ctx, rendezvous)
+	dutil.Advertise(ctx, routingDiscovery, rendezvous)
 
-	if err != nil {
-		log.WithField("error", err).Errorln("Routing discovery start failed.")
-	}
+	// 广播路由的初始化不能使用下面的语句，逆天 go-libp2p，否则广播网络无法工作
+	// _, err := routingDiscovery.Advertise(ctx, rendezvous)
 
 	pm.id = h.ID()
 
 	// 利用 go-libp2p-pubsub 构建广播网络
-	{
-		pm.gossipSub, err = pubsub.NewGossipSub(ctx, h)
-		if err != nil {
-			log.WithError(err).Fatalf("Create gossip sub failed")
-			return
-		}
-
-		pm.txTopic, err = pm.gossipSub.Join(TxGossipTopic)
-		if err != nil {
-			log.WithError(err).Fatalf("Join transaction topic failed")
-			return
-		}
-
-		sub, err := pm.txTopic.Subscribe()
-		if err != nil {
-			log.WithError(err).Fatalf("Get sub from topic failed")
-			return
-		}
-
-		go pm.gossipTxSubscribe(ctx, sub, h.ID())
+	pm.gossipSub, err = pubsub.NewGossipSub(ctx, h)
+	if err != nil {
+		log.WithError(err).Fatalf("Create gossip sub failed")
+		return
 	}
+
+	pm.txTopic, err = pm.gossipSub.Join(TxGossipTopic)
+	if err != nil {
+		log.WithError(err).Fatalf("Join transaction topic failed")
+		return
+	}
+	log.Infof("Join to topic %s", TxGossipTopic)
+
+	sub, err := pm.txTopic.Subscribe()
+	if err != nil {
+		log.WithError(err).Fatalf("Get sub from topic failed")
+		return
+	}
+
+	go pm.gossipTxSubscribe(ctx, sub, h)
 
 	// 每 500ms 通过 Kademlia 获取对端节点列表
 	ticker := time.NewTicker(500 * time.Millisecond)
