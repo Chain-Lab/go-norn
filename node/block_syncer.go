@@ -115,7 +115,8 @@ func (bs *BlockSyncer) run() {
 				available = append(available, p)
 
 				id := p.peerID
-				if time.Since(bs.peerReqTime[id]) < requestBlockInterval {
+				if p.MarkSynced() || time.Since(bs.
+					peerReqTime[id]) < requestBlockInterval {
 					log.Traceln("Peer just send msg, loop continue.")
 					continue
 				}
@@ -128,6 +129,7 @@ func (bs *BlockSyncer) run() {
 
 				metrics.RoutineCreateHistogramObserve(14)
 				go requestSyncGetBlock(height, p)
+				p.SetMarkSynced(true)
 			}
 			bs.peerSet = available
 			bs.peerStatusLock.Unlock()

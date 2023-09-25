@@ -121,7 +121,7 @@ func handleBlockMsg(pm *P2PManager, msg *p2p.Message, p *Peer) {
 
 func handleGetBlockBodiesMsg(pm *P2PManager, msg *p2p.Message, p *Peer) {
 	status := pm.blockSyncer.getStatus()
-	if status != synced {
+	if status != synced || status != bufferSyncing {
 		return
 	}
 
@@ -182,6 +182,7 @@ func handleSyncBlockMsg(pm *P2PManager, msg *p2p.Message, p *Peer) {
 		return
 	}
 	pm.appendBlockToSyncer(block)
+	p.SetMarkSynced(false)
 }
 
 func handleTimeSyncReq(pm *P2PManager, msg *p2p.Message, p *Peer) {
