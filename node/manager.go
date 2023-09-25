@@ -54,8 +54,8 @@ const (
 	maxKnownTransaction    = 32768
 	maxSyncerStatusChannel = 512
 	packageBlockInterval   = 2
-	ProtocolId             = protocol.ID("/chronos/1.0.0/p2p")
 	TxGossipTopic          = "/chronos/1.0.1/transactions"
+	ProtocolId             = protocol.ID("/chronos/1.0.0/p2p")
 	TxProtocolId           = protocol.ID("/chronos/1.0.0/transaction")
 )
 
@@ -320,6 +320,7 @@ func (pm *P2PManager) gossipTxSubscribe(ctx context.Context,
 			continue
 		}
 
+		metrics.GossipReceiveCountInc()
 		transaction, err := utils.DeserializeTransaction(txMsg.Data)
 		if err != nil {
 			log.WithField("error", err).Debugln("Deserializer transaction failed.")
@@ -419,7 +420,7 @@ func (pm *P2PManager) Discover(ctx context.Context, h host.Host,
 	var routingDiscovery = routing.NewRoutingDiscovery(dht)
 	dutil.Advertise(ctx, routingDiscovery, rendezvous)
 
-	// 广播路由的初始化不能使用下面的语句，逆天 go-libp2p，否则广播网络无法工作
+	// 广播路由的初始化不能使用下面的语句，否则广播网络无法工作, 逆天 go-libp2p，
 	// _, err := routingDiscovery.Advertise(ctx, rendezvous)
 
 	pm.id = h.ID()

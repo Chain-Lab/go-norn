@@ -10,6 +10,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
 	log "github.com/sirupsen/logrus"
+	"sync"
 )
 
 const (
@@ -47,6 +48,9 @@ type Peer struct {
 	syncBlock chan *int64
 
 	msgQueue chan *p2p.Message
+
+	lock       sync.RWMutex
+	markSynced bool
 	// todo: 这里是传值还是需要传指针用于构建 channel？
 	// todo： 还需要将区块、交易传出给上层结构处理的管道
 }
@@ -87,6 +91,7 @@ func NewPeer(peerId peer.ID, s *network.Stream, config PeerConfig) (*Peer, error
 		txBroadcast:     make(chan *common.Transaction, maxQueuedTxs),
 		txAnnounce:      make(chan common.Hash, maxQueuedTxAnns),
 		msgQueue:        msgQueue,
+		markSynced:      false,
 	}
 
 	log.Infof("Starting 4 (+2) broadcast routine...")
@@ -99,8 +104,17 @@ func NewPeer(peerId peer.ID, s *network.Stream, config PeerConfig) (*Peer, error
 	return p, nil
 }
 
-func (p *Peer) RunPeer() {
+func (p *Peer) SetMarkSynced(v bool) {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+	p.markSynced = v
+}
 
+func (p *Peer) MarkSynced() bool {
+	p.lock.RLock()
+	defer p.lock.RUnlock()
+
+	return p.markSynced
 }
 
 func (p *Peer) MarkBlock(blockHash string) {
