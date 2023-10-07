@@ -452,6 +452,7 @@ func (bc *BlockChain) InsertBlock(block *common.Block) {
 	// 向 VDF 的计算添加区块下的信息
 	calculator := crypto.GetCalculatorInstance()
 	calculator.AppendNewSeed(seed, proof)
+	metrics.BlockHeightSet(block.Header.Height)
 }
 
 // AppendBlockTask 向区块缓冲视图中添加区块处理任务

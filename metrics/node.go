@@ -24,6 +24,10 @@ var (
 		Name: "node_connect_count",
 		Help: "The count of connected node.",
 	})
+	blockHeightCount = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "block_height_count",
+		Help: "Block height count",
+	})
 	RoutineCreateHistogram = promauto.NewHistogram(prometheus.HistogramOpts{
 		Name: "routine_create_summary",
 		Help: "The summary for create new routine.",
@@ -55,4 +59,8 @@ func ConnectedNodeDec() {
 
 func RoutineCreateHistogramObserve(value float64) {
 	RoutineCreateHistogram.Observe(value)
+}
+
+func BlockHeightSet(height int64) {
+	blockHeightCount.Set(float64(height))
 }
