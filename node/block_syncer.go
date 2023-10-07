@@ -50,8 +50,8 @@ type BlockSyncer struct {
 	targetHeight int64 // 到达 buffer 同步状态后的目标高度
 	knownHeight  int64 // 目前已知节点中的最新高度
 	//dbLatestHeight   int64               // 数据库中存储的最高区块高度
-	requestTimestamp map[int64]time.Time // 区块请求的时间戳
-	blockMap         map[int64]*common.Block
+	requestTimestamp map[int64]time.Time     // 区块请求的时间戳, height -> time
+	blockMap         map[int64]*common.Block // height -> block 对应高度的区块
 	peerReqTime      map[peer.ID]time.Time
 
 	chain          *core.BlockChain
@@ -111,7 +111,6 @@ func (bs *BlockSyncer) run() {
 				if p.Stopped() {
 					continue
 				}
-
 				available = append(available, p)
 
 				id := p.peerID
@@ -122,10 +121,10 @@ func (bs *BlockSyncer) run() {
 				}
 
 				height := bs.selectBlockHeight()
-				//log.Infof("Select to get block #%d", height)
 				if height < 0 {
 					continue
 				}
+				log.Infof("Select to get block #%d", height)
 
 				metrics.RoutineCreateHistogramObserve(14)
 				go requestSyncGetBlock(height, p)
@@ -270,7 +269,8 @@ func (bs *BlockSyncer) selectBlockHeight() int64 {
 			bs.requestTimestamp[height] = time.UnixMilli(0)
 		}
 
-		if bs.blockMap[height] == nil || time.Since(bs.requestTimestamp[height]) > requestBlockInterval {
+		if bs.blockMap[height] == nil && time.Since(bs.
+			requestTimestamp[height]) > requestBlockInterval {
 			bs.requestTimestamp[height] = time.Now()
 			log.WithField("height", height).Traceln("Select height to sync.")
 			return height

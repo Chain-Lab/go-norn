@@ -21,7 +21,6 @@ import (
 	"github.com/libp2p/go-libp2p/p2p/discovery/routing"
 	dutil "github.com/libp2p/go-libp2p/p2p/discovery/util"
 	log "github.com/sirupsen/logrus"
-	"math"
 	"net"
 	"sync"
 	"time"
@@ -30,17 +29,17 @@ import (
 type msgHandler func(pm *P2PManager, msg *p2p.Message, p *Peer)
 
 var handlerMap = map[p2p.StatusCode]msgHandler{
-	p2p.StatusCodeStatusMsg:         handleStatusMsg,
-	p2p.StatusCodeNewBlockMsg:       handleNewBlockMsg,
-	p2p.StatusCodeNewBlockHashesMsg: handleNewBlockHashMsg,
-	p2p.StatusCodeBlockBodiesMsg:    handleBlockMsg,
-	p2p.StatusCodeGetBlockBodiesMsg: handleGetBlockBodiesMsg,
-	p2p.StatusCodeSyncStatusReq:     handleSyncStatusReq,
-	p2p.StatusCodeSyncStatusMsg:     handleSyncStatusMsg,
-	p2p.StatusCodeSyncGetBlocksMsg:  handleSyncGetBlocksMsg,
-	p2p.StatusCodeSyncBlocksMsg:     handleSyncBlockMsg,
-	p2p.StatusCodeTimeSyncReq:       handleTimeSyncReq,
-	p2p.StatusCodeTimeSyncRsp:       handleTimeSyncRsp,
+	p2p.StatusCodeStatusMsg:         handleStatusMsg,         // 状态消息，目前接收对端的高度信息
+	p2p.StatusCodeNewBlockMsg:       handleNewBlockMsg,       // 广播新打包的区块，在同步旧区块（非缓冲区同步状态）时不处理
+	p2p.StatusCodeNewBlockHashesMsg: handleNewBlockHashMsg,   // 广播新打包的区块哈希值，在同步旧区块（非缓冲区同步状态）时不处理
+	p2p.StatusCodeBlockBodiesMsg:    handleBlockMsg,          // 对应上一个状态码，如果对端请求区块，在缓冲区中取出区块进行响应
+	p2p.StatusCodeGetBlockBodiesMsg: handleGetBlockBodiesMsg, // 请求本地缓冲区中不存在的区块
+	p2p.StatusCodeSyncStatusReq:     handleSyncStatusReq,     // 携带本地的高度信息，请求对端的状态信息，例如高度/缓冲区高度
+	p2p.StatusCodeSyncStatusMsg:     handleSyncStatusMsg,     // 响应对端的状态请求
+	p2p.StatusCodeSyncGetBlocksMsg:  handleSyncGetBlocksMsg,  // 根据高度请求区块
+	p2p.StatusCodeSyncBlocksMsg:     handleSyncBlockMsg,      // 响应对应高度的区块
+	p2p.StatusCodeTimeSyncReq:       handleTimeSyncReq,       // 时间同步请求
+	p2p.StatusCodeTimeSyncRsp:       handleTimeSyncRsp,       // 时间同步响应
 }
 
 var (
@@ -256,7 +255,8 @@ func (pm *P2PManager) broadcastBlock() {
 			peers := pm.getPeersWithoutBlock(blockHash)
 
 			peersCount := len(peers)
-			countBroadcastBlock := int(math.Sqrt(float64(peersCount)))
+			//countBroadcastBlock := int(math.Sqrt(float64(peersCount)))
+			countBroadcastBlock := peersCount
 
 			for idx := 0; idx < countBroadcastBlock; idx++ {
 				if pm.removePeerIfStopped(idx) {

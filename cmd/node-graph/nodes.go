@@ -96,7 +96,9 @@ func ConnectNodeInfoRoutine(interval time.Duration, nodesAddr []string) {
 				}
 			}
 			graphLock.Lock()
-			edges = edgesResult
+			if len(edgesResult) != 0 {
+				edges = edgesResult
+			}
 			graphLock.Unlock()
 		}
 	}

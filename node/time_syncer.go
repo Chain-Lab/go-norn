@@ -19,10 +19,10 @@ type SyncStatus int8
 
 const (
 	//syncInterval       = 5 * time.Second  // 时间同步间隔
-	syncInterval       = 3 * time.Second  // 时间同步间隔
-	autoSyncInterval   = 10 * time.Second // 自动重启任务间隔
-	confirmThreshold   = 2                // 时间同步确认阈值
-	availableThreshold = 1000             // 1000 ms 容忍范围
+	syncInterval       = 2 * time.Second // 时间同步间隔
+	autoSyncInterval   = 5 * time.Second // 自动重启任务间隔
+	confirmThreshold   = 2               // 时间同步确认阈值
+	availableThreshold = 1000            // 1000 ms 容忍范围
 )
 
 const (
