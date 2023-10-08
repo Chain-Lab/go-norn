@@ -21,7 +21,6 @@ import (
 	"github.com/libp2p/go-libp2p/p2p/discovery/routing"
 	dutil "github.com/libp2p/go-libp2p/p2p/discovery/util"
 	log "github.com/sirupsen/logrus"
-	"math"
 	"net"
 	"sync"
 	"time"
@@ -256,7 +255,8 @@ func (pm *P2PManager) broadcastBlock() {
 			peers := pm.getPeersWithoutBlock(blockHash)
 
 			peersCount := len(peers)
-			countBroadcastBlock := int(math.Sqrt(float64(peersCount)))
+			//countBroadcastBlock := int(math.Sqrt(float64(peersCount)))
+			countBroadcastBlock := peersCount
 
 			for idx := 0; idx < countBroadcastBlock; idx++ {
 				if pm.removePeerIfStopped(idx) {

@@ -121,10 +121,10 @@ func (bs *BlockSyncer) run() {
 				}
 
 				height := bs.selectBlockHeight()
-				//log.Infof("Select to get block #%d", height)
 				if height < 0 {
 					continue
 				}
+				log.Infof("Select to get block #%d", height)
 
 				metrics.RoutineCreateHistogramObserve(14)
 				go requestSyncGetBlock(height, p)

@@ -17,17 +17,17 @@ import (
 
 const (
 	// todo: 前期测试使用，后面需要修改限制条件
-	secondQueueInterval = 100 * time.Millisecond // 区块缓冲视图队列处理延时
+	secondQueueInterval = 100 * time.Microsecond // 区块缓冲视图队列处理延时
 	maxBlockMark        = 200                    // 单个区块最多标记多少次不再处理
-	maxKnownBlock       = 1024                   // lru 缓冲下最多存放多少区块
+	maxKnownBlock       = 2048                   // lru 缓冲下最多存放多少区块
 	maxQueueBlock       = 512                    // 区块处理第二队列最多存放多少区块
-	maxBufferSize       = 32                     // buffer 缓冲多少高度时弹出一个区块
+	maxBufferSize       = 15                     // buffer 缓冲多少高度时弹出一个区块
 )
 
 // BlockBuffer 维护一个树形结构的缓冲区，保存当前视图下的区块信息
 type BlockBuffer struct {
 	blockChan  chan *common.Block // 第一区块处理队列，收到即处理
-	secondChan chan *common.Block // 第二区块处理队列
+	secondChan chan *common.Block // 第二区块处理队列，优先队列
 	popChan    chan *common.Block // 推出队列
 
 	blockProcessList map[int64]blockList     // 每个高度下的区块列表
@@ -171,16 +171,19 @@ func (b *BlockBuffer) Process() {
 }
 
 func (b *BlockBuffer) secondProcess() {
-	timer := time.NewTimer(secondQueueInterval)
+	timer := time.NewTicker(secondQueueInterval)
 	var block *common.Block = nil
 	for {
 		select {
 		// 接收计时器到期事件
 		case <-timer.C:
-			if block == nil {
-				block = <-b.secondChan
-				log.WithField("height", block.Header.Height).Debugln("Pop block from second channel.")
-			}
+			//if block == nil {
+			//	block = <-b.secondChan
+			//	log.WithField("height", block.Header.Height).Debugln("Pop block from second channel.")
+			//}
+
+			block = <-b.secondChan
+			log.WithField("height", block.Header.Height).Debugln("Pop block from second channel.")
 
 			// 获取区块的相关信息
 			blockHash := block.BlockHash()
@@ -192,8 +195,7 @@ func (b *BlockBuffer) secondProcess() {
 					"height": block.Header.Height,
 					"latest": b.latestBlockHeight,
 				}).Warningln("Block height too low.")
-				block = nil
-				timer.Reset(secondQueueInterval)
+				//timer.Reset(secondQueueInterval)
 				break
 			}
 
@@ -209,7 +211,8 @@ func (b *BlockBuffer) secondProcess() {
 					//if b.blockMark[blockHash] >= maxBlockMark {
 					//	block = nil
 					//}
-					timer.Reset(secondQueueInterval)
+					//timer.Reset(secondQueueInterval)
+					b.secondChan <- block
 					b.updateLock.Unlock()
 					break
 				} else {
@@ -253,10 +256,10 @@ func (b *BlockBuffer) secondProcess() {
 				b.popChan <- b.PopSelectedBlock()
 			}
 
-			block = nil
+			//block = nil
 			b.updateLock.Unlock()
 
-			timer.Reset(secondQueueInterval)
+			//timer.Reset(secondQueueInterval)
 		}
 	}
 }
