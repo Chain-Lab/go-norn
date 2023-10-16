@@ -54,7 +54,8 @@ func (p *Peer) sendStatus() {
 		}
 
 		// fixed[230725]：在同步完成后不再请求对端高度
-		if p.handler.Synced() {
+		status := p.handler.blockSyncer.getStatus()
+		if status == synced {
 			break
 		}
 	}

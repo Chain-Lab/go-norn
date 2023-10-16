@@ -24,6 +24,10 @@ var (
 		Name: "gossip_receive_counter",
 		Help: "P2P network broadcast topic receive counter.",
 	})
+	gossipBlockReceiveCounter = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "gossip_block_receive_counter",
+		Help: "P2P network broadcast topic receive blocks counter.",
+	})
 )
 
 func SendQueueCountInc() {
@@ -36,6 +40,10 @@ func RecvQueueCountInc() {
 
 func GossipReceiveCountInc() {
 	gossipReceiveCounter.Inc()
+}
+
+func GossipReceiveBlocksCountInc() {
+	gossipBlockReceiveCounter.Inc()
 }
 
 //

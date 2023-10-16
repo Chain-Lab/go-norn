@@ -109,7 +109,7 @@ func NewBlockchain(db *utils.LevelDB) *BlockChain {
 	}
 
 	// 区块处理协程启动
-	metrics.RoutineCreateHistogramObserve(7)
+	metrics.RoutineCreateCounterObserve(7)
 	go chain.BlockProcessRoutine()
 	return chain
 }

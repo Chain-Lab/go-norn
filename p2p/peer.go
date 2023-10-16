@@ -49,7 +49,7 @@ func NewPeer(id peer.ID, s *network.Stream, msgQueue chan *Message) (*Peer, erro
 		stopped:   false,
 	}
 
-	metrics.RoutineCreateHistogramObserve(13)
+	metrics.RoutineCreateCounterObserve(13)
 	go p.Run()
 
 	return &p, nil
@@ -67,7 +67,7 @@ func (p *Peer) Run() {
 	log.WithField("peer", p.peerID).Infoln("Start run peer instance.")
 
 	p.wg.Add(2)
-	metrics.RoutineCreateHistogramObserve(12)
+	metrics.RoutineCreateCounterObserve(12)
 	go p.pingLoop()
 
 	// 不可多协程并发写，存在问题

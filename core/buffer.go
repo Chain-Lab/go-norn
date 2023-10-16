@@ -21,7 +21,7 @@ const (
 	maxBlockMark        = 200                    // 单个区块最多标记多少次不再处理
 	maxKnownBlock       = 2048                   // lru 缓冲下最多存放多少区块
 	maxQueueBlock       = 512                    // 区块处理第二队列最多存放多少区块
-	maxBufferSize       = 15                     // buffer 缓冲多少高度时弹出一个区块
+	maxBufferSize       = 72                     // buffer 缓冲多少高度时弹出一个区块
 )
 
 // BlockBuffer 维护一个树形结构的缓冲区，保存当前视图下的区块信息
@@ -71,7 +71,7 @@ func NewBlockBuffer(latest *common.Block, popChan chan *common.Block) (*BlockBuf
 		bufferedHeight:    latest.Header.Height,
 	}
 
-	metrics.RoutineCreateHistogramObserve(8)
+	metrics.RoutineCreateCounterObserve(8)
 	go buffer.Process()
 	go buffer.secondProcess()
 

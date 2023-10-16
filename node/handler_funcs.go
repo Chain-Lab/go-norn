@@ -54,7 +54,7 @@ func handleNewBlockMsg(pm *P2PManager, msg *p2p.Message, p *Peer) {
 	p.MarkBlock(strHash)
 
 	if block.Header.Height == 0 {
-		metrics.RoutineCreateHistogramObserve(18)
+		metrics.RoutineCreateCounterObserve(18)
 		go pm.chain.InsertBlock(block)
 		return
 	}
@@ -82,7 +82,7 @@ func handleNewBlockHashMsg(pm *P2PManager, msg *p2p.Message, p *Peer) {
 		return
 	}
 
-	metrics.RoutineCreateHistogramObserve(19)
+	metrics.RoutineCreateCounterObserve(19)
 	go requestBlockWithHash(blockHash, p)
 }
 
@@ -109,7 +109,7 @@ func handleBlockMsg(pm *P2PManager, msg *p2p.Message, p *Peer) {
 	//log.WithField("height", block.Header.Height).Infoln("Receive block.")
 
 	if block.Header.Height == 0 {
-		metrics.RoutineCreateHistogramObserve(20)
+		metrics.RoutineCreateCounterObserve(20)
 		go pm.chain.InsertBlock(block)
 		return
 	}
@@ -133,14 +133,14 @@ func handleGetBlockBodiesMsg(pm *P2PManager, msg *p2p.Message, p *Peer) {
 		return
 	}
 
-	metrics.RoutineCreateHistogramObserve(30)
+	metrics.RoutineCreateCounterObserve(30)
 	go respondGetBlockBodies(block, p)
 }
 
 func handleSyncStatusReq(pm *P2PManager, msg *p2p.Message, p *Peer) {
 	message := pm.StatusMessage()
 
-	metrics.RoutineCreateHistogramObserve(23)
+	metrics.RoutineCreateCounterObserve(23)
 	go respondGetSyncStatus(message, p)
 }
 
@@ -169,7 +169,7 @@ func handleSyncGetBlocksMsg(pm *P2PManager, msg *p2p.Message, p *Peer) {
 		return
 	}
 
-	metrics.RoutineCreateHistogramObserve(24)
+	metrics.RoutineCreateCounterObserve(24)
 	go respondSyncGetBlock(block, p)
 }
 

@@ -53,10 +53,10 @@ const (
 )
 
 type SyncStatusMsg struct {
-	LatestHeight        int64
-	LatestHash          [32]byte
-	BufferedStartHeight int64
-	BufferedEndHeight   int64
+	LatestHeight        int64    // db 中的最新区块高度
+	LatestHash          [32]byte // db 中的最新区块哈希
+	BufferedStartHeight int64    // 缓冲区起始区块高度
+	BufferedEndHeight   int64    // 缓冲区截止区块高度
 }
 
 func NewSyncStatusMsg() SyncStatusMsg {

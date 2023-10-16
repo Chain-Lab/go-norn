@@ -74,7 +74,7 @@ func CalculatorInitialization(pp *big.Int, order *big.Int, t int64) {
 			changed: false,
 		}
 
-		metrics.RoutineCreateHistogramObserve(10)
+		metrics.RoutineCreateCounterObserve(10)
 		go calculatorInst.run()
 	})
 }

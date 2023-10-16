@@ -9,6 +9,7 @@ package metrics
 import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	"strconv"
 )
 
 var (
@@ -28,16 +29,26 @@ var (
 		Name: "block_height_count",
 		Help: "Block height count",
 	})
-	RoutineCreateHistogram = promauto.NewHistogram(prometheus.HistogramOpts{
+	RoutineCreateCodeCounter = promauto.NewCounterVec(prometheus.CounterOpts{
 		Name: "routine_create_summary",
 		Help: "The summary for create new routine.",
-		Buckets: []float64{
-			0.0, 1.0, 2.0, 3.0, 4.0,
-			5.0, 6.0, 7.0, 8.0, 9.0, 10.0,
-			11.0, 12.0, 13.0, 14.0, 15.0,
-			16.0, 17.0, 18.0, 19.0, 20.0,
-			21.0, 22.0, 23.0, 24.0, 25.0,
-			26.0, 27.0, 28.0, 29.0, 30.0},
+	},
+		[]string{"code"},
+	)
+	HandleReceivedMessageCodeCounter = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "handle_received_message_codes",
+			Help: "The counter that record received message code",
+		},
+		[]string{"code"},
+	)
+	TimeSyncrStatus = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "time_syncer_status",
+		Help: "The status in time syncer.",
+	})
+	BlockSyncrStatus = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "block_syncer_status",
+		Help: "The status in time syncer.",
 	})
 )
 
@@ -57,10 +68,22 @@ func ConnectedNodeDec() {
 	connectNodeCount.Dec()
 }
 
-func RoutineCreateHistogramObserve(value float64) {
-	RoutineCreateHistogram.Observe(value)
+func RoutineCreateCounterObserve(value int) {
+	RoutineCreateCodeCounter.WithLabelValues(strconv.Itoa(value)).Inc()
 }
 
 func BlockHeightSet(height int64) {
 	blockHeightCount.Set(float64(height))
+}
+
+func RecordHandleReceivedCode(code int) {
+	HandleReceivedMessageCodeCounter.WithLabelValues(strconv.Itoa(code)).Inc()
+}
+
+func TimeSyncerStatusSet(code int8) {
+	TimeSyncrStatus.Set(float64(code))
+}
+
+func BlockSyncerStatusSet(code int8) {
+	BlockSyncrStatus.Set(float64(code))
 }
