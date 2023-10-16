@@ -19,10 +19,10 @@ type SyncStatus int8
 
 const (
 	//syncInterval       = 5 * time.Second  // 时间同步间隔
-	syncInterval       = 2 * time.Second // 时间同步间隔
-	autoSyncInterval   = 5 * time.Second // 自动重启任务间隔
-	confirmThreshold   = 2               // 时间同步确认阈值
-	availableThreshold = 1000            // 1000 ms 容忍范围
+	syncInterval = 3 * time.Second // 时间同步间隔
+	//autoSyncInterval   = 10 * time.Second // 自动重启任务间隔
+	confirmThreshold   = 5    // 时间同步确认阈值
+	availableThreshold = 1000 // 1000 ms 容忍范围
 )
 
 const (
@@ -33,8 +33,7 @@ const (
 
 type TimeSyncer struct {
 	syncerLock sync.RWMutex
-	timer      *time.Timer
-	autoTimer  *time.Timer
+	timer      *time.Ticker
 	genesis    bool
 
 	// 需要 syncerLock 加锁才能进行修改、读取
@@ -44,6 +43,7 @@ type TimeSyncer struct {
 }
 
 func NewTimeSyncer(genesis bool, delta int64) *TimeSyncer {
+	metrics.TimeSyncerStatusSet(int8(INITIAL))
 	return &TimeSyncer{
 		status:       INITIAL,
 		delta:        delta,
@@ -55,20 +55,19 @@ func NewTimeSyncer(genesis bool, delta int64) *TimeSyncer {
 // syncRoutine 时间同步协程函数，每隔 syncInterval 选择节点发出一次同步请求
 func (ts *TimeSyncer) syncRoutine() {
 	log.Infoln("Start time syncer routine.")
-	ts.timer = time.NewTimer(syncInterval)
-	ts.autoTimer = time.NewTimer(autoSyncInterval)
+	ts.timer = time.NewTicker(syncInterval)
 	for {
 		select {
 		case <-ts.timer.C:
-			handler := GetP2PManager()
-			peersLen := len(handler.peerSet)
+			pm := GetP2PManager()
+			peersLen := len(pm.peerSet)
 
 			if peersLen <= 0 {
 				continue
 			}
 
 			r := rand.New(rand.NewSource(time.Now().UnixMilli()))
-			peer := handler.peerSet[r.Intn(peersLen)]
+			peer := pm.peerSet[r.Intn(peersLen)]
 
 			msg := &p2p.TimeSyncMsg{
 				Code:       0,
@@ -77,11 +76,9 @@ func (ts *TimeSyncer) syncRoutine() {
 				RspTime:    0,
 				RecRspTime: 0,
 			}
-			metrics.RoutineCreateHistogramObserve(26)
+			metrics.RoutineCreateCounterObserve(26)
 			go requestTimeSync(msg, peer)
 			log.Infoln("Request to remote time sync.")
-		case <-ts.autoTimer.C:
-			ts.timer.Reset(syncInterval)
 		}
 	}
 }
@@ -89,9 +86,10 @@ func (ts *TimeSyncer) syncRoutine() {
 // todo: 添加上下文
 func (ts *TimeSyncer) Start() {
 	if !ts.genesis {
-		metrics.RoutineCreateHistogramObserve(27)
+		metrics.RoutineCreateCounterObserve(27)
 		go ts.syncRoutine()
 	} else {
+		metrics.TimeSyncerStatusSet(int8(SYNCED))
 		ts.status = SYNCED
 	}
 }
@@ -113,15 +111,11 @@ func (ts *TimeSyncer) ProcessSyncRequest(msg *p2p.TimeSyncMsg, p *Peer) {
 	//	msg.Code = -1
 	//}
 
-	metrics.RoutineCreateHistogramObserve(28)
+	metrics.RoutineCreateCounterObserve(28)
 	go respondTimeSync(msg, p)
 }
 
 func (ts *TimeSyncer) ProcessSyncRespond(msg *p2p.TimeSyncMsg, p *Peer) {
-	ts.autoTimer.Stop()
-	ts.autoTimer.Reset(autoSyncInterval)
-
-	defer ts.timer.Reset(syncInterval)
 	if msg.Code != 0 {
 		log.Warningln("Remote peer respond time sync error.")
 		return
@@ -134,6 +128,7 @@ func (ts *TimeSyncer) ProcessSyncRespond(msg *p2p.TimeSyncMsg, p *Peer) {
 	ts.syncerLock.Lock()
 	defer ts.syncerLock.Unlock()
 	if ts.status == INITIAL {
+		metrics.TimeSyncerStatusSet(int8(CONFIRMING))
 		ts.status = CONFIRMING
 		ts.delta += delta
 		return
@@ -153,6 +148,7 @@ func (ts *TimeSyncer) ProcessSyncRespond(msg *p2p.TimeSyncMsg, p *Peer) {
 
 	// 如果连续确认 confirmThreshold 次后在容忍范围，则认为时间的同步完成
 	if ts.status == CONFIRMING && ts.confirmTimes == confirmThreshold {
+		metrics.TimeSyncerStatusSet(int8(SYNCED))
 		ts.status = SYNCED
 		log.Infoln("Time syncer sync finished.")
 	}

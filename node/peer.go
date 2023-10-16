@@ -95,7 +95,7 @@ func NewPeer(peerId peer.ID, s *network.Stream, config PeerConfig) (*Peer, error
 	}
 
 	log.Infof("Starting 4 (+2) broadcast routine...")
-	metrics.RoutineCreateHistogramObserve(25)
+	metrics.RoutineCreateCounterObserve(25)
 	go p.broadcastBlock()
 	go p.broadcastBlockHash()
 	go p.sendStatus()
@@ -170,7 +170,8 @@ func (p *Peer) Handle() {
 			handle := handlerMap[msg.Code]
 
 			if handle != nil {
-				metrics.RoutineCreateHistogramObserve(17)
+				metrics.RoutineCreateCounterObserve(17)
+				metrics.RecordHandleReceivedCode(int(msg.Code))
 				go handle(p.handler, msg, p)
 			}
 		}

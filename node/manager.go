@@ -30,8 +30,6 @@ type msgHandler func(pm *P2PManager, msg *p2p.Message, p *Peer)
 
 var handlerMap = map[p2p.StatusCode]msgHandler{
 	p2p.StatusCodeStatusMsg:         handleStatusMsg,         // 状态消息，目前接收对端的高度信息
-	p2p.StatusCodeNewBlockMsg:       handleNewBlockMsg,       // 广播新打包的区块，在同步旧区块（非缓冲区同步状态）时不处理
-	p2p.StatusCodeNewBlockHashesMsg: handleNewBlockHashMsg,   // 广播新打包的区块哈希值，在同步旧区块（非缓冲区同步状态）时不处理
 	p2p.StatusCodeBlockBodiesMsg:    handleBlockMsg,          // 对应上一个状态码，如果对端请求区块，在缓冲区中取出区块进行响应
 	p2p.StatusCodeGetBlockBodiesMsg: handleGetBlockBodiesMsg, // 请求本地缓冲区中不存在的区块
 	p2p.StatusCodeSyncStatusReq:     handleSyncStatusReq,     // 携带本地的高度信息，请求对端的状态信息，例如高度/缓冲区高度
@@ -40,6 +38,8 @@ var handlerMap = map[p2p.StatusCode]msgHandler{
 	p2p.StatusCodeSyncBlocksMsg:     handleSyncBlockMsg,      // 响应对应高度的区块
 	p2p.StatusCodeTimeSyncReq:       handleTimeSyncReq,       // 时间同步请求
 	p2p.StatusCodeTimeSyncRsp:       handleTimeSyncRsp,       // 时间同步响应
+	p2p.StatusCodeNewBlockHashesMsg: handleNewBlockHashMsg,   // 广播新打包的区块哈希值，在同步旧区块（非缓冲区同步状态）时不处理
+	//p2p.StatusCodeNewBlockMsg:       handleNewBlockMsg,       // 广播新打包的区块，在同步旧区块（非缓冲区同步状态）时不处理
 }
 
 var (
@@ -53,7 +53,9 @@ const (
 	maxKnownTransaction    = 32768
 	maxSyncerStatusChannel = 512
 	packageBlockInterval   = 2
+	NetworkRendezvous      = "chronos"
 	TxGossipTopic          = "/chronos/1.0.1/transactions"
+	BlockGossipTopic       = "/chronos/1.0.1/blocks"
 	ProtocolId             = protocol.ID("/chronos/1.0.0/p2p")
 	TxProtocolId           = protocol.ID("/chronos/1.0.0/transaction")
 )
@@ -71,8 +73,9 @@ type P2PManager struct {
 	peerSet    []*Peer               // 已建立连接的节点列表
 	peers      map[peer.ID]*Peer     // 节点 ID -> 节点对象
 
-	gossipSub *pubsub.PubSub
-	txTopic   *pubsub.Topic
+	gossip     *pubsub.PubSub
+	blockTopic *pubsub.Topic
+	txTopic    *pubsub.Topic
 
 	blockBroadcastQueue chan *common.Block
 	txBroadcastQueue    chan *common.Transaction
@@ -118,7 +121,7 @@ func NewP2PManager(config *P2PManagerConfig) (*P2PManager, error) {
 		peerSet:    make([]*Peer, 0, 40),
 		peers:      make(map[peer.ID]*Peer),
 
-		blockBroadcastQueue: make(chan *common.Block, 64),
+		blockBroadcastQueue: make(chan *common.Block, 256),
 		txBroadcastQueue:    make(chan *common.Transaction, 8192),
 
 		knownBlock:       knownBlockCache,
@@ -133,7 +136,7 @@ func NewP2PManager(config *P2PManagerConfig) (*P2PManager, error) {
 		genesis: config.Genesis,
 	}
 
-	metrics.RoutineCreateHistogramObserve(15)
+	metrics.RoutineCreateCounterObserve(15)
 	go handler.packageBlockRoutine()
 	bs.Start()
 	ts.Start()
@@ -247,31 +250,21 @@ func (pm *P2PManager) isKnownTransaction(hash common.Hash) bool {
 }
 
 func (pm *P2PManager) broadcastBlock() {
+	log.Infoln("P2P manger broadcast block routine start!")
 	for {
 		select {
 		case block := <-pm.blockBroadcastQueue:
-			blockHash := block.Header.BlockHash
-
-			peers := pm.getPeersWithoutBlock(blockHash)
-
-			peersCount := len(peers)
-			//countBroadcastBlock := int(math.Sqrt(float64(peersCount)))
-			countBroadcastBlock := peersCount
-
-			for idx := 0; idx < countBroadcastBlock; idx++ {
-				if pm.removePeerIfStopped(idx) {
-					continue
-				}
-
-				peers[idx].AsyncSendNewBlock(block)
+			//blockHash := block.Header.BlockHash
+			blockData, err := utils.SerializeBlock(block)
+			if err != nil {
+				log.WithError(err).Errorln("Serialize block failed.")
+				continue
 			}
 
-			for idx := countBroadcastBlock; idx < peersCount; idx++ {
-				if pm.removePeerIfStopped(idx) {
-					continue
-				}
-
-				peers[idx].AsyncSendNewBlockHash(block.Header.BlockHash)
+			err = pm.blockTopic.Publish(context.Background(), blockData)
+			if err != nil {
+				log.WithError(err).Errorln("Publish block failed.")
+				continue
 			}
 		}
 	}
@@ -292,9 +285,65 @@ func (pm *P2PManager) broadcastTransaction() {
 
 			err = pm.txTopic.Publish(context.Background(), txData)
 			if err != nil {
-				log.WithError(err).Errorln("Public transaction failed.")
+				log.WithError(err).Errorln("Publish transaction failed.")
 				continue
 			}
+
+			//log.Infof("Broadcast transaction successful.")
+		}
+	}
+}
+
+func (pm *P2PManager) gossipBlockSubscribe(ctx context.Context,
+	sub *pubsub.Subscription, h host.Host) {
+	log.Infoln("P2P gossip block subscription routine start!")
+	for {
+		blockMsg, err := sub.Next(ctx)
+
+		if err != nil {
+			log.Errorf("Get block data from subscription failed: %s", err)
+			continue
+		}
+
+		if blockMsg.ReceivedFrom == h.ID() {
+			continue
+		}
+
+		metrics.GossipReceiveBlocksCountInc()
+
+		status := pm.blockSyncer.getStatus()
+		if status == blockSyncing || status == syncPaused {
+			continue
+		}
+
+		block, err := utils.DeserializeBlock(blockMsg.Data)
+
+		if err != nil {
+			log.WithField("error", err).Debugln("Deserialize block from bytes failed.")
+			return
+		}
+
+		blockHash := block.Header.BlockHash
+		strHash := hex.EncodeToString(blockHash[:])
+		if pm.knownBlock.Contains(strHash) {
+			return
+		}
+
+		pm.markBlock(strHash)
+
+		if block.Header.Height == 0 {
+			metrics.RoutineCreateCounterObserve(18)
+			go pm.chain.InsertBlock(block)
+			return
+		}
+
+		if verifyBlockVRF(block) {
+			log.WithField("status", status).Debugln("Receive block from p2p.")
+			pm.chain.AppendBlockTask(block)
+			//pm.blockBroadcastQueue <- block
+		} else {
+			//log.Infoln(hex.EncodeToString(block.Header.PublicKey[:]))
+			log.Warning("Block VRF verify failed.")
 		}
 	}
 }
@@ -315,15 +364,14 @@ func (pm *P2PManager) gossipTxSubscribe(ctx context.Context,
 		}
 		//log.Infoln("Receive message from gossip.")
 
-		status := pm.blockSyncer.getStatus()
-		if status != synced {
+		if !pm.Synced() {
 			continue
 		}
 
 		metrics.GossipReceiveCountInc()
 		transaction, err := utils.DeserializeTransaction(txMsg.Data)
 		if err != nil {
-			log.WithField("error", err).Debugln("Deserializer transaction failed.")
+			log.WithField("error", err).Errorln("Deserializer transaction failed.")
 			continue
 		}
 
@@ -426,26 +474,38 @@ func (pm *P2PManager) Discover(ctx context.Context, h host.Host,
 	pm.id = h.ID()
 
 	// 利用 go-libp2p-pubsub 构建广播网络
-	pm.gossipSub, err = pubsub.NewGossipSub(ctx, h)
+	pm.gossip, err = pubsub.NewGossipSub(ctx, h)
 	if err != nil {
 		log.WithError(err).Fatalf("Create gossip sub failed")
 		return
 	}
 
-	pm.txTopic, err = pm.gossipSub.Join(TxGossipTopic)
+	pm.txTopic, err = pm.gossip.Join(TxGossipTopic)
 	if err != nil {
 		log.WithError(err).Fatalf("Join transaction topic failed")
 		return
 	}
 	log.Infof("Join to topic %s", TxGossipTopic)
+	pm.blockTopic, err = pm.gossip.Join(BlockGossipTopic)
+	if err != nil {
+		log.WithError(err).Fatalf("Join block topic failed")
+		return
+	}
+	log.Infof("Join to topic %s", BlockGossipTopic)
 
-	sub, err := pm.txTopic.Subscribe()
+	txSub, err := pm.txTopic.Subscribe()
+	if err != nil {
+		log.WithError(err).Fatalf("Get sub from topic failed")
+		return
+	}
+	blockSub, err := pm.blockTopic.Subscribe()
 	if err != nil {
 		log.WithError(err).Fatalf("Get sub from topic failed")
 		return
 	}
 
-	go pm.gossipTxSubscribe(ctx, sub, h)
+	go pm.gossipTxSubscribe(ctx, txSub, h)
+	go pm.gossipBlockSubscribe(ctx, blockSub, h)
 
 	// 每 500ms 通过 Kademlia 获取对端节点列表
 	ticker := time.NewTicker(500 * time.Millisecond)
@@ -524,10 +584,11 @@ func (pm *P2PManager) CheckAndCreateStream(ctx context.Context, h host.Host,
 
 func (pm *P2PManager) Synced() bool {
 	status := pm.blockSyncer.getStatus()
+
 	if status == synced && pm.timeSyncer.synced() {
 		pm.startRoutine.Do(func() {
 			log.Infoln("Block && time sync finish!")
-			metrics.RoutineCreateHistogramObserve(16)
+			metrics.RoutineCreateCounterObserve(16)
 			go pm.broadcastBlock()
 			go pm.broadcastTransaction()
 		})

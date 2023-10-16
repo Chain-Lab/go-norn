@@ -78,17 +78,19 @@ func NewBlockSyncer(config *BlockSyncerConfig) *BlockSyncer {
 		status:    syncPaused,
 		statusMsg: make(chan *p2p.SyncStatusMsg, maxSyncerStatusChannel),
 	}
+	metrics.BlockSyncerStatusSet(int8(syncPaused))
 
 	return &syncer
 }
 
 func (bs *BlockSyncer) Start() {
-	metrics.RoutineCreateHistogramObserve(11)
+	metrics.RoutineCreateCounterObserve(11)
 	go bs.run()
 	go bs.statusMsgRoutine()
 	go bs.blockProcessRoutine()
 
 	bs.lock.Lock()
+	metrics.BlockSyncerStatusSet(int8(blockSyncing))
 	bs.status = blockSyncing
 	bs.lock.Unlock()
 	log.Infoln("Start process block syncer.")
@@ -126,7 +128,7 @@ func (bs *BlockSyncer) run() {
 				}
 				log.Infof("Select to get block #%d", height)
 
-				metrics.RoutineCreateHistogramObserve(14)
+				metrics.RoutineCreateCounterObserve(14)
 				go requestSyncGetBlock(height, p)
 				p.SetMarkSynced(true)
 			}
@@ -174,6 +176,7 @@ func (bs *BlockSyncer) statusMsgRoutine() {
 				//	"remote": bs.remoteHeight,
 				//	"local":  bs.knownHeight,
 				//}).Infoln("Reach remote block height.")
+				metrics.BlockSyncerStatusSet(int8(bufferSyncing))
 				bs.status = bufferSyncing
 			}
 
@@ -196,6 +199,7 @@ func (bs *BlockSyncer) statusMsgRoutine() {
 				//	calculator.AppendNewSeed(seed, pi)
 				//}()
 
+				metrics.BlockSyncerStatusSet(int8(synced))
 				bs.status = synced
 			}
 
@@ -319,6 +323,7 @@ func (bs *BlockSyncer) setSynced() {
 	bs.lock.Lock()
 	defer bs.lock.Unlock()
 	bs.status = synced
+	metrics.BlockSyncerStatusSet(int8(synced))
 }
 
 func max(h1 int64, h2 int64) int64 {
