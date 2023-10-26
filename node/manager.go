@@ -20,7 +20,9 @@ import (
 	"github.com/libp2p/go-libp2p/core/protocol"
 	"github.com/libp2p/go-libp2p/p2p/discovery/routing"
 	dutil "github.com/libp2p/go-libp2p/p2p/discovery/util"
+	"github.com/multiformats/go-multiaddr"
 	log "github.com/sirupsen/logrus"
+	"math/rand"
 	"net"
 	"sync"
 	"time"
@@ -53,6 +55,7 @@ const (
 	maxKnownTransaction    = 32768
 	maxSyncerStatusChannel = 512
 	packageBlockInterval   = 2
+	gossipNodes            = 5
 	NetworkRendezvous      = "chronos"
 	TxGossipTopic          = "/chronos/1.0.1/transactions"
 	BlockGossipTopic       = "/chronos/1.0.1/blocks"
@@ -74,6 +77,7 @@ type P2PManager struct {
 	peers      map[peer.ID]*Peer     // 节点 ID -> 节点对象
 
 	gossip     *pubsub.PubSub
+	flood      *pubsub.PubSub
 	blockTopic *pubsub.Topic
 	txTopic    *pubsub.Topic
 
@@ -147,8 +151,11 @@ func NewP2PManager(config *P2PManagerConfig) (*P2PManager, error) {
 
 // AddTransaction 仅用于测试
 func (pm *P2PManager) AddTransaction(tx *common.Transaction) {
+	txHash := hex.EncodeToString(tx.Body.Hash[:])
+
 	pm.txBroadcastQueue <- tx
 	pm.txPool.Add(tx)
+	pm.markTransaction(txHash)
 }
 
 func GetP2PManager() *P2PManager {
@@ -214,11 +221,14 @@ func (pm *P2PManager) packageBlockRoutine() {
 	}
 }
 
-func (pm *P2PManager) NewPeer(peerId peer.ID, s *network.Stream) (*Peer, error) {
+func (pm *P2PManager) NewPeer(peerId peer.ID, s *network.Stream,
+	remoteAddr string) (*Peer,
+	error) {
 	cfg := PeerConfig{
-		chain:   pm.chain,
-		txPool:  pm.txPool,
-		handler: pm,
+		chain:          pm.chain,
+		txPool:         pm.txPool,
+		handler:        pm,
+		remoteMultAddr: remoteAddr,
 	}
 
 	p, err := NewPeer(peerId, s, cfg)
@@ -229,6 +239,7 @@ func (pm *P2PManager) NewPeer(peerId peer.ID, s *network.Stream) (*Peer, error) 
 	}
 
 	pm.peerSet = append(pm.peerSet, p)
+	log.Infoln(p.addr)
 	pm.peers[p.peerID] = p
 	pm.blockSyncer.AddPeer(p)
 	return p, err
@@ -275,21 +286,7 @@ func (pm *P2PManager) broadcastTransaction() {
 	for {
 		select {
 		case tx := <-pm.txBroadcastQueue:
-
-			txData, err := utils.SerializeTransaction(tx)
-			if err != nil {
-				// todo: 如果交易序列化失败先不处理
-				log.WithError(err).Errorln("Serialize transaction failed.")
-				continue
-			}
-
-			err = pm.txTopic.Publish(context.Background(), txData)
-			if err != nil {
-				log.WithError(err).Errorln("Publish transaction failed.")
-				continue
-			}
-
-			//log.Infof("Broadcast transaction successful.")
+			pm.UDPGossipBroadcast(tx)
 		}
 	}
 }
@@ -446,8 +443,9 @@ func (pm *P2PManager) HandleStream(s network.Stream) {
 	}
 
 	conn := s.Conn()
+	remoteAddr := conn.RemoteMultiaddr().String()
 
-	_, err := pm.NewPeer(conn.RemotePeer(), &s)
+	_, err := pm.NewPeer(conn.RemotePeer(), &s, remoteAddr)
 
 	log.Infoln("Receive new stream, handle stream.")
 	log.Infoln(conn.RemoteMultiaddr())
@@ -479,13 +477,18 @@ func (pm *P2PManager) Discover(ctx context.Context, h host.Host,
 		log.WithError(err).Fatalf("Create gossip sub failed")
 		return
 	}
+	//pm.flood, err = pubsub.NewFloodSub(ctx, h)
+	//if err != nil {
+	//	log.WithError(err).Fatalf("Create flood sub failed")
+	//	return
+	//}
 
-	pm.txTopic, err = pm.gossip.Join(TxGossipTopic)
-	if err != nil {
-		log.WithError(err).Fatalf("Join transaction topic failed")
-		return
-	}
-	log.Infof("Join to topic %s", TxGossipTopic)
+	//pm.txTopic, err = pm.gossip.Join(TxGossipTopic)
+	//if err != nil {
+	//	log.WithError(err).Fatalf("Join transaction topic failed")
+	//	return
+	//}
+	//log.Infof("Join to topic %s", TxGossipTopic)
 	pm.blockTopic, err = pm.gossip.Join(BlockGossipTopic)
 	if err != nil {
 		log.WithError(err).Fatalf("Join block topic failed")
@@ -493,18 +496,18 @@ func (pm *P2PManager) Discover(ctx context.Context, h host.Host,
 	}
 	log.Infof("Join to topic %s", BlockGossipTopic)
 
-	txSub, err := pm.txTopic.Subscribe()
-	if err != nil {
-		log.WithError(err).Fatalf("Get sub from topic failed")
-		return
-	}
+	//txSub, err := pm.txTopic.Subscribe()
+	//if err != nil {
+	//	log.WithError(err).Fatalf("Get sub from topic failed")
+	//	return
+	//}
 	blockSub, err := pm.blockTopic.Subscribe()
 	if err != nil {
 		log.WithError(err).Fatalf("Get sub from topic failed")
 		return
 	}
 
-	go pm.gossipTxSubscribe(ctx, txSub, h)
+	go pm.TransactionUDP()
 	go pm.gossipBlockSubscribe(ctx, blockSub, h)
 
 	// 每 500ms 通过 Kademlia 获取对端节点列表
@@ -573,7 +576,9 @@ func (pm *P2PManager) CheckAndCreateStream(ctx context.Context, h host.Host,
 		return
 	}
 
-	_, err = pm.NewPeer(p.ID, &stream)
+	conn := stream.Conn()
+
+	_, err = pm.NewPeer(p.ID, &stream, conn.RemoteMultiaddr().String())
 	if err != nil {
 		log.WithError(err).Debugln("Create new peer failed.")
 		return
@@ -635,6 +640,62 @@ func (pm *P2PManager) removePeerIfStopped(idx int) bool {
 	return false
 }
 
+func (pm *P2PManager) UDPGossipBroadcast(tx *common.Transaction) {
+	pm.peerSetLock.RLock()
+	defer pm.peerSetLock.RUnlock()
+
+	txData, err := utils.SerializeTransaction(tx)
+	if err != nil {
+		// todo: 如果交易序列化失败先不处理
+		log.WithError(err).Errorln("Serialize transaction failed.")
+		return
+	}
+
+	for i := 0; i < gossipNodes; i++ {
+		randomIdx := rand.Intn(len(pm.peerSet))
+		p := pm.peerSet[randomIdx]
+
+		if p == nil {
+			continue
+		}
+
+		multAddr, err := multiaddr.NewMultiaddr(p.addr)
+		//log.Infoln(p.peer.Id().String())
+		if err != nil {
+			log.WithError(err).Errorln("Get peer addr failed.")
+			continue
+		}
+
+		ip4Addr, err := multAddr.ValueForProtocol(multiaddr.P_IP4)
+		if err != nil {
+			log.WithError(err).Errorln("Get IPV4 address failed.")
+			continue
+		}
+
+		ip, err := net.ResolveIPAddr("ip", ip4Addr)
+		if err != nil {
+			log.WithError(err).Errorln("Cast string to ip failed.")
+			continue
+		}
+
+		socket, err := net.DialUDP("udp", nil, &net.UDPAddr{
+			IP:   ip.IP,
+			Port: 31259,
+		})
+
+		if err != nil {
+			continue
+		}
+
+		_, err = socket.Write(txData)
+		if err != nil {
+			continue
+		}
+
+		metrics.GossipUDPSendCountInc()
+	}
+}
+
 // TransactionUDP 计划使用的交易广播独立网络，
 func (pm *P2PManager) TransactionUDP() {
 	port := config.Int("node.udp", 31259)
@@ -649,39 +710,41 @@ func (pm *P2PManager) TransactionUDP() {
 	}
 
 	defer listen.Close()
+	log.Infoln("Transaction gossip routine start!")
 
 	for {
 		var data [10240]byte
 		n, _, err := listen.ReadFromUDP(data[:])
 		if err != nil {
-			log.WithError(err).Debugln("Receive tx failed.")
+			log.WithError(err).Warningln("Receive tx failed.")
 			continue
 		}
 
 		// bm: BroadcastMessage
-		bm, err := utils.DeserializeBroadcastMessage(data[:n])
+		tx, err := utils.DeserializeTransaction(data[:n])
 
-		var id peer.ID
-		var txData []byte
+		//var id peer.ID
+		//var txData []byte
 
 		if err != nil {
-			id = peer.ID(bm.ID)
-			txData = bm.Data
-		} else {
+			log.WithError(err).Warningln("Deserialize data failed.")
 			continue
 		}
 
 		// todo: 如何验证一个交易是非法的？当前的逻辑下可以使用 Verify 方法来校验
-		tx, err := utils.DeserializeTransaction(txData)
-		if err != nil {
-			peer := pm.peers[id]
-			if peer != nil {
-				txHash := hex.EncodeToString(tx.Body.Hash[:])
-				peer.MarkTransaction(txHash)
-			}
+		//tx, err := utils.DeserializeTransaction(txData)
+		//if err != nil {
+		//p := pm.peers[id]
+		//if p != nil {
+		txHash := hex.EncodeToString(tx.Body.Hash[:])
+		exists := pm.knownTransaction.Contains(txHash)
+		if !exists {
 			pm.AddTransaction(tx)
 		}
+		//}
 	}
+
+	metrics.GossipUDPRecvCountInc()
 }
 
 func (pm *P2PManager) GetConnectNodeInfo() (string, []string) {

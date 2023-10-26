@@ -1,0 +1,912 @@
+INFO[0000] Metric server start on localhost:8700
+INFO[0000] Start process block syncer.
+INFO[0000] Node address: /ip4/127.0.0.1/tcp/31258/p2p/QmZ1uBk7JdNzAggpRATBr9U7h8ANh8HLJ91kaV8XugaKzN
+INFO[0000] Create genesis block after 10s...
+INFO[0000] Join to topic /chronos/1.0.1/transactions
+INFO[0000] Join to topic /chronos/1.0.1/blocks
+INFO[0000] P2P gossip block subscription routine start!
+INFO[0000] P2P gossip transaction subscription routine start!
+INFO[0001] Waiting for node synced.
+INFO[0002] Starting 4 (+2) broadcast routine...
+INFO[0002] Start run peer instance.                      peer=Qmf7dNJo2fbubFzZQaujifDkDc4jXLTFmEom36QjmLsP2E
+INFO[0002] Starting 4 (+2) broadcast routine...
+INFO[0002] Start ping loop.
+INFO[0002] Start run peer instance.                      peer=QmZDeR5Hvu1wh1yXMewKhyHZgAYbmwm9wbZ8XX53Z6kQt8
+INFO[0002] Starting 4 (+2) broadcast routine...
+INFO[0002] Start ping loop.
+INFO[0002] Start run peer instance.                      peer=QmR2L9hEn8Uqgop5Te4thFdA4yZBxz8VGJpf7FUg6RoDz5
+INFO[0002] Starting 4 (+2) broadcast routine...
+INFO[0002] Start run peer instance.                      peer=QmPoxTEYndVVe2RfspGaMatygecFVGckJSyGaoHShbwF3y
+INFO[0002] Start ping loop.
+INFO[0002] Starting 4 (+2) broadcast routine...
+INFO[0002] Starting 4 (+2) broadcast routine...
+INFO[0002] Starting 4 (+2) broadcast routine...
+INFO[0002] Starting 4 (+2) broadcast routine...
+INFO[0002] Starting 4 (+2) broadcast routine...
+INFO[0002] Starting 4 (+2) broadcast routine...
+INFO[0002] Starting 4 (+2) broadcast routine...
+INFO[0002] Starting 4 (+2) broadcast routine...
+INFO[0002] Starting 4 (+2) broadcast routine...
+INFO[0002] Starting 4 (+2) broadcast routine...
+INFO[0002] Starting 4 (+2) broadcast routine...
+INFO[0002] Starting 4 (+2) broadcast routine...
+INFO[0002] Starting 4 (+2) broadcast routine...
+INFO[0002] Starting 4 (+2) broadcast routine...
+INFO[0002] Starting 4 (+2) broadcast routine...
+INFO[0002] Start ping loop.
+INFO[0002] Starting 4 (+2) broadcast routine...
+INFO[0002] Start run peer instance.                      peer=QmZWyjDyyHWnReCA5xwTMrWvhvkkTtAJxAkZWzCXSeZxnA
+INFO[0002] Start run peer instance.                      peer=QmS1QF1Fgh1KfjNHhu8zrnzb9h7kgpYSRvvMNMwaZC7rZx
+INFO[0002] Start run peer instance.                      peer=QmXdWqXtzKPYnH76KNJ2TpnAGmYHrqQ9ZeMfPGuDPhkZhd
+INFO[0002] Start run peer instance.                      peer=QmcKbP4V42rsc7utUHz9s9oae8N3iUYUUJYifhCFSF1FmY
+INFO[0002] Start run peer instance.                      peer=Qmc4yt9DRAFrz7wMU2jsUQPZtCSazi7MkDJJ9P6EJtycHz
+INFO[0002] Start run peer instance.                      peer=QmNQoTLhGRbdsbK8iSLTzEanmmLdoRbn1W7cUzadQG9cXk
+INFO[0002] Start ping loop.
+INFO[0002] Start ping loop.
+INFO[0002] Start run peer instance.                      peer=QmZ97CSg9xpUbhczFt3tibHm1XeSiY7z8aSD2gL5eFGfSZ
+INFO[0002] Start run peer instance.                      peer=QmeeNRepgKEx2b6chcUdYMQg5JHSH1X1z1rNRH37pZJLnF
+INFO[0002] Start run peer instance.                      peer=QmV27KVb9LXbU9Nd7XPNpDbSNsdWLi8tQx8JtDLkSR83MP
+INFO[0002] Start run peer instance.                      peer=QmU6iihJ7puPNmGDVi96DeEjmyng1zDqVAwvzhMQzgEBdz
+INFO[0002] Start run peer instance.                      peer=QmSVfPr8RiGCAcPmipjxyN5ZNBFg7wbGsKZArzN3JQXmLe
+INFO[0002] Start run peer instance.                      peer=QmdZqgKMBv4A1A6VDrk3J4RGDgNEhfDp7iv96dpeECr4vQ
+INFO[0002] Start ping loop.
+INFO[0002] Start run peer instance.                      peer=QmVexyje5QySTHSTKoi23nqLgw297zYRvaYQQd1ofuUfJG
+INFO[0002] Start run peer instance.                      peer=QmR4QHjM9sFJjuixefrA2TN1uchuGNvZEVDhYiAgR2zTQg
+INFO[0002] Start ping loop.
+INFO[0002] Start run peer instance.                      peer=QmRsABzonL1U44fVDzbAdKaoC6vztSXccuaeiMaAvkgubP
+INFO[0002] Start ping loop.
+INFO[0002] Start run peer instance.                      peer=Qmd1cY4zJcQhByat1K494cPLFkDpKBUv6osCpauH76pMKo
+INFO[0002] Start ping loop.
+INFO[0002] Start ping loop.
+INFO[0002] Start ping loop.
+INFO[0002] Start ping loop.
+INFO[0002] Start ping loop.
+INFO[0002] Start ping loop.
+INFO[0002] Start ping loop.
+INFO[0002] Start ping loop.
+INFO[0002] Start ping loop.
+INFO[0002] Start ping loop.
+INFO[0002] Start ping loop.
+INFO[0002] Starting 4 (+2) broadcast routine...
+INFO[0002] Start run peer instance.                      peer=QmXpMPkemfNj6qagKkakLjRsDvDdHRU8u5V2oMqspSuFhp
+INFO[0002] Receive new stream, handle stream.
+INFO[0002] /ip4/172.22.0.226/tcp/31258
+INFO[0002] Start ping loop.
+INFO[0003] Waiting for node synced.
+INFO[0005] Waiting for node synced.
+INFO[0007] Waiting for node synced.
+INFO[0009] Waiting for node synced.
+INFO[0010] Create genesis block.
+ERRO[0010] Get block hash with height failed.            error="leveldb: not found" key="block#0"
+INFO[0010] Genesis params initialization.
+INFO[0010] Insert block to database.                     address=00000000 count=0 hash=00000000 height=0
+INFO[0010] Start new VDF calculate.
+INFO[0010] Block sync finished, exit block process routine.
+INFO[0010] Block && time sync finish!
+INFO[0010] P2P manger broadcast transaction routine start!
+INFO[0010] P2P manger broadcast block routine start!
+INFO[0010] Block syncer exit.
+INFO[0011] Local is not consensus node.
+INFO[0013] Local is not consensus node.
+INFO[0015] Local is not consensus node.
+INFO[0017] Local is not consensus node.
+INFO[0019] Local is not consensus node.
+INFO[0020] List is nil.                                  prev=0000000000000000000000000000000000000000000000000000000000000000
+INFO[0021] Local is not consensus node.
+INFO[0023] Local is not consensus node.
+INFO[0025] Local is not consensus node.
+INFO[0027] Local is not consensus node.
+INFO[0029] Local is not consensus node.
+INFO[0031] Local is not consensus node.
+INFO[0033] Local is not consensus node.
+INFO[0035] Local is not consensus node.
+INFO[0037] Local is not consensus node.
+INFO[0039] Local is not consensus node.
+INFO[0041] Local is not consensus node.
+INFO[0043] Local is not consensus node.
+INFO[0045] Local is not consensus node.
+INFO[0047] Local is not consensus node.
+INFO[0049] Local is not consensus node.
+INFO[0051] Local is not consensus node.
+INFO[0053] Local is not consensus node.
+INFO[0055] Local is not consensus node.
+INFO[0057] Local is not consensus node.
+INFO[0058] Insert block to database.                     address=02b22fa3 count=0 hash=28f0bf5c height=1
+INFO[0059] Local is not consensus node.
+INFO[0060] Insert block to database.                     address=03f84cf6 count=0 hash=fd10d6ff height=2
+INFO[0061] Local is not consensus node.
+INFO[0062] Insert block to database.                     address=0360eb86 count=0 hash=e5380dda height=3
+INFO[0063] Local is not consensus node.
+INFO[0064] Insert block to database.                     address=03871a4a count=0 hash=39b3d05b height=4
+INFO[0065] Local is not consensus node.
+INFO[0066] Insert block to database.                     address=02c9d918 count=0 hash=03747d15 height=5
+INFO[0067] Local is not consensus node.
+INFO[0068] Insert block to database.                     address=03f84cf6 count=0 hash=cd0faeb7 height=6
+INFO[0069] Local is not consensus node.
+INFO[0070] Insert block to database.                     address=0360eb86 count=0 hash=293f3ff7 height=7
+INFO[0071] Local is not consensus node.
+INFO[0072] Insert block to database.                     address=03871a4a count=0 hash=cf04bf00 height=8
+INFO[0073] Local is not consensus node.
+INFO[0074] Insert block to database.                     address=03871a4a count=0 hash=f42ff6e3 height=9
+INFO[0075] Local is not consensus node.
+INFO[0076] Insert block to database.                     address=03871a4a count=0 hash=a46b3e11 height=10
+INFO[0077] Local is not consensus node.
+INFO[0078] Insert block to database.                     address=03871a4a count=0 hash=f030cf1a height=11
+INFO[0079] Local is not consensus node.
+INFO[0080] Insert block to database.                     address=03871a4a count=0 hash=e7955c31 height=12
+INFO[0081] Local is not consensus node.
+INFO[0082] Insert block to database.                     address=03871a4a count=0 hash=8a2431a4 height=13
+INFO[0083] Local is not consensus node.
+INFO[0084] Insert block to database.                     address=03871a4a count=0 hash=c667109f height=14
+INFO[0085] Local is not consensus node.
+INFO[0086] Insert block to database.                     address=03871a4a count=0 hash=185ddf50 height=15
+INFO[0087] Local is not consensus node.
+INFO[0088] Insert block to database.                     address=03871a4a count=0 hash=0eaeda43 height=16
+INFO[0089] Local is not consensus node.
+INFO[0090] Insert block to database.                     address=03871a4a count=0 hash=5e35581a height=17
+INFO[0091] Local is not consensus node.
+INFO[0092] Insert block to database.                     address=03871a4a count=0 hash=5d320025 height=18
+INFO[0093] Local is not consensus node.
+INFO[0094] Insert block to database.                     address=03871a4a count=0 hash=8426a9a1 height=19
+INFO[0095] Local is not consensus node.
+INFO[0096] Insert block to database.                     address=03871a4a count=0 hash=9ca33531 height=20
+INFO[0097] Local is not consensus node.
+INFO[0098] Insert block to database.                     address=03871a4a count=0 hash=63bbb25a height=21
+INFO[0099] Local is not consensus node.
+INFO[0100] Insert block to database.                     address=03871a4a count=0 hash=24fdd7dd height=22
+INFO[0101] Local is not consensus node.
+INFO[0102] Insert block to database.                     address=03871a4a count=0 hash=90cc9032 height=23
+INFO[0103] Local is not consensus node.
+INFO[0104] Insert block to database.                     address=03871a4a count=0 hash=58728f22 height=24
+INFO[0105] Local is not consensus node.
+INFO[0107] Local is not consensus node.
+INFO[0107] Insert block to database.                     address=03871a4a count=0 hash=18837391 height=25
+INFO[0109] Local is not consensus node.
+INFO[0109] Insert block to database.                     address=03871a4a count=0 hash=e82a56a9 height=26
+INFO[0111] Local is not consensus node.
+INFO[0111] Insert block to database.                     address=03871a4a count=0 hash=a0ef18b3 height=27
+INFO[0112] Insert block to database.                     address=03871a4a count=0 hash=83970212 height=28
+INFO[0113] Local is not consensus node.
+INFO[0114] Insert block to database.                     address=03871a4a count=0 hash=3eab74ee height=29
+INFO[0115] Local is not consensus node.
+INFO[0116] Insert block to database.                     address=03871a4a count=0 hash=595f4050 height=30
+INFO[0117] Local is not consensus node.
+INFO[0118] Insert block to database.                     address=03871a4a count=0 hash=b5141715 height=31
+INFO[0119] Local is not consensus node.
+INFO[0120] Insert block to database.                     address=03871a4a count=0 hash=ac129358 height=32
+INFO[0121] Local is not consensus node.
+INFO[0122] Insert block to database.                     address=03871a4a count=0 hash=ad4aea18 height=33
+INFO[0123] Local is not consensus node.
+INFO[0124] Insert block to database.                     address=03871a4a count=0 hash=634f90a1 height=34
+INFO[0125] Local is not consensus node.
+INFO[0126] Insert block to database.                     address=03871a4a count=0 hash=3d4b6146 height=35
+INFO[0127] Local is not consensus node.
+INFO[0128] Insert block to database.                     address=03871a4a count=0 hash=4be883a2 height=36
+INFO[0128] List is nil.                                  prev=21d462a12f6368475e4b7d34b0aa1a0dea46079ea6e321691029a55e3196de2a
+INFO[0128] Pop block to second channel.
+INFO[0128] List is nil.                                  prev=9f5e339724c1b4dc8071b5cf9442b936666063226538ffd219a798ab5872123a
+INFO[0128] Pop block to second channel.
+INFO[0129] Local is not consensus node.
+INFO[0130] Insert block to database.                     address=03871a4a count=0 hash=47f605e0 height=37
+INFO[0130] List is nil.                                  prev=e0c9f2a880626528f5efb3f8898033c00c6853a6a99af9e10804a1269f87f558
+INFO[0130] Pop block to second channel.
+INFO[0130] List is nil.                                  prev=db1597b2b52b8a88a226416f4b2499dc746aeaa158ae26f306f51bb5e9a6f23e
+INFO[0130] Pop block to second channel.
+INFO[0131] Local is not consensus node.
+INFO[0132] Insert block to database.                     address=03871a4a count=0 hash=afdd5503 height=38
+WARN[0132] Block height too low.                         height=38 latest=38
+WARN[0132] Block height too low.                         height=38 latest=38
+INFO[0133] Local is not consensus node.
+INFO[0134] Insert block to database.                     address=03871a4a count=0 hash=94f8a6bd height=39
+WARN[0134] Block height too low.                         height=39 latest=39
+WARN[0134] Block height too low.                         height=39 latest=39
+INFO[0135] Local is not consensus node.
+INFO[0136] Insert block to database.                     address=03871a4a count=0 hash=7b8b014f height=40
+INFO[0137] Local is not consensus node.
+INFO[0138] Insert block to database.                     address=03871a4a count=0 hash=c7f16de8 height=41
+INFO[0139] Local is not consensus node.
+INFO[0140] Insert block to database.                     address=03871a4a count=0 hash=28831760 height=42
+INFO[0141] Local is not consensus node.
+INFO[0142] Insert block to database.                     address=03871a4a count=0 hash=d2125b72 height=43
+INFO[0143] Local is not consensus node.
+INFO[0144] Insert block to database.                     address=03871a4a count=0 hash=ff863119 height=44
+INFO[0145] Local is not consensus node.
+INFO[0146] Insert block to database.                     address=03871a4a count=0 hash=f421fec6 height=45
+INFO[0147] Local is not consensus node.
+INFO[0148] Insert block to database.                     address=03871a4a count=0 hash=94bc8059 height=46
+INFO[0149] Local is not consensus node.
+INFO[0150] Insert block to database.                     address=03871a4a count=0 hash=05db76ea height=47
+INFO[0151] Local is not consensus node.
+INFO[0152] Insert block to database.                     address=03871a4a count=0 hash=8c1d1780 height=48
+INFO[0153] Local is not consensus node.
+INFO[0154] Insert block to database.                     address=02b22fa3 count=4229 hash=7a70ed7e height=49
+INFO[0155] Local is not consensus node.
+INFO[0156] Insert block to database.                     address=0360eb86 count=1803 hash=a0145f53 height=50
+INFO[0157] Local is not consensus node.
+INFO[0158] Insert block to database.                     address=03871a4a count=2364 hash=5b6d9d9d height=51
+INFO[0159] Local is not consensus node.
+INFO[0160] Insert block to database.                     address=03871a4a count=0 hash=1e2e9c59 height=52
+INFO[0161] Local is not consensus node.
+INFO[0162] Insert block to database.                     address=03871a4a count=0 hash=c2b0a859 height=53
+INFO[0163] Local is not consensus node.
+INFO[0164] Insert block to database.                     address=03871a4a count=0 hash=73514a99 height=54
+INFO[0165] Local is not consensus node.
+INFO[0166] Insert block to database.                     address=03871a4a count=0 hash=dfb94bb7 height=55
+INFO[0167] Local is not consensus node.
+INFO[0168] Insert block to database.                     address=03871a4a count=0 hash=44ab7905 height=56
+INFO[0169] Local is not consensus node.
+INFO[0170] Insert block to database.                     address=03871a4a count=0 hash=9717ac38 height=57
+INFO[0171] Local is not consensus node.
+INFO[0172] Insert block to database.                     address=03871a4a count=0 hash=c2a96f2d height=58
+INFO[0173] Local is not consensus node.
+INFO[0174] Insert block to database.                     address=03871a4a count=0 hash=2a53c79b height=59
+INFO[0175] Local is not consensus node.
+INFO[0176] Insert block to database.                     address=03871a4a count=0 hash=87f1cd01 height=60
+INFO[0177] Local is not consensus node.
+INFO[0178] Insert block to database.                     address=03871a4a count=0 hash=b47b7620 height=61
+INFO[0179] Local is not consensus node.
+INFO[0180] Insert block to database.                     address=03871a4a count=0 hash=3c0cf219 height=62
+INFO[0181] Local is not consensus node.
+INFO[0182] Insert block to database.                     address=03871a4a count=0 hash=3ef4ea77 height=63
+INFO[0183] Local is not consensus node.
+INFO[0184] Insert block to database.                     address=03871a4a count=0 hash=7159dfe6 height=64
+INFO[0185] Local is not consensus node.
+INFO[0186] Insert block to database.                     address=03871a4a count=0 hash=7906f812 height=65
+INFO[0187] Local is not consensus node.
+INFO[0188] Insert block to database.                     address=03871a4a count=0 hash=3c7275bd height=66
+INFO[0189] Local is not consensus node.
+INFO[0190] Insert block to database.                     address=03871a4a count=0 hash=d559f3da height=67
+INFO[0191] Local is not consensus node.
+INFO[0192] Insert block to database.                     address=03871a4a count=0 hash=513dd50e height=68
+INFO[0193] Local is not consensus node.
+INFO[0194] Insert block to database.                     address=03871a4a count=0 hash=e7d3faf4 height=69
+INFO[0195] Local is not consensus node.
+INFO[0196] Insert block to database.                     address=03871a4a count=0 hash=c8d76391 height=70
+INFO[0197] Local is not consensus node.
+INFO[0198] Insert block to database.                     address=03871a4a count=0 hash=2ce38f99 height=71
+INFO[0199] Local is not consensus node.
+INFO[0200] Insert block to database.                     address=03871a4a count=0 hash=756c2501 height=72
+INFO[0201] Local is not consensus node.
+INFO[0202] Insert block to database.                     address=03871a4a count=0 hash=11cc6671 height=73
+INFO[0203] Local is not consensus node.
+INFO[0204] Insert block to database.                     address=03871a4a count=0 hash=067e9065 height=74
+INFO[0205] Local is not consensus node.
+INFO[0206] Insert block to database.                     address=03871a4a count=0 hash=f55efafd height=75
+INFO[0207] Local is not consensus node.
+INFO[0208] Insert block to database.                     address=03871a4a count=0 hash=a2869d13 height=76
+INFO[0209] Local is not consensus node.
+INFO[0210] Insert block to database.                     address=03871a4a count=0 hash=d5f45194 height=77
+INFO[0211] Local is not consensus node.
+INFO[0212] Insert block to database.                     address=03871a4a count=0 hash=50913e5b height=78
+INFO[0213] Local is not consensus node.
+INFO[0214] Insert block to database.                     address=03871a4a count=0 hash=107b76cb height=79
+INFO[0215] Local is not consensus node.
+INFO[0216] Insert block to database.                     address=03871a4a count=0 hash=ce4fa410 height=80
+INFO[0217] Local is not consensus node.
+INFO[0218] Insert block to database.                     address=03871a4a count=0 hash=062fe78a height=81
+INFO[0219] Local is not consensus node.
+INFO[0220] Insert block to database.                     address=03871a4a count=0 hash=3eb6f5fb height=82
+INFO[0221] Local is not consensus node.
+INFO[0222] Insert block to database.                     address=03871a4a count=0 hash=ca9d398b height=83
+INFO[0223] Local is not consensus node.
+INFO[0224] Insert block to database.                     address=03871a4a count=0 hash=affa3f80 height=84
+INFO[0225] Local is not consensus node.
+INFO[0226] Insert block to database.                     address=03871a4a count=0 hash=a086a634 height=85
+INFO[0227] Local is not consensus node.
+INFO[0228] Insert block to database.                     address=03871a4a count=0 hash=3367b401 height=86
+INFO[0229] Local is not consensus node.
+INFO[0230] Insert block to database.                     address=03871a4a count=0 hash=19d2f59e height=87
+INFO[0231] Local is not consensus node.
+INFO[0232] Insert block to database.                     address=03871a4a count=0 hash=6df68bb0 height=88
+INFO[0233] Local is not consensus node.
+INFO[0235] Local is not consensus node.
+INFO[0235] Insert block to database.                     address=03871a4a count=0 hash=76a7a194 height=89
+INFO[0237] Local is not consensus node.
+INFO[0237] Insert block to database.                     address=03871a4a count=0 hash=edf2fe20 height=90
+INFO[0239] Local is not consensus node.
+INFO[0239] Insert block to database.                     address=03871a4a count=0 hash=26ce1556 height=91
+INFO[0241] Local is not consensus node.
+INFO[0241] Insert block to database.                     address=03871a4a count=0 hash=e42e072b height=92
+INFO[0243] Local is not consensus node.
+INFO[0243] Insert block to database.                     address=03871a4a count=0 hash=c9dccf55 height=93
+INFO[0245] Local is not consensus node.
+INFO[0245] Insert block to database.                     address=03871a4a count=0 hash=1bfb66fc height=94
+INFO[0247] Local is not consensus node.
+INFO[0247] Insert block to database.                     address=03871a4a count=0 hash=9ecee9c3 height=95
+INFO[0249] Local is not consensus node.
+INFO[0249] Insert block to database.                     address=03871a4a count=1 hash=39b0646e height=96
+INFO[0251] Local is not consensus node.
+INFO[0251] Insert block to database.                     address=03871a4a count=0 hash=db516e7b height=97
+INFO[0253] Local is not consensus node.
+INFO[0253] Insert block to database.                     address=03871a4a count=0 hash=e0e5947a height=98
+INFO[0255] Local is not consensus node.
+INFO[0255] Insert block to database.                     address=03871a4a count=0 hash=72d7a337 height=99
+INFO[0257] Local is not consensus node.
+INFO[0257] Insert block to database.                     address=03871a4a count=0 hash=1bf7c857 height=100
+INFO[0259] Local is not consensus node.
+INFO[0259] Insert block to database.                     address=03871a4a count=0 hash=77e1463a height=101
+INFO[0261] Local is not consensus node.
+INFO[0261] Insert block to database.                     address=03871a4a count=0 hash=30115cfb height=102
+INFO[0263] Local is not consensus node.
+INFO[0263] Insert block to database.                     address=03871a4a count=0 hash=29a96522 height=103
+INFO[0265] Local is not consensus node.
+INFO[0265] Insert block to database.                     address=03871a4a count=0 hash=e684f1d4 height=104
+INFO[0267] Local is not consensus node.
+INFO[0267] Insert block to database.                     address=03871a4a count=0 hash=114e296e height=105
+INFO[0269] Local is not consensus node.
+INFO[0269] Insert block to database.                     address=03871a4a count=0 hash=ae33b9a7 height=106
+INFO[0271] Local is not consensus node.
+INFO[0271] Insert block to database.                     address=03871a4a count=0 hash=05505534 height=107
+INFO[0273] Local is not consensus node.
+INFO[0273] Insert block to database.                     address=03871a4a count=0 hash=9525ff25 height=108
+INFO[0275] Local is not consensus node.
+INFO[0275] Insert block to database.                     address=03871a4a count=0 hash=bc20c19b height=109
+INFO[0277] Local is not consensus node.
+INFO[0277] Insert block to database.                     address=03871a4a count=0 hash=77301a89 height=110
+INFO[0279] Local is not consensus node.
+INFO[0279] Insert block to database.                     address=03871a4a count=0 hash=f76ba136 height=111
+INFO[0281] Local is not consensus node.
+INFO[0281] Insert block to database.                     address=03871a4a count=0 hash=2e8f9b63 height=112
+INFO[0283] Local is not consensus node.
+INFO[0283] Insert block to database.                     address=03d64420 count=3383 hash=8bcd99b6 height=113
+INFO[0285] Local is not consensus node.
+INFO[0285] Insert block to database.                     address=02b917d6 count=2801 hash=3f21f657 height=114
+INFO[0287] Local is not consensus node.
+INFO[0287] Insert block to database.                     address=03d64420 count=3046 hash=0f814494 height=115
+INFO[0289] Local is not consensus node.
+INFO[0289] Insert block to database.                     address=0218ef92 count=2968 hash=b8f4e24d height=116
+INFO[0291] Local is not consensus node.
+INFO[0291] Insert block to database.                     address=031aadf4 count=2886 hash=a2bf4cfd height=117
+INFO[0293] Local is not consensus node.
+INFO[0293] Insert block to database.                     address=02de5290 count=3176 hash=ebea3e27 height=118
+INFO[0295] Local is not consensus node.
+INFO[0295] Insert block to database.                     address=02b22fa3 count=2877 hash=26bbe39d height=119
+INFO[0297] Local is not consensus node.
+INFO[0297] Insert block to database.                     address=0360eb86 count=2906 hash=66c63549 height=120
+INFO[0299] Local is not consensus node.
+INFO[0299] Insert block to database.                     address=02b917d6 count=2985 hash=0ca8c533 height=121
+INFO[0301] Local is not consensus node.
+INFO[0301] Insert block to database.                     address=03871a4a count=2896 hash=d75b3db5 height=122
+INFO[0303] Local is not consensus node.
+INFO[0303] Insert block to database.                     address=0218ef92 count=2855 hash=7cbbdf35 height=123
+INFO[0305] Local is not consensus node.
+INFO[0305] Insert block to database.                     address=02de5290 count=2823 hash=5b8f8e2e height=124
+INFO[0307] Local is not consensus node.
+INFO[0307] Insert block to database.                     address=0360eb86 count=2768 hash=98a26310 height=125
+INFO[0309] Local is not consensus node.
+INFO[0309] Insert block to database.                     address=03871a4a count=2806 hash=96b8557b height=126
+INFO[0311] Local is not consensus node.
+INFO[0311] Insert block to database.                     address=02b917d6 count=2878 hash=426c82f7 height=127
+INFO[0313] Local is not consensus node.
+INFO[0313] Insert block to database.                     address=03d64420 count=2657 hash=ca9bb974 height=128
+INFO[0315] Local is not consensus node.
+INFO[0315] Insert block to database.                     address=03f84cf6 count=2849 hash=a42afbbd height=129
+INFO[0317] Local is not consensus node.
+INFO[0317] Insert block to database.                     address=038a404a count=2873 hash=7802fad1 height=130
+INFO[0319] Local is not consensus node.
+INFO[0319] Insert block to database.                     address=03f84cf6 count=2983 hash=da3c025e height=131
+INFO[0321] Local is not consensus node.
+INFO[0321] Insert block to database.                     address=03871a4a count=2824 hash=7c318c15 height=132
+INFO[0323] Local is not consensus node.
+INFO[0323] Insert block to database.                     address=03f84cf6 count=2742 hash=bfd0906c height=133
+INFO[0325] Local is not consensus node.
+INFO[0325] Insert block to database.                     address=03871a4a count=3264 hash=78da71b2 height=134
+INFO[0327] Local is not consensus node.
+INFO[0327] Insert block to database.                     address=031aadf4 count=2975 hash=920dd65b height=135
+INFO[0329] Local is not consensus node.
+INFO[0329] Insert block to database.                     address=03871a4a count=2863 hash=df67d6fd height=136
+INFO[0331] Local is not consensus node.
+INFO[0331] Insert block to database.                     address=02de5290 count=2750 hash=eb0e9b90 height=137
+INFO[0333] Local is not consensus node.
+INFO[0333] Insert block to database.                     address=038a404a count=2824 hash=1ec05cee height=138
+INFO[0335] Local is not consensus node.
+INFO[0335] Insert block to database.                     address=02b22fa3 count=2777 hash=35b25be6 height=139
+INFO[0337] Local is not consensus node.
+INFO[0337] Insert block to database.                     address=038a404a count=2720 hash=4333e205 height=140
+INFO[0339] Local is not consensus node.
+INFO[0339] Insert block to database.                     address=02b22fa3 count=3050 hash=32e17caa height=141
+INFO[0341] Local is not consensus node.
+INFO[0341] Insert block to database.                     address=03d64420 count=2825 hash=aa795c62 height=142
+INFO[0343] Local is not consensus node.
+INFO[0343] Insert block to database.                     address=0360eb86 count=2888 hash=8aad4a1d height=143
+INFO[0345] Local is not consensus node.
+INFO[0345] Insert block to database.                     address=03871a4a count=2774 hash=0d4622ac height=144
+INFO[0347] Local is not consensus node.
+INFO[0347] Insert block to database.                     address=0360eb86 count=2942 hash=a9e71dc8 height=145
+INFO[0349] Local is not consensus node.
+INFO[0349] Insert block to database.                     address=02de5290 count=2968 hash=59780608 height=146
+INFO[0351] Local is not consensus node.
+INFO[0351] Insert block to database.                     address=02b22fa3 count=2987 hash=15b48380 height=147
+INFO[0353] Local is not consensus node.
+INFO[0353] Insert block to database.                     address=02b917d6 count=2818 hash=e2dc8c15 height=148
+INFO[0355] Local is not consensus node.
+INFO[0355] Insert block to database.                     address=03f84cf6 count=3131 hash=44ee75e8 height=149
+INFO[0357] Local is not consensus node.
+INFO[0357] Insert block to database.                     address=02de5290 count=2807 hash=09bbfa15 height=150
+INFO[0359] Local is not consensus node.
+INFO[0359] Insert block to database.                     address=02b22fa3 count=2930 hash=29c7edd0 height=151
+INFO[0361] Local is not consensus node.
+INFO[0361] Insert block to database.                     address=02de5290 count=2832 hash=8c18722c height=152
+INFO[0363] Local is not consensus node.
+INFO[0363] Insert block to database.                     address=02b917d6 count=3094 hash=7b91d36f height=153
+INFO[0365] Local is not consensus node.
+INFO[0365] Insert block to database.                     address=031aadf4 count=2851 hash=a03595c7 height=154
+INFO[0367] Local is not consensus node.
+INFO[0367] Insert block to database.                     address=0218ef92 count=3089 hash=7721d997 height=155
+INFO[0369] Local is not consensus node.
+INFO[0369] Insert block to database.                     address=0360eb86 count=3007 hash=f0e1b3d3 height=156
+INFO[0371] Local is not consensus node.
+INFO[0371] Insert block to database.                     address=03871a4a count=2921 hash=c2449568 height=157
+INFO[0373] Local is not consensus node.
+INFO[0373] Insert block to database.                     address=038a404a count=3103 hash=3091d152 height=158
+INFO[0375] Local is not consensus node.
+INFO[0375] Insert block to database.                     address=03871a4a count=3032 hash=dedd34bc height=159
+INFO[0377] Local is not consensus node.
+INFO[0377] Insert block to database.                     address=02b917d6 count=2798 hash=be85235d height=160
+INFO[0379] Local is not consensus node.
+INFO[0379] Insert block to database.                     address=03d64420 count=2862 hash=173f3078 height=161
+INFO[0381] Local is not consensus node.
+INFO[0381] Insert block to database.                     address=031aadf4 count=2906 hash=b4f39260 height=162
+INFO[0383] Local is not consensus node.
+INFO[0383] Insert block to database.                     address=0218ef92 count=2939 hash=362ae772 height=163
+INFO[0385] Local is not consensus node.
+INFO[0385] Insert block to database.                     address=03871a4a count=3092 hash=61a684b4 height=164
+INFO[0387] Local is not consensus node.
+INFO[0387] Insert block to database.                     address=0218ef92 count=2631 hash=c0bfdeb3 height=165
+INFO[0389] Local is not consensus node.
+INFO[0389] Insert block to database.                     address=02de5290 count=3042 hash=c0ff2440 height=166
+INFO[0391] Local is not consensus node.
+INFO[0391] Insert block to database.                     address=031aadf4 count=2662 hash=7e882ee8 height=167
+INFO[0393] Local is not consensus node.
+INFO[0393] Insert block to database.                     address=03871a4a count=3051 hash=db80b61b height=168
+INFO[0395] Local is not consensus node.
+INFO[0395] Insert block to database.                     address=02de5290 count=2557 hash=8a480a9b height=169
+INFO[0397] Local is not consensus node.
+INFO[0397] Insert block to database.                     address=02b917d6 count=3205 hash=e9314f5b height=170
+INFO[0399] Local is not consensus node.
+INFO[0399] Insert block to database.                     address=031aadf4 count=2558 hash=a2f41306 height=171
+INFO[0401] Local is not consensus node.
+INFO[0401] Insert block to database.                     address=03871a4a count=3173 hash=91afd18c height=172
+INFO[0403] Local is not consensus node.
+INFO[0403] Insert block to database.                     address=03d64420 count=2532 hash=bf7bd133 height=173
+INFO[0405] Local is not consensus node.
+INFO[0405] Insert block to database.                     address=0218ef92 count=2997 hash=8c34fbef height=174
+INFO[0407] Local is not consensus node.
+INFO[0407] Insert block to database.                     address=02b917d6 count=2786 hash=1d273287 height=175
+INFO[0409] Local is not consensus node.
+INFO[0409] Insert block to database.                     address=03f84cf6 count=3081 hash=039f510d height=176
+INFO[0411] Local is not consensus node.
+INFO[0411] Insert block to database.                     address=03871a4a count=2524 hash=3ccb53a8 height=177
+INFO[0413] Local is not consensus node.
+INFO[0413] Insert block to database.                     address=02de5290 count=2924 hash=ad7f14b1 height=178
+INFO[0415] Local is not consensus node.
+INFO[0415] Insert block to database.                     address=0218ef92 count=2503 hash=774bfae8 height=179
+INFO[0417] Local is not consensus node.
+INFO[0417] Insert block to database.                     address=02de5290 count=2805 hash=b3bafdf1 height=180
+INFO[0419] Local is not consensus node.
+INFO[0419] Insert block to database.                     address=031aadf4 count=2849 hash=334ed1b8 height=181
+INFO[0421] Local is not consensus node.
+INFO[0421] Insert block to database.                     address=02b917d6 count=2867 hash=0910378e height=182
+INFO[0423] Local is not consensus node.
+INFO[0423] Insert block to database.                     address=031aadf4 count=2766 hash=ec6ff9de height=183
+INFO[0425] Local is not consensus node.
+INFO[0425] Insert block to database.                     address=0360eb86 count=2925 hash=365c1191 height=184
+INFO[0427] Local is not consensus node.
+INFO[0427] Insert block to database.                     address=02de5290 count=2873 hash=8753f049 height=185
+INFO[0429] Local is not consensus node.
+INFO[0429] Insert block to database.                     address=03871a4a count=2923 hash=87da9b89 height=186
+INFO[0431] Local is not consensus node.
+INFO[0431] Insert block to database.                     address=02b22fa3 count=2758 hash=be524c29 height=187
+INFO[0433] Local is not consensus node.
+INFO[0433] Insert block to database.                     address=02b917d6 count=2857 hash=a4a3731f height=188
+INFO[0435] Local is not consensus node.
+INFO[0435] Insert block to database.                     address=0218ef92 count=2842 hash=0c470e78 height=189
+INFO[0437] Local is not consensus node.
+INFO[0437] Insert block to database.                     address=03d64420 count=2948 hash=b12558cd height=190
+INFO[0439] Local is not consensus node.
+INFO[0439] Insert block to database.                     address=0218ef92 count=2909 hash=99421e34 height=191
+INFO[0441] Local is not consensus node.
+INFO[0441] Insert block to database.                     address=031aadf4 count=3205 hash=38643975 height=192
+INFO[0443] Local is not consensus node.
+INFO[0443] Insert block to database.                     address=0218ef92 count=2608 hash=7b540410 height=193
+INFO[0445] Local is not consensus node.
+INFO[0445] Insert block to database.                     address=02b917d6 count=3277 hash=bbb4f98f height=194
+INFO[0447] Local is not consensus node.
+INFO[0447] Insert block to database.                     address=02de5290 count=2477 hash=525a2473 height=195
+INFO[0449] Local is not consensus node.
+INFO[0449] Insert block to database.                     address=0218ef92 count=3114 hash=042c99fd height=196
+INFO[0451] Local is not consensus node.
+INFO[0451] Insert block to database.                     address=03d64420 count=2598 hash=8ebe9ec9 height=197
+INFO[0453] Local is not consensus node.
+INFO[0453] Insert block to database.                     address=038a404a count=3301 hash=108121b2 height=198
+INFO[0455] Local is not consensus node.
+INFO[0455] Insert block to database.                     address=02b22fa3 count=2714 hash=039782d9 height=199
+INFO[0457] Local is not consensus node.
+INFO[0457] Insert block to database.                     address=0218ef92 count=3062 hash=af69dcd7 height=200
+INFO[0459] Local is not consensus node.
+INFO[0459] Insert block to database.                     address=0360eb86 count=2553 hash=aab52bc7 height=201
+INFO[0461] Local is not consensus node.
+INFO[0461] Insert block to database.                     address=0218ef92 count=3174 hash=ead2c356 height=202
+INFO[0463] Local is not consensus node.
+INFO[0463] Insert block to database.                     address=02b22fa3 count=2833 hash=c9f83d2f height=203
+INFO[0465] Local is not consensus node.
+INFO[0465] Insert block to database.                     address=03871a4a count=3122 hash=de8ed35f height=204
+INFO[0467] Local is not consensus node.
+INFO[0467] Insert block to database.                     address=0360eb86 count=2719 hash=0eff0a6e height=205
+INFO[0469] Local is not consensus node.
+INFO[0469] Insert block to database.                     address=02de5290 count=3075 hash=f78e0bf4 height=206
+INFO[0471] Local is not consensus node.
+INFO[0471] Insert block to database.                     address=03f84cf6 count=2696 hash=e68417eb height=207
+INFO[0473] Local is not consensus node.
+INFO[0473] Insert block to database.                     address=03871a4a count=3040 hash=93f9ede7 height=208
+INFO[0475] Local is not consensus node.
+INFO[0475] Insert block to database.                     address=02b917d6 count=2661 hash=5f7b1fc5 height=209
+INFO[0477] Local is not consensus node.
+INFO[0477] Insert block to database.                     address=031aadf4 count=3350 hash=3f07d84a height=210
+INFO[0479] Local is not consensus node.
+INFO[0479] Insert block to database.                     address=0218ef92 count=2682 hash=01370ee9 height=211
+INFO[0481] Local is not consensus node.
+INFO[0481] Insert block to database.                     address=02de5290 count=3149 hash=90d7fb47 height=212
+INFO[0483] Local is not consensus node.
+INFO[0483] Insert block to database.                     address=0360eb86 count=2735 hash=06e5abe0 height=213
+INFO[0485] Local is not consensus node.
+INFO[0485] Insert block to database.                     address=02de5290 count=3240 hash=4aef78da height=214
+INFO[0487] Local is not consensus node.
+INFO[0487] Insert block to database.                     address=0218ef92 count=2937 hash=23b94eb4 height=215
+INFO[0489] Local is not consensus node.
+INFO[0489] Insert block to database.                     address=02de5290 count=2917 hash=649b64eb height=216
+INFO[0491] Local is not consensus node.
+INFO[0491] Insert block to database.                     address=03f84cf6 count=2856 hash=b08675df height=217
+INFO[0493] Local is not consensus node.
+INFO[0493] Insert block to database.                     address=03871a4a count=2962 hash=3012a46a height=218
+INFO[0495] Local is not consensus node.
+INFO[0495] Insert block to database.                     address=02b22fa3 count=3007 hash=1faa59c7 height=219
+INFO[0497] Local is not consensus node.
+INFO[0497] Insert block to database.                     address=02de5290 count=3008 hash=6df84148 height=220
+INFO[0499] Local is not consensus node.
+INFO[0499] Insert block to database.                     address=02b917d6 count=3387 hash=fc8f6298 height=221
+INFO[0501] Local is not consensus node.
+INFO[0501] Insert block to database.                     address=02b22fa3 count=2788 hash=d4ebb18f height=222
+INFO[0503] Local is not consensus node.
+INFO[0503] Insert block to database.                     address=031aadf4 count=3088 hash=f02f7f88 height=223
+INFO[0505] Local is not consensus node.
+INFO[0505] Insert block to database.                     address=03f84cf6 count=3059 hash=cf193634 height=224
+INFO[0507] Local is not consensus node.
+INFO[0507] Insert block to database.                     address=0218ef92 count=2837 hash=3055bae5 height=225
+INFO[0509] Local is not consensus node.
+INFO[0509] Insert block to database.                     address=0360eb86 count=3116 hash=98430c26 height=226
+INFO[0511] Local is not consensus node.
+INFO[0511] Insert block to database.                     address=0218ef92 count=2650 hash=abeb019d height=227
+INFO[0513] Local is not consensus node.
+INFO[0513] Insert block to database.                     address=02b917d6 count=3148 hash=3f940dfe height=228
+INFO[0515] Local is not consensus node.
+INFO[0515] Insert block to database.                     address=02de5290 count=2657 hash=29e1a05f height=229
+INFO[0517] Local is not consensus node.
+INFO[0517] Insert block to database.                     address=03871a4a count=2971 hash=df30148b height=230
+INFO[0519] Local is not consensus node.
+INFO[0519] Insert block to database.                     address=038a404a count=3094 hash=dbee6166 height=231
+INFO[0520] List is nil.                                  prev=61f6e7f35a7c45d37cc41b44a8bf37f586e0ff7dcc6056c9106d159de27d5161
+INFO[0520] Pop block to second channel.
+INFO[0521] Local is not consensus node.
+INFO[0521] List is nil.                                  prev=61f6e7f35a7c45d37cc41b44a8bf37f586e0ff7dcc6056c9106d159de27d5161
+INFO[0521] Pop block to second channel.
+INFO[0521] Insert block to database.                     address=03f84cf6 count=2739 hash=c9c6f377 height=232
+INFO[0523] Local is not consensus node.
+INFO[0523] Insert block to database.                     address=03d64420 count=3163 hash=320b926a height=233
+INFO[0523] List is nil.                                  prev=d55aace3f820a00be4e6278bb391be1ff811288fc00d7f535c39441dcd73d6be
+INFO[0523] Pop block to second channel.
+INFO[0525] Local is not consensus node.
+INFO[0525] Insert block to database.                     address=02de5290 count=2867 hash=4ed842ea height=234
+INFO[0525] List is nil.                                  prev=6ec57238817b73f178c7c2aaccf659e05bf1eebde7f1a4814fb9007444f98681
+INFO[0525] Pop block to second channel.
+INFO[0527] Local is not consensus node.
+INFO[0527] Insert block to database.                     address=02b917d6 count=2950 hash=6fcce54e height=235
+INFO[0529] Local is not consensus node.
+INFO[0529] List is nil.                                  prev=941d98c8a64a9beda86e185f3b21af23752677e1ace0b43ae2e142be6cc92a6f
+INFO[0529] Pop block to second channel.
+INFO[0529] Insert block to database.                     address=03f84cf6 count=2665 hash=fbb942a1 height=236
+INFO[0531] Local is not consensus node.
+INFO[0531] Insert block to database.                     address=03871a4a count=2990 hash=76d5f9ed height=237
+INFO[0533] Local is not consensus node.
+INFO[0533] List is nil.                                  prev=bab1e553ac0f8575455925cb22f23db533ff3c818999ccc8de0b472173a229e3
+INFO[0533] Pop block to second channel.
+INFO[0533] Insert block to database.                     address=02de5290 count=2861 hash=515d30bd height=238
+INFO[0535] Local is not consensus node.
+INFO[0535] Insert block to database.                     address=0360eb86 count=2888 hash=b27904f2 height=239
+INFO[0535] List is nil.                                  prev=be94156f21eeb92a02a0d5eae9b4d3bfbc57bcab21d52a19a9c3e9f1b1dfd4fd
+INFO[0535] Pop block to second channel.
+INFO[0537] Local is not consensus node.
+INFO[0537] List is nil.                                  prev=43162082d0e9f2286ea06dc86d274e0fb7853b6d1213efb33a9c2519d1e06a96
+INFO[0537] Pop block to second channel.
+INFO[0537] Insert block to database.                     address=0218ef92 count=3183 hash=3f91eeec height=240
+INFO[0537] List is nil.                                  prev=4f72a44607170ac10add281f3c7994c3243fb79ec819a9ed25eaaf6d05a03826
+INFO[0537] Pop block to second channel.
+INFO[0539] Local is not consensus node.
+INFO[0539] Insert block to database.                     address=038a404a count=2571 hash=fd0ee675 height=241
+INFO[0540] List is nil.                                  prev=c8b4d9e0f3c3bab5ff01da70667c1c6de5a57fc6557d2211b0d31a69f2821fda
+INFO[0540] Pop block to second channel.
+INFO[0540] List is nil.                                  prev=e80a42f809d1eeb19d3ce109c2a0f12451ea1403efbe15b6027534c547967afb
+INFO[0540] Pop block to second channel.
+INFO[0540] List is nil.                                  prev=e80a42f809d1eeb19d3ce109c2a0f12451ea1403efbe15b6027534c547967afb
+INFO[0540] Pop block to second channel.
+INFO[0541] Local is not consensus node.
+INFO[0541] List is nil.                                  prev=e49e954e90e10bbc53414cf6f4043b7131cc1c66101755530f1e500c238c8cfc
+INFO[0541] Pop block to second channel.
+INFO[0541] Insert block to database.                     address=03871a4a count=3185 hash=66e495b4 height=242
+INFO[0543] Local is not consensus node.
+INFO[0543] Insert block to database.                     address=02b22fa3 count=2669 hash=4911c97d height=243
+INFO[0543] List is nil.                                  prev=0c03a0b4549ccba652d7161ed057ff059ca66c8d5bcd25498d5bad32bd0a9438
+INFO[0543] Pop block to second channel.
+INFO[0545] Local is not consensus node.
+INFO[0545] List is nil.                                  prev=0690d2ffb310d6622431f31d9bc540c73a9d7769116d14a262a8bbde63a5592d
+INFO[0545] Pop block to second channel.
+INFO[0545] Insert block to database.                     address=02de5290 count=2882 hash=96a39b4c height=244
+INFO[0545] List is nil.                                  prev=2d8ba62c95aaecd3c8f164a6d358c30a71bfd44c610a50f1a7abe58701291224
+INFO[0545] Pop block to second channel.
+INFO[0547] Local is not consensus node.
+INFO[0547] Insert block to database.                     address=02b917d6 count=3082 hash=c340b964 height=245
+INFO[0548] List is nil.                                  prev=588d5c7df3d6e2aaa46ce8db685da4aafa27f2d4a94a270ef3ba603e5eaf93b8
+INFO[0548] Pop block to second channel.
+INFO[0549] Local is not consensus node.
+INFO[0549] Insert block to database.                     address=03f84cf6 count=2632 hash=74707f7d height=246
+INFO[0549] List is nil.                                  prev=1c9eae6cff912ee8bef32e1393a9745751c3035b99cf4f5890d72177ab69313b
+INFO[0549] Pop block to second channel.
+INFO[0551] Local is not consensus node.
+INFO[0551] List is nil.                                  prev=69742fd33168cd26d8ab1aa749eefd947b20ebee685cc28c5a95be9155cf19d7
+INFO[0551] Pop block to second channel.
+INFO[0551] Insert block to database.                     address=02b22fa3 count=3040 hash=e30b96b1 height=247
+INFO[0553] Local is not consensus node.
+INFO[0553] Insert block to database.                     address=03f84cf6 count=2996 hash=ceaeffc7 height=248
+INFO[0555] Local is not consensus node.
+INFO[0555] Insert block to database.                     address=02de5290 count=2444 hash=cb6902d7 height=249
+INFO[0557] Local is not consensus node.
+INFO[0557] List is nil.                                  prev=0a7ede0902c8706c04748e8a33e0b2b92a0ae915360679801aa5f4fb8d0ffb49
+INFO[0557] Pop block to second channel.
+INFO[0557] Insert block to database.                     address=0360eb86 count=3108 hash=09ae12b3 height=250
+INFO[0559] Local is not consensus node.
+INFO[0559] List is nil.                                  prev=b058a76fa5ea8075c643bcef3053adaf0e05d3bf3d3e3e955ec9b694d9c5f625
+INFO[0559] Pop block to second channel.
+INFO[0559] Insert block to database.                     address=02de5290 count=2650 hash=f2460459 height=251
+INFO[0561] Local is not consensus node.
+INFO[0561] List is nil.                                  prev=a28ddb73d07853d1a656fa4012e72eccce06053efa25d9f761b00e53e1796f0b
+INFO[0561] Pop block to second channel.
+INFO[0561] List is nil.                                  prev=e446e1390123bef12bcb8860236dbb19db78b262c34c1eb21274778527aedf2f
+INFO[0561] Pop block to second channel.
+INFO[0561] Insert block to database.                     address=0218ef92 count=2924 hash=bea625c3 height=252
+INFO[0563] Local is not consensus node.
+INFO[0563] Insert block to database.                     address=02b22fa3 count=2940 hash=999a5c51 height=253
+INFO[0563] List is nil.                                  prev=47750efe4c465032ea41df89d29bcb8f394720bf5ac2dde0de473bab9aa178c2
+INFO[0563] Pop block to second channel.
+INFO[0563] List is nil.                                  prev=d704d37b1b7def676fac0da7b316c01107a211a4f8fcd35bdae1ac87558feb55
+INFO[0563] Pop block to second channel.
+INFO[0564] List is nil.                                  prev=0bdbb5a85f78df1e4feb9448dfef6190cdbffaeb1bb1072619198265da39506d
+INFO[0564] Pop block to second channel.
+INFO[0564] List is nil.                                  prev=8b38ac633c5b79a6b2c86628a864826c0056094f7f71cfc58b75f71d06ff1a2e
+INFO[0564] Pop block to second channel.
+INFO[0564] List is nil.                                  prev=e247250a842ca2b77ac82182e354f098b9756838874584099636fbd8c1a6d21b
+INFO[0564] Pop block to second channel.
+INFO[0565] Local is not consensus node.
+INFO[0565] Insert block to database.                     address=02b917d6 count=2985 hash=531d8437 height=254
+INFO[0565] List is nil.                                  prev=9177772d47dc7c7f8bbecb6f1c04afe34d9e29df89699d200f6b299b65041604
+INFO[0565] Pop block to second channel.
+INFO[0565] List is nil.                                  prev=bb0987ce893e391a39ab3a4cc9435125b7c88bf1c891314b6c3a2456d917152a
+INFO[0565] Pop block to second channel.
+INFO[0567] Local is not consensus node.
+INFO[0567] Insert block to database.                     address=0360eb86 count=3861 hash=97eb4be4 height=255
+INFO[0567] List is nil.                                  prev=9835b5af1bcbb1bb7910b2925d86be7f705d3af484393f507754a5c7bacf3019
+INFO[0567] Pop block to second channel.
+INFO[0568] List is nil.                                  prev=bcb5fe9dbf8404726427e2ab1aada3909714269e0d52a79c444f80c691fd7114
+INFO[0568] Pop block to second channel.
+INFO[0569] Local is not consensus node.
+INFO[0569] List is nil.                                  prev=ecbd18763457ec820d18918a30007e7770878f4735a6638349d27826443f5b16
+INFO[0569] Pop block to second channel.
+INFO[0569] List is nil.                                  prev=407908ef5687af8a08c52f7ea98242ebb3e9aae490eca6b311c3d844200000a5
+INFO[0569] Pop block to second channel.
+WARN[0569] Block height too low.                         height=256 latest=256
+INFO[0569] Insert block to database.                     address=0218ef92 count=2905 hash=12300cca height=256
+WARN[0569] Block height too low.                         height=256 latest=256
+INFO[0571] Local is not consensus node.
+INFO[0571] List is nil.                                  prev=0b2c59965d623d166d604fa2cf389cb461418865c03ba4fde0860dde66b10211
+INFO[0571] Pop block to second channel.
+WARN[0571] Block height too low.                         height=257 latest=257
+INFO[0571] Insert block to database.                     address=0360eb86 count=3784 hash=dc968848 height=257
+INFO[0573] Local is not consensus node.
+INFO[0573] List is nil.                                  prev=c7028e3f3377c598ec9a68515e08c336b0f7ead2f536e5b3c25c44fcf5521efc
+INFO[0573] Pop block to second channel.
+INFO[0573] List is nil.                                  prev=b70b997c544bc2f3253af992a892c8d3777200bc20ee4298cf118d95e2149e1b
+INFO[0573] Pop block to second channel.
+INFO[0573] Insert block to database.                     address=03f84cf6 count=2762 hash=c0f1cfec height=258
+WARN[0573] Block height too low.                         height=258 latest=258
+INFO[0575] Local is not consensus node.
+INFO[0575] List is nil.                                  prev=eac1947ce25d248e5501d205bca817a433dd2dc773cfb001351115de8bc39135
+INFO[0575] Pop block to second channel.
+INFO[0575] Insert block to database.                     address=0360eb86 count=3681 hash=ad89afee height=259
+INFO[0577] Local is not consensus node.
+INFO[0577] List is nil.                                  prev=5a1585ff2935785f528662f650edc805e8dcac84cc702b3a53edb1d4fc353d0d
+INFO[0577] Pop block to second channel.
+INFO[0577] Insert block to database.                     address=031aadf4 count=2795 hash=fed54d4f height=260
+WARN[0577] Block height too low.                         height=260 latest=260
+INFO[0579] Local is not consensus node.
+INFO[0579] List is nil.                                  prev=3fdb332ca58ec77c27eae27605831f6abb1fdfb889e3c55f31b4229782575e72
+INFO[0579] Pop block to second channel.
+INFO[0581] Local is not consensus node.
+INFO[0581] List is nil.                                  prev=ca29083d2e0efa92a3440401076c5c0db6dfeb629f6a23588b3c523da2527250
+INFO[0581] Pop block to second channel.
+INFO[0583] Local is not consensus node.
+INFO[0583] List is nil.                                  prev=81e99ac798e915d30388ed65d7e3a50451acf95ec6428ce2891e4b5ab95e2140
+INFO[0583] Pop block to second channel.
+INFO[0583] List is nil.                                  prev=695ba758eec1f52ec1b82eff95f62fb28880f564fac431c59d2d35ab096c5a1a
+INFO[0583] Pop block to second channel.
+INFO[0583] List is nil.                                  prev=346201b50314829f8dd210d976a59370d515f7dacc3489e85259cffaad228ea0
+INFO[0583] Pop block to second channel.
+INFO[0585] Local is not consensus node.
+INFO[0585] List is nil.                                  prev=06d8e5d299de669a8a25d1cd0f2fb046afb4b7df5dce1e677c0fda7598f1de1d
+INFO[0585] Pop block to second channel.
+INFO[0585] List is nil.                                  prev=c9a54eb7c465292dbc96af37b64aacc12aecbedcbb682cf32bbdfc789b50195e
+INFO[0585] Pop block to second channel.
+INFO[0587] Local is not consensus node.
+INFO[0587] List is nil.                                  prev=52148e6b3fd75909f796a01bc89cd791ac352c6d5e58b593aa133a946e8a9c20
+INFO[0587] Pop block to second channel.
+INFO[0587] List is nil.                                  prev=a020948a4b433e602f9f1a0b33eab836e745ba6b72f700db9b37af1b7c377ca9
+INFO[0587] Pop block to second channel.
+INFO[0587] List is nil.                                  prev=a63f6af4c9bf7f45473a23185dbffc7e3fcefb8f2c58c0fdcfd3a2712d6353df
+INFO[0587] Pop block to second channel.
+INFO[0587] List is nil.                                  prev=7c8a4db92a97f6ccae3697fdf835989e3c978a63f9944b49623260f15811fcd7
+INFO[0587] Pop block to second channel.
+INFO[0588] List is nil.                                  prev=a21622d38f5c31a0398f0e4fe57f52534c96feaf2ae3a99d3059c100b36ae640
+INFO[0588] Pop block to second channel.
+INFO[0588] List is nil.                                  prev=f59749ac87afba5bdd3f8bbed3cc5f24227c8ad783c69c81821cffc37680d6c0
+INFO[0588] Pop block to second channel.
+INFO[0588] List is nil.                                  prev=49649eaedfb7280f2e358d9d0cdb473066ceb7909fbef2981488c74c88cff977
+INFO[0588] Pop block to second channel.
+INFO[0589] Local is not consensus node.
+INFO[0590] List is nil.                                  prev=529849917f46066f55efd6fdd542c88a3394bd54ffff6e04a21b430d6cd60864
+INFO[0590] Pop block to second channel.
+INFO[0590] List is nil.                                  prev=703da2cdcd6de49769b58a56e349b2aac5bd8d8ea2d97f7bcb5d8db7505bc82b
+INFO[0590] Pop block to second channel.
+INFO[0590] List is nil.                                  prev=5a641d3cd92bc0c4cb5fd5878895770a114477b5f5ba96e960ca1db9fed19e0d
+INFO[0590] Pop block to second channel.
+INFO[0591] Local is not consensus node.
+INFO[0593] Local is not consensus node.
+INFO[0593] List is nil.                                  prev=c5bc41545264fff98c1b95f67480cd058f95763d868ee5eb611bfa3f0176d624
+INFO[0593] Pop block to second channel.
+INFO[0593] List is nil.                                  prev=5f0664f37f13fae1a3cfed70d66516250748d80591ba2e7489d98ffc6966c082
+INFO[0593] Pop block to second channel.
+INFO[0593] List is nil.                                  prev=ad7488eeb0e60b7acae645cb55e5c73f7bac743bff1f0c25ccb30efc6aa73249
+INFO[0593] Pop block to second channel.
+INFO[0594] List is nil.                                  prev=18375a21e135db2c5efea5c86baac3a607950c82d6bf8e32700677d99db9704d
+INFO[0594] Pop block to second channel.
+INFO[0594] List is nil.                                  prev=f82cdc43478f4ced82bd433304e4f63f6e5062441f333e5baab44a784835cae2
+INFO[0594] Pop block to second channel.
+INFO[0594] List is nil.                                  prev=66269803c55b77e2ccacbda072173e0a34d4403cef843e49366352dbba70bccf
+INFO[0594] Pop block to second channel.
+INFO[0595] Local is not consensus node.
+INFO[0597] Local is not consensus node.
+INFO[0598] List is nil.                                  prev=e0ae8ca09ee01db026aea8943f2499fe674969708f4f32a7f42638926f9913ef
+INFO[0598] Pop block to second channel.
+INFO[0598] List is nil.                                  prev=7dcfa4e54d190c2d899d4f20c7909ad8eb8d7774732df3bd46c2828a14e9c034
+INFO[0598] Pop block to second channel.
+INFO[0598] List is nil.                                  prev=2a4c7c44e20df075c1bb37919177f267600918911d13216b6c73fc770f28f5ad
+INFO[0598] Pop block to second channel.
+INFO[0598] List is nil.                                  prev=7ac6ad2ad14c38cebec83a91094506e97eced30c1518f668177e411717eb3cae
+INFO[0598] Pop block to second channel.
+INFO[0599] Local is not consensus node.
+INFO[0599] List is nil.                                  prev=3b347d27fcf0c5d40471648f2655af8c47fcb2e644ee85a1562a0cb0a6bebc86
+INFO[0599] Pop block to second channel.
+INFO[0599] List is nil.                                  prev=a9186f1ef3ad8466f8225a1b77dcef8cdab56048883f80e735da8dc99850c773
+INFO[0599] Pop block to second channel.
+INFO[0600] List is nil.                                  prev=712ccb77b708f3132a88f7d25f5df30a966ccd7a834bf7b9744810e35638f0ec
+INFO[0600] Pop block to second channel.
+INFO[0600] List is nil.                                  prev=511c9643aeb8343426900b3f3a3b0f71e9974e737f4db382007e0f71db5bb9cd
+INFO[0600] Pop block to second channel.
+INFO[0600] List is nil.                                  prev=ec9b1ce824e82412dda9413939042171cfadc353f9c3265c518e9cc849569a4b
+INFO[0600] Pop block to second channel.
+INFO[0601] Local is not consensus node.
+INFO[0603] Local is not consensus node.
+INFO[0603] List is nil.                                  prev=389106e0212f4d2e1560c7f1847f1d570db52689116a2eddba94b536c53be85d
+INFO[0603] Pop block to second channel.
+INFO[0603] List is nil.                                  prev=1ee151c2b29f7c488423ddbd4760f89629e38b4c300c410cd51680e8d0ba5d93
+INFO[0603] Pop block to second channel.
+INFO[0603] List is nil.                                  prev=06b9ff1623a71d21907ccd031e712c82557e5dc76573f8bde02fb667b8265863
+INFO[0603] Pop block to second channel.
+INFO[0604] List is nil.                                  prev=db2241035248f4cf180be51f23debc8fc81e5725c7b3ef051ecbd6e3db8ca1bb
+INFO[0604] Pop block to second channel.
+INFO[0604] List is nil.                                  prev=ffa5bb1266078274ca4c160f35b824489584b2eeda8029010221089a683f8d28
+INFO[0604] Pop block to second channel.
+INFO[0604] List is nil.                                  prev=24eae78ced51bcdf9583369534c588e8ea1a6bb6cd94ca1eb230ac471dd739e4
+INFO[0604] Pop block to second channel.
+INFO[0605] Local is not consensus node.
+INFO[0607] Local is not consensus node.
+INFO[0607] List is nil.                                  prev=886dc3c7438e520b36fc650f7b1b89766cf013576ff8fc1f2d9a10193ed11cff
+INFO[0607] Pop block to second channel.
+INFO[0607] List is nil.                                  prev=659e9d53b0b37802292b59b32b1d7db64cad9c3b832c0a673d1a1bd4ddc9e5fb
+INFO[0607] Pop block to second channel.
+INFO[0608] List is nil.                                  prev=fe4cccddad9c18e889af934bc40e632e15b37dbdc6d779e73ceee39aa11472c8
+INFO[0608] Pop block to second channel.
+INFO[0608] List is nil.                                  prev=e342eb06338c080a0f877834bda776862a91ca9d27f8dd1c372f79c3438f124d
+INFO[0608] Pop block to second channel.
+INFO[0609] Local is not consensus node.
+INFO[0609] List is nil.                                  prev=17efcf12dbed58f651b71acaca9333cb67344cf82cddde2bb86c80f1d844d98a
+INFO[0609] Pop block to second channel.
+INFO[0609] List is nil.                                  prev=b9101ae170301a4053f3b09471afc6339f082f56d9a9e9755b74313488e8f414
+INFO[0609] Pop block to second channel.
+INFO[0610] List is nil.                                  prev=533a572b4f6c859c4f14c98d1ec810a36b52001f1ac17bf2c2d02729560117b6
+INFO[0610] Pop block to second channel.
+INFO[0610] List is nil.                                  prev=9a8b4a84565de3a510eb682d05dc5604da5dfa245deaa671ff03d1bb162ce2ac
+INFO[0610] Pop block to second channel.
+INFO[0610] List is nil.                                  prev=6a04e0618dcaab6130d2ef3f7c81c679999527b665c9ec7762a0a250a542c40d
+INFO[0610] Pop block to second channel.
+INFO[0611] Local is not consensus node.
+INFO[0613] Local is not consensus node.
+INFO[0613] List is nil.                                  prev=23dcef70477dcc2a2cf6adcdac13eb2c8e42d241cde584c5ffed05a7bfe70081
+INFO[0613] Pop block to second channel.
+INFO[0613] List is nil.                                  prev=d5a0a8a471a919c980ccfb8822b4fded1b7759d2ab0a4928420f53620b67bf16
+INFO[0613] Pop block to second channel.
+INFO[0613] List is nil.                                  prev=749d8b2aa522566a817306ab1d5748fbc9f068b21e9cb5a4939cce34f253ae62
+INFO[0613] Pop block to second channel.
+INFO[0614] List is nil.                                  prev=338019f9149cc7e8124fc50f84d460877e19a538243074df59644a6d80ab0a91
+INFO[0614] Pop block to second channel.
+INFO[0614] List is nil.                                  prev=a675eb93f5b879dc709ee5286daa61c7601167c260d0702c8d7e96f25b8cb49e
+INFO[0614] Pop block to second channel.
+INFO[0614] List is nil.                                  prev=7ced843e5a638d09fb6a21c6072feddd50f3c8e56ca557c071795aead252529b
+INFO[0614] Pop block to second channel.
+INFO[0615] Local is not consensus node.
+INFO[0616] List is nil.                                  prev=d92676f590eb5121c461a9addf76a7cfe78700c93c79745ce13bc90752bc6e57
+INFO[0616] Pop block to second channel.
+INFO[0616] List is nil.                                  prev=13d7931c19525252e65ff7796a0c4bc3c40bbfa03ab9be49db563349a73bbcf2
+INFO[0616] Pop block to second channel.
+INFO[0617] Local is not consensus node.
+INFO[0617] List is nil.                                  prev=0f530aaa5b5a9c085b8bdb262c9ac8eccca2df0b4973b3543d06999559f234ec
+INFO[0617] Pop block to second channel.
+INFO[0619] Local is not consensus node.
+INFO[0619] List is nil.                                  prev=c93e285c823915eb0e4a8f82c4271d21087eeb245d793b4b2699499a4cda6818
+INFO[0619] Pop block to second channel.
+INFO[0619] List is nil.                                  prev=c344040d95fd2703c035955ee6b2c031851060e142e310db373d9b79c5ff4e54
+INFO[0619] Pop block to second channel.
+INFO[0619] List is nil.                                  prev=98f1a142cc64fb2aec2056666f920e2aacd50bc794a0e1f8f83216b49811ad30
+INFO[0619] Pop block to second channel.
+INFO[0621] Local is not consensus node.
+INFO[0621] List is nil.                                  prev=d8e0e3ef938d833f84537c2adc5d9a65fa2b520e018fc4dcc8dcbfe1a7cce930
+INFO[0621] Pop block to second channel.
+INFO[0621] List is nil.                                  prev=ba33891e63e5f70640a0d99eb9ccd8c5962ce70020d3804dda6ebaa6c875e1b5
+INFO[0621] Pop block to second channel.
+INFO[0622] List is nil.                                  prev=3bcbca83a5b5c970dd8a352490062b3a07a632097e2027db89e26b5e546b5d57
+INFO[0622] Pop block to second channel.
+INFO[0623] Local is not consensus node.
+INFO[0623] List is nil.                                  prev=b6b8a74f2697671dfe1582462d1d3734ca455a2ba287d4cec592c75f2d3ccebb
+INFO[0623] Pop block to second channel.
+INFO[0624] List is nil.                                  prev=b885645e8a60746e79e84d24dcd99ea77387dd1d33897770bd9aa2810577c083
+INFO[0624] Pop block to second channel.
+INFO[0624] List is nil.                                  prev=021f8b198e0e53a9f2e4fe86b1f8054b6c82b062bd4e96eb7b94d30ccbbe641b
+INFO[0624] Pop block to second channel.
+INFO[0625] Local is not consensus node.
+INFO[0626] List is nil.                                  prev=02b3fd2342f8917fdb37d82882f2d3a3ee1b0fc2e58810506382481b17784f2d
+INFO[0626] Pop block to second channel.
+INFO[0626] List is nil.                                  prev=37e669b37bcc4f79b30e51e73bb7df6b2c98095215fc46a0ed1978586a417c88
+INFO[0626] Pop block to second channel.
+INFO[0627] Local is not consensus node.
+INFO[0628] List is nil.                                  prev=69a6a65484dc5904cad1115835d9953d6d6e50387168e4f679e489f494c62e27
+INFO[0628] Pop block to second channel.
+INFO[0629] Local is not consensus node.
+INFO[0631] Local is not consensus node.
+INFO[0631] List is nil.                                  prev=ad8a2ede28af037b6a6f43382892383e930a80187b5837b9416a97124fda2773
+INFO[0631] Pop block to second channel.
+INFO[0633] Local is not consensus node.
+INFO[0633] List is nil.                                  prev=95f79cb27a7d03724e590b0f53edafa398c3036afca923afee67c0bfdd195150
+INFO[0633] Pop block to second channel.
+INFO[0634] List is nil.                                  prev=eaeb6b4510624ae5780bd442700c8cd07b6b699d7fdca30479adfdd98602597c
+INFO[0634] Pop block to second channel.
+INFO[0635] Local is not consensus node.
+INFO[0636] List is nil.                                  prev=eaa65613dca540dcdcb562ab437fd6ea78c70edccaa2d110f415bbdcf86fa356
+INFO[0636] Pop block to second channel.
+INFO[0637] Local is not consensus node.
+INFO[0639] Local is not consensus node.
+INFO[0639] List is nil.                                  prev=4a39b5fe9dc970fb9294233138b739b1a0ccdb910ff7308ca7a2a73376deca6d
+INFO[0639] Pop block to second channel.
+INFO[0641] Local is not consensus node.
+INFO[0642] List is nil.                                  prev=9cc2677aad6388d8a1794e3ffbd7ba86e9e698486563a7695aacd53d3c9f58d2
+INFO[0642] Pop block to second channel.
+INFO[0642] List is nil.                                  prev=b92f17833eaf00629e6c0156e9c7ef7fc041036ca4dee9b778782ba1f0b9431c
+INFO[0642] Pop block to second channel.
+INFO[0643] Local is not consensus node.
+INFO[0645] Local is not consensus node.

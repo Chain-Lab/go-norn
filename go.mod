@@ -7,14 +7,17 @@ require (
 	github.com/gogo/protobuf v1.3.2
 	github.com/gookit/config/v2 v2.2.1
 	github.com/hashicorp/golang-lru v0.5.4
+	github.com/jbenet/goprocess v0.1.4
 	github.com/libp2p/go-libp2p v0.27.8
 	github.com/libp2p/go-libp2p-kad-dht v0.21.1
+	github.com/libp2p/go-libp2p-pubsub v0.9.3
 	github.com/multiformats/go-multiaddr v0.9.0
 	github.com/prometheus/client_golang v1.14.0
 	github.com/shirou/gopsutil v3.21.11+incompatible
 	github.com/sirupsen/logrus v1.8.1
 	github.com/syndtr/goleveldb v1.0.0
 	golang.org/x/crypto v0.7.0
+	golang.org/x/time v0.0.0-20191024005414-555d28b269f0
 	google.golang.org/grpc v1.56.0
 	google.golang.org/protobuf v1.30.0
 	karmem.org v1.2.9
@@ -63,7 +66,6 @@ require (
 	github.com/ipld/go-ipld-prime v0.9.0 // indirect
 	github.com/jackpal/go-nat-pmp v1.0.2 // indirect
 	github.com/jbenet/go-temp-err-catcher v0.1.0 // indirect
-	github.com/jbenet/goprocess v0.1.4 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/klauspost/compress v1.16.4 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.4 // indirect
@@ -74,7 +76,6 @@ require (
 	github.com/libp2p/go-flow-metrics v0.1.0 // indirect
 	github.com/libp2p/go-libp2p-asn-util v0.3.0 // indirect
 	github.com/libp2p/go-libp2p-kbucket v0.5.0 // indirect
-	github.com/libp2p/go-libp2p-pubsub v0.9.3 // indirect
 	github.com/libp2p/go-libp2p-record v0.2.0 // indirect
 	github.com/libp2p/go-msgio v0.3.0 // indirect
 	github.com/libp2p/go-nat v0.1.0 // indirect
