@@ -28,6 +28,10 @@ var (
 		Name: "core_block_buffer_count",
 		Help: "Block buffer count",
 	})
+	coreBufferSecondQueueMetrices = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "core_buffer_second_queue",
+		Help: "Core buffer second blocks",
+	})
 )
 
 func TxPoolMetricsInc() {
@@ -52,4 +56,12 @@ func BlockBufferCountMetricsDec(value int) {
 
 func BlockBufferCountMetricsInc() {
 	blockBufferCountMetric.Inc()
+}
+
+func SecondBufferInc() {
+	coreBufferSecondQueueMetrices.Inc()
+}
+
+func SecondBufferDec() {
+	coreBufferSecondQueueMetrices.Dec()
 }

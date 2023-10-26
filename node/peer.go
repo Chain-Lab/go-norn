@@ -24,9 +24,10 @@ const (
 )
 
 type PeerConfig struct {
-	chain   *core.BlockChain
-	txPool  *core.TxPool
-	handler *P2PManager
+	chain          *core.BlockChain
+	txPool         *core.TxPool
+	handler        *P2PManager
+	remoteMultAddr string
 }
 
 type Peer struct {
@@ -81,6 +82,7 @@ func NewPeer(peerId peer.ID, s *network.Stream, config PeerConfig) (*Peer, error
 	p := &Peer{
 		peer:            pp,
 		peerID:          pp.Id(),
+		addr:            config.remoteMultAddr,
 		knownBlocks:     blockLru,
 		queuedBlocks:    make(chan *common.Block, maxQueuedBlocks),
 		queuedBlockAnns: make(chan common.Hash, maxQueuedBlockAnns),

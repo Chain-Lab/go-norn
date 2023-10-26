@@ -21,7 +21,7 @@ const (
 	maxBlockMark        = 200                    // 单个区块最多标记多少次不再处理
 	maxKnownBlock       = 2048                   // lru 缓冲下最多存放多少区块
 	maxQueueBlock       = 512                    // 区块处理第二队列最多存放多少区块
-	maxBufferSize       = 72                     // buffer 缓冲多少高度时弹出一个区块
+	maxBufferSize       = 32                     // buffer 缓冲多少高度时弹出一个区块
 )
 
 // BlockBuffer 维护一个树形结构的缓冲区，保存当前视图下的区块信息
@@ -117,6 +117,7 @@ func (b *BlockBuffer) Process() {
 				if prevBlockHash != b.latestBlockHash {
 					// 前一个区块不在视图中，放到等待队列中，这里保证了 nextBlockMap 能形成树形结构
 					log.Infoln("Pop block to second channel.")
+					metrics.SecondBufferInc()
 					b.secondChan <- block
 					b.updateLock.Unlock()
 					break
@@ -172,7 +173,6 @@ func (b *BlockBuffer) Process() {
 
 func (b *BlockBuffer) secondProcess() {
 	timer := time.NewTicker(secondQueueInterval)
-	var block *common.Block = nil
 	for {
 		select {
 		// 接收计时器到期事件
@@ -182,7 +182,8 @@ func (b *BlockBuffer) secondProcess() {
 			//	log.WithField("height", block.Header.Height).Debugln("Pop block from second channel.")
 			//}
 
-			block = <-b.secondChan
+			block := <-b.secondChan
+			metrics.SecondBufferDec()
 			log.WithField("height", block.Header.Height).Debugln("Pop block from second channel.")
 
 			// 获取区块的相关信息
@@ -212,6 +213,7 @@ func (b *BlockBuffer) secondProcess() {
 					//	block = nil
 					//}
 					//timer.Reset(secondQueueInterval)
+					metrics.SecondBufferInc()
 					b.secondChan <- block
 					b.updateLock.Unlock()
 					break

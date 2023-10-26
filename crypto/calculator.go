@@ -55,11 +55,11 @@ func CalculatorInitialization(pp *big.Int, order *big.Int, t int64) {
 	calculatorOnce.Do(func() {
 		calculatorInst = &Calculator{
 			// 传递消息的管道，外界 -> calculator
-			seedChannel:      make(chan *big.Int, 1),
-			prevProofChannel: make(chan *big.Int, 1),
+			seedChannel:      make(chan *big.Int, 32),
+			prevProofChannel: make(chan *big.Int, 32),
 			// 传递消息的管道， calculator -> 外界
-			resultChannel: make(chan *big.Int, 1),
-			proofChannel:  make(chan *big.Int, 1),
+			resultChannel: make(chan *big.Int, 32),
+			proofChannel:  make(chan *big.Int, 32),
 
 			// 证明参数，阶数，时间参数
 			proofParam: pp,
@@ -113,10 +113,10 @@ func (c *Calculator) AppendNewSeed(seed *big.Int, proof *big.Int) {
 
 	// todo： 这里切换的地方感觉还是存在问题
 	c.changed = true
-	c.changeLock.Unlock()
 
 	c.seedChannel <- seed
 	c.prevProofChannel <- proof
+	c.changeLock.Unlock()
 }
 
 // GenerateParams 用于生成计算参数，返回 order(n), proof_param
@@ -150,13 +150,13 @@ func (c *Calculator) run() {
 	for {
 		select {
 		case seed := <-c.seedChannel:
-			c.changeLock.Lock()
+			c.changeLock.RLock()
 			log.Infoln("Start new VDF calculate.")
 
 			c.changed = false
 			c.seed = seed
 			c.proof = <-c.prevProofChannel
-			c.changeLock.Unlock()
+			c.changeLock.RUnlock()
 
 			result, pi := c.calculate(seed)
 
@@ -183,6 +183,7 @@ func (c *Calculator) calculate(seed *big.Int) (*big.Int, *big.Int) {
 	for round := int64(0); round < c.timeParam; round++ {
 		//log.Infoln(round)
 		if c.changed {
+			log.Infoln("VDF seed changed")
 			return nil, nil
 		}
 
@@ -246,7 +247,7 @@ func GenerateGenesisParams() (*common.GenesisParams, error) {
 	}
 
 	genesisParams.Order = [128]byte(order.Bytes())
-	genesisParams.TimeParam = 1000000
+	genesisParams.TimeParam = 500000000
 	//genesisParams.TimeParam = 1000
 	genesisParams.VerifyParam = [32]byte(pp.Bytes())
 	genesisParams.Seed = [32]byte(seed.Bytes())

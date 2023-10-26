@@ -28,6 +28,14 @@ var (
 		Name: "gossip_block_receive_counter",
 		Help: "P2P network broadcast topic receive blocks counter.",
 	})
+	gossipUDPSendCounter = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "gossip_upd_send_counter",
+		Help: "Gossip UDP send counter",
+	})
+	gossipUDPRecvCounter = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "gossip_upd_recv_counter",
+		Help: "Gossip UDP receive counter",
+	})
 )
 
 func SendQueueCountInc() {
@@ -44,6 +52,14 @@ func GossipReceiveCountInc() {
 
 func GossipReceiveBlocksCountInc() {
 	gossipBlockReceiveCounter.Inc()
+}
+
+func GossipUDPSendCountInc() {
+	gossipUDPSendCounter.Inc()
+}
+
+func GossipUDPRecvCountInc() {
+	gossipUDPRecvCounter.Inc()
 }
 
 //
