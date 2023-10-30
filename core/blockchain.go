@@ -22,7 +22,7 @@ import (
 
 const (
 	maxBlockCache         = 64
-	maxTransactionCache   = 8192
+	maxTransactionCache   = 8192 * 4
 	maxBlockProcessList   = 12
 	maxBlockChannel       = 128
 	maxDbChannel          = 256

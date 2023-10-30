@@ -55,7 +55,7 @@ const (
 	maxKnownTransaction    = 32768
 	maxSyncerStatusChannel = 512
 	packageBlockInterval   = 2
-	gossipNodes            = 5
+	gossipNodes            = 10
 	NetworkRendezvous      = "chronos"
 	TxGossipTopic          = "/chronos/1.0.1/transactions"
 	BlockGossipTopic       = "/chronos/1.0.1/blocks"
@@ -126,7 +126,7 @@ func NewP2PManager(config *P2PManagerConfig) (*P2PManager, error) {
 		peers:      make(map[peer.ID]*Peer),
 
 		blockBroadcastQueue: make(chan *common.Block, 256),
-		txBroadcastQueue:    make(chan *common.Transaction, 8192),
+		txBroadcastQueue:    make(chan *common.Transaction, 8192*4),
 
 		knownBlock:       knownBlockCache,
 		knownTransaction: knownTxCache,
@@ -152,10 +152,9 @@ func NewP2PManager(config *P2PManagerConfig) (*P2PManager, error) {
 // AddTransaction 仅用于测试
 func (pm *P2PManager) AddTransaction(tx *common.Transaction) {
 	txHash := hex.EncodeToString(tx.Body.Hash[:])
-
+	pm.markTransaction(txHash)
 	pm.txBroadcastQueue <- tx
 	pm.txPool.Add(tx)
-	pm.markTransaction(txHash)
 }
 
 func GetP2PManager() *P2PManager {
@@ -192,7 +191,8 @@ func (pm *P2PManager) packageBlockRoutine() {
 
 			consensus, err := crypto.VRFCheckLocalConsensus(seed.Bytes())
 			if !consensus || err != nil {
-				log.Infoln("Local is not consensus node.")
+				log.Infof("Local is not consensus node: %s",
+					hex.EncodeToString(seed.Bytes()))
 				continue
 			}
 
@@ -694,6 +694,7 @@ func (pm *P2PManager) UDPGossipBroadcast(tx *common.Transaction) {
 
 		metrics.GossipUDPSendCountInc()
 	}
+	time.Sleep(300 * time.Microsecond)
 }
 
 // TransactionUDP 计划使用的交易广播独立网络，
@@ -741,10 +742,10 @@ func (pm *P2PManager) TransactionUDP() {
 		if !exists {
 			pm.AddTransaction(tx)
 		}
+
+		metrics.GossipUDPRecvCountInc()
 		//}
 	}
-
-	metrics.GossipUDPRecvCountInc()
 }
 
 func (pm *P2PManager) GetConnectNodeInfo() (string, []string) {

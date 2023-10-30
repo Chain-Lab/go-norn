@@ -33,7 +33,7 @@ func NewTxPool(chain *BlockChain) *TxPool {
 
 		txPoolInst = &TxPool{
 			chain:   chain,
-			txQueue: make(chan string, 8192),
+			txQueue: make(chan string, 8192*5),
 			//packing:  false,
 			//lock:     lock,
 			//packCond: sync.NewCond(lock),
@@ -122,9 +122,13 @@ func (pool *TxPool) Add(transaction *common.Transaction) {
 	//}
 
 	txHash := hex.EncodeToString(transaction.Body.Hash[:])
-	pool.txs.Store(txHash, transaction)
 	//pool.txs[tx]
-	pool.txQueue <- txHash
+	select {
+	case pool.txQueue <- txHash:
+		pool.txs.Store(txHash, transaction)
+	default:
+
+	}
 	metrics.TxPoolMetricsInc()
 }
 
