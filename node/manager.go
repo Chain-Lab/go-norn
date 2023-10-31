@@ -187,7 +187,10 @@ func (pm *P2PManager) packageBlockRoutine() {
 			}
 
 			calc := crypto.GetCalculatorInstance()
-			seed, pi := calc.GetSeedParams()
+			full := pm.chain.BufferFull()
+			//pm.chain.
+			seed, pi := calc.GetSeedParams(full)
+			log.Debugf("Get seed: %s", hex.EncodeToString(seed.Bytes()))
 
 			consensus, err := crypto.VRFCheckLocalConsensus(seed.Bytes())
 			if !consensus || err != nil {
@@ -197,6 +200,8 @@ func (pm *P2PManager) packageBlockRoutine() {
 			}
 
 			randNumber, s, t, err := crypto.VRFCalculate(elliptic.P256(), seed.Bytes())
+			log.Debugf("Package with seed: %s", hex.EncodeToString(seed.Bytes()))
+
 			params := common.GeneralParams{
 				Result:       seed.Bytes(),
 				Proof:        pi.Bytes(),

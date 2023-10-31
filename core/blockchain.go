@@ -442,16 +442,17 @@ func (bc *BlockChain) InsertBlock(block *common.Block) {
 		// todo: 将编码转换的过程放入到VRF代码中
 		seed.SetBytes(params.Seed[:])
 		proof.SetInt64(0)
-	} else {
-		params, _ := utils.DeserializeGeneralParams(block.Header.Params)
-		// todo: 将编码转换的过程放入到VRF代码中
-		seed.SetBytes(params.Result)
-		proof.SetBytes(params.Proof)
-	}
 
-	// 向 VDF 的计算添加区块下的信息
-	calculator := crypto.GetCalculatorInstance()
-	calculator.AppendNewSeed(seed, proof)
+		calculator := crypto.GetCalculatorInstance()
+		calculator.AppendNewSeed(seed, proof)
+	}
+	//	params, _ := utils.DeserializeGeneralParams(block.Header.Params)
+	//	// todo: 将编码转换的过程放入到VRF代码中
+	//	seed.SetBytes(params.Result)
+	//	proof.SetBytes(params.Proof)
+	//}
+
+	//// 向 VDF 的计算添加区块下的信息
 	metrics.BlockHeightSet(block.Header.Height)
 }
 
@@ -510,6 +511,13 @@ func (bc *BlockChain) BufferedHeight() int64 {
 		return 0
 	}
 	return bc.buffer.bufferedHeight
+}
+
+func (bc *BlockChain) BufferFull() bool {
+	if bc.buffer == nil {
+		return false
+	}
+	return bc.buffer.bufferFull
 }
 
 func isPrevBlock(prev *common.Block, block *common.Block) bool {

@@ -76,11 +76,17 @@ func CalculatorInitialization(pp *big.Int, order *big.Int, t int64) {
 
 		metrics.RoutineCreateCounterObserve(10)
 		go calculatorInst.run()
+		//go func(c *Calculator) {
+		//	for {
+		//		time.Sleep(100 * time.Millisecond)
+		//		log.Infof("VDF Seed: %s", hex.EncodeToString(c.seed.Bytes()))
+		//	}
+		//}(calculatorInst)
 	})
 }
 
 // GetSeedParams 读取计算信息，如果channel中有数据则优先获取
-func (c *Calculator) GetSeedParams() (*big.Int, *big.Int) {
+func (c *Calculator) GetSeedParams(bufferFull bool) (*big.Int, *big.Int) {
 	seed := new(big.Int)
 	proof := new(big.Int)
 
@@ -92,31 +98,47 @@ func (c *Calculator) GetSeedParams() (*big.Int, *big.Int) {
 	}
 
 	c.changeLock.RLock()
-	seed.Set(c.seed)
-	proof.Set(c.proof)
+	seed.SetBytes(c.seed.Bytes())
+	proof.SetBytes(c.proof.Bytes())
 	c.changeLock.RUnlock()
 
 	return seed, proof
 }
 
+func (c *Calculator) VerifyBlockVDF(seed *big.Int, proof *big.Int) bool {
+	c.changeLock.Lock()
+	defer c.changeLock.Unlock()
+
+	if c.seed.Cmp(seed) == 0 || (c.seed.Cmp(zero) != 0 && c.Verify(c.seed,
+		proof, seed)) {
+		return true
+	}
+
+	return false
+}
+
 // AppendNewSeed 在计算运行时修改此时的运行参数
 func (c *Calculator) AppendNewSeed(seed *big.Int, proof *big.Int) {
 	c.changeLock.Lock()
-	//log.Infof("Trying append new seed %s.", hex.EncodeToString(seed.Bytes()))
+	defer c.changeLock.Unlock()
+
+	log.Debugln("Now VDF seed: %s", hex.EncodeToString(c.seed.Bytes()))
 
 	// 检查如果当前的 seed 没有变化就直接返回 或者
 	// 如果当前的 seed 不是初始的0，并且输入无法通过验证则不更新
 	if c.seed.Cmp(seed) == 0 || (c.seed.Cmp(zero) != 0 && !c.Verify(c.seed, proof, seed)) {
-		c.changeLock.Unlock()
+		log.Debugln("Block VDF verify failed seed: %s, result: %s",
+			hex.EncodeToString(c.seed.Bytes()), hex.EncodeToString(seed.
+				Bytes()))
 		return
 	}
 
 	// todo： 这里切换的地方感觉还是存在问题
 	c.changed = true
-
+	log.Infof("New Seed: %s, Proof: %s", hex.EncodeToString(seed.Bytes()),
+		hex.EncodeToString(proof.Bytes()))
 	c.seedChannel <- seed
 	c.prevProofChannel <- proof
-	c.changeLock.Unlock()
 }
 
 // GenerateParams 用于生成计算参数，返回 order(n), proof_param
@@ -154,14 +176,16 @@ func (c *Calculator) run() {
 			log.Infoln("Start new VDF calculate.")
 
 			c.changed = false
-			c.seed = seed
+			c.seed.SetBytes(seed.Bytes())
+			log.Infof("Set seed to %s", hex.EncodeToString(c.seed.Bytes()))
 			c.proof = <-c.prevProofChannel
 			c.changeLock.RUnlock()
 
 			result, pi := c.calculate(seed)
 
 			if pi != nil {
-				log.Debugf("Calculate result: %s", hex.EncodeToString(result.Bytes()))
+				log.Debugf("Calculate result: %s", hex.EncodeToString(result.
+					Bytes()))
 				log.Debugf("Calculate proof: %s", hex.EncodeToString(pi.Bytes()))
 				c.resultChannel <- result
 				c.proofChannel <- pi
@@ -175,7 +199,7 @@ func (c *Calculator) calculate(seed *big.Int) (*big.Int, *big.Int) {
 	pi, r := big.NewInt(1), big.NewInt(1)
 	g := new(big.Int)
 	result := new(big.Int)
-	result.Set(seed)
+	result.SetBytes(seed.Bytes())
 
 	// result = g^(2^t)
 	// 注： 这里如果直接计算 m^a mod n 的时间复杂度是接近 O(t) 的
@@ -212,17 +236,22 @@ func (c *Calculator) calculate(seed *big.Int) (*big.Int, *big.Int) {
 // Verify 验证 VDF 计算结果 result == pi^l * seed^s
 // 具体细节见论文 - Simple Verifiable Delay Functions
 func (c *Calculator) Verify(seed *big.Int, pi *big.Int, result *big.Int) bool {
+	tSeed := big.NewInt(0)
+	tSeed.SetBytes(seed.Bytes())
+	tPi := big.NewInt(0)
+	tPi.SetBytes(pi.Bytes())
+
 	// todo: 写一下 calculate 和 verify 实现的公式的过程
 	r := big.NewInt(2)
-	t := big.NewInt(int64(c.timeParam))
+	t := big.NewInt(c.timeParam)
 
 	// r = r^t mod pp
 	r = r.Exp(r, t, c.proofParam)
 
 	// h = pi^pp
-	h := pi.Exp(pi, c.proofParam, c.order)
+	h := tPi.Exp(tPi, c.proofParam, c.order)
 	// s = seed
-	s := seed.Exp(seed, r, c.order)
+	s := tSeed.Exp(tSeed, r, c.order)
 
 	h = h.Mul(h, s)
 	h = h.Mod(h, c.order)
@@ -247,7 +276,7 @@ func GenerateGenesisParams() (*common.GenesisParams, error) {
 	}
 
 	genesisParams.Order = [128]byte(order.Bytes())
-	genesisParams.TimeParam = 500000000
+	genesisParams.TimeParam = 10000000
 	//genesisParams.TimeParam = 1000
 	genesisParams.VerifyParam = [32]byte(pp.Bytes())
 	genesisParams.Seed = [32]byte(seed.Bytes())
