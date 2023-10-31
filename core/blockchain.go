@@ -22,7 +22,7 @@ import (
 
 const (
 	maxBlockCache         = 64
-	maxTransactionCache   = 8192 * 4
+	maxTransactionCache   = 8192
 	maxBlockProcessList   = 12
 	maxBlockChannel       = 128
 	maxDbChannel          = 256
@@ -348,6 +348,7 @@ func (bc *BlockChain) InsertBlock(block *common.Block) {
 	count := len(block.Transactions)
 
 	blockHash := common.Hash(block.Header.BlockHash)
+	pool := GetTxPoolInst()
 
 	// 获取对应哈希的区块，如果区块存在，说明链上已经存在该区块
 	_, err := bc.GetBlockByHash(&blockHash)
@@ -414,7 +415,7 @@ func (bc *BlockChain) InsertBlock(block *common.Block) {
 	for idx := range block.Transactions {
 		// todo： 或许需要校验一下交易是否合法
 		tx := block.Transactions[idx]
-
+		pool.RemoveTx(tx.Body.Hash)
 		txWriter := karmem.NewWriter(1024)
 		keys[idx+transactionStartIndex] = append([]byte("tx#"), tx.Body.Hash[:]...)
 		_, err := tx.WriteAsRoot(txWriter)

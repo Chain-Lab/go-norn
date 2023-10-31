@@ -55,7 +55,7 @@ const (
 	maxKnownTransaction    = 32768
 	maxSyncerStatusChannel = 512
 	packageBlockInterval   = 2
-	gossipNodes            = 10
+	gossipNodes            = 4
 	NetworkRendezvous      = "chronos"
 	TxGossipTopic          = "/chronos/1.0.1/transactions"
 	BlockGossipTopic       = "/chronos/1.0.1/blocks"
@@ -194,8 +194,7 @@ func (pm *P2PManager) packageBlockRoutine() {
 
 			consensus, err := crypto.VRFCheckLocalConsensus(seed.Bytes())
 			if !consensus || err != nil {
-				log.Infof("Local is not consensus node: %s",
-					hex.EncodeToString(seed.Bytes()))
+				log.Infof("Local is not consensus node")
 				continue
 			}
 
@@ -699,7 +698,7 @@ func (pm *P2PManager) UDPGossipBroadcast(tx *common.Transaction) {
 
 		metrics.GossipUDPSendCountInc()
 	}
-	time.Sleep(300 * time.Microsecond)
+	time.Sleep(500 * time.Microsecond)
 }
 
 // TransactionUDP 计划使用的交易广播独立网络，
