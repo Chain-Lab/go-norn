@@ -23,20 +23,24 @@ type TxPool struct {
 	waitingQueue chan *common.Transaction
 	txs          sync.Map
 
+	packing  bool
+	packCond *sync.Cond
+	lock     *sync.Mutex
+
 	flags  sync.Map
 	height int
 }
 
 func NewTxPool(chain *BlockChain) *TxPool {
 	txOnce.Do(func() {
-		//lock := &sync.RWMutex{}
+		lock := &sync.Mutex{}
 
 		txPoolInst = &TxPool{
-			chain:   chain,
-			txQueue: make(chan string, 8192*5),
-			//packing:  false,
-			//lock:     lock,
-			//packCond: sync.NewCond(lock),
+			chain:    chain,
+			txQueue:  make(chan string, 8192),
+			packing:  false,
+			lock:     lock,
+			packCond: sync.NewCond(lock),
 			//txs:     sync.Map{},
 			//txs: make(map[common.Hash]*common.Transaction),
 		}
@@ -48,25 +52,27 @@ func GetTxPoolInst() *TxPool {
 	return txPoolInst
 }
 
-//func (pool *TxPool) setPackStart() {
-//	log.Infoln("Set packing to true.")
-//	pool.packing = true
-//}
-//
-//func (pool *TxPool) setPackStop() {
-//	pool.packing = false
-//}
+func (pool *TxPool) setPackStart() {
+	log.Infoln("Set packing to true.")
+	pool.packing = true
+}
+
+func (pool *TxPool) setPackStop() {
+	pool.packing = false
+}
 
 // Package 用于打包交易，这里返回的是 Transaction 的切片
 // todo： 需要具体观察打包交易时的效率问题
 func (pool *TxPool) Package() []common.Transaction {
 	log.Debugln("Start package transaction...")
-	//pool.setPackStart()
-	//pool.lock.Lock()
-	//log.Infoln("pool locked")
-	//defer pool.packCond.Broadcast()
-	//defer pool.setPackStop()
-	//defer pool.lock.Unlock()
+	pool.setPackStart()
+	pool.lock.Lock()
+	log.Infoln("pool locked")
+
+	defer log.Infoln("pool unlocked")
+	defer pool.lock.Unlock()
+	defer pool.packCond.Broadcast()
+	defer pool.setPackStop()
 
 	count := 0
 	result := make([]common.Transaction, 0, maxTxPackageCount)
@@ -114,22 +120,22 @@ func (pool *TxPool) Package() []common.Transaction {
 }
 
 func (pool *TxPool) Add(transaction *common.Transaction) {
-	//pool.lock.Lock()
-	//defer pool.lock.Unlock()
-	//
-	//for pool.packing {
-	//	pool.packCond.Wait()
-	//}
+	pool.lock.Lock()
+	defer pool.lock.Unlock()
 
 	txHash := hex.EncodeToString(transaction.Body.Hash[:])
-	//pool.txs[tx]
+
+	for pool.packing {
+		pool.packCond.Wait()
+	}
+
 	select {
 	case pool.txQueue <- txHash:
 		pool.txs.Store(txHash, transaction)
+		metrics.TxPoolMetricsInc()
 	default:
 
 	}
-	metrics.TxPoolMetricsInc()
 }
 
 func (pool *TxPool) Contain(hash string) bool {
@@ -138,7 +144,14 @@ func (pool *TxPool) Contain(hash string) bool {
 }
 
 func (pool *TxPool) RemoveTx(hash common.Hash) {
+	pool.lock.Lock()
+	defer pool.lock.Unlock()
 	txHash := hex.EncodeToString(hash[:])
+
+	for pool.packing {
+		pool.packCond.Wait()
+	}
+
 	pool.txs.Delete(txHash)
 }
 

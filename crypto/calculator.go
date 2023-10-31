@@ -135,7 +135,7 @@ func (c *Calculator) AppendNewSeed(seed *big.Int, proof *big.Int) {
 
 	// todo： 这里切换的地方感觉还是存在问题
 	c.changed = true
-	log.Infof("New Seed: %s, Proof: %s", hex.EncodeToString(seed.Bytes()),
+	log.Debugf("New Seed: %s, Proof: %s", hex.EncodeToString(seed.Bytes()),
 		hex.EncodeToString(proof.Bytes()))
 	c.seedChannel <- seed
 	c.prevProofChannel <- proof
