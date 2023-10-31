@@ -7,10 +7,14 @@
 package core
 
 import (
+	"encoding/hex"
 	"github.com/chain-lab/go-chronos/common"
+	"github.com/chain-lab/go-chronos/crypto"
 	"github.com/chain-lab/go-chronos/metrics"
+	"github.com/chain-lab/go-chronos/utils"
 	lru "github.com/hashicorp/golang-lru"
 	log "github.com/sirupsen/logrus"
+	"math/big"
 	"sync"
 	"time"
 )
@@ -42,6 +46,7 @@ type BlockBuffer struct {
 	latestBlockHeight int64         // 当前 db 中存储的最新区块的高度
 	latestBlock       *common.Block // 当前 db 中存储的最新区块
 	bufferedHeight    int64         // 缓存视图的最新高度
+	bufferFull        bool          // 缓存高度是否到达 maxBufferSize
 
 	updateLock sync.RWMutex // 视图更新的读写锁
 }
@@ -69,6 +74,7 @@ func NewBlockBuffer(latest *common.Block, popChan chan *common.Block) (*BlockBuf
 		latestBlockHash:   latest.BlockHash(),
 		latestBlock:       latest,
 		bufferedHeight:    latest.Header.Height,
+		bufferFull:        false,
 	}
 
 	metrics.RoutineCreateCounterObserve(8)
@@ -126,6 +132,25 @@ func (b *BlockBuffer) Process() {
 				list = make(blockList, 0, 15)
 			}
 
+			calculator := crypto.GetCalculatorInstance()
+			seed := new(big.Int)
+			proof := new(big.Int)
+
+			params, _ := utils.DeserializeGeneralParams(block.Header.Params)
+			// todo: 将编码转换的过程放入到VRF代码中
+			seed.SetBytes(params.Result)
+			proof.SetBytes(params.Proof)
+			log.Debugf("seed before verify: %s", hex.EncodeToString(seed.
+				Bytes()))
+
+			if !calculator.VerifyBlockVDF(seed, proof) {
+				log.WithField("hash", block.BlockHash()[:16]).Debugf(
+					"Verify block VDF Failed.")
+				break
+			}
+
+			log.Debugf("seed after verify: %s", hex.EncodeToString(seed.Bytes()))
+
 			// 获取这个区块高度下已经选定的区块
 			selected, _ := b.selectedBlock[blockHeight]
 			prevSelected, _ := b.selectedBlock[blockHeight-1]
@@ -164,8 +189,10 @@ func (b *BlockBuffer) Process() {
 
 			if block.Header.Height-b.latestBlockHeight > maxBufferSize {
 				b.popChan <- b.PopSelectedBlock()
+				b.bufferFull = true
 			}
 
+			calculator.AppendNewSeed(seed, proof)
 			b.updateLock.Unlock()
 		}
 	}
@@ -221,6 +248,20 @@ func (b *BlockBuffer) secondProcess() {
 					list = make(blockList, 0, 15)
 				}
 			}
+
+			calculator := crypto.GetCalculatorInstance()
+			seed := new(big.Int)
+			proof := new(big.Int)
+
+			params, _ := utils.DeserializeGeneralParams(block.Header.Params)
+			// todo: 将编码转换的过程放入到VRF代码中
+			seed.SetBytes(params.Result)
+			proof.SetBytes(params.Proof)
+
+			if !calculator.VerifyBlockVDF(seed, proof) {
+				break
+			}
+
 			b.nextBlockMap[prevBlockHash] = append(list, block)
 			b.nextBlockMap[blockHash] = make(blockList, 0, 15)
 			log.WithField("height", blockHeight).Debugln("[Second channel] Create block map.")
@@ -255,10 +296,11 @@ func (b *BlockBuffer) secondProcess() {
 			b.blockProcessList[blockHeight] = append(processList, block)
 
 			if block.Header.Height-b.latestBlockHeight > maxBufferSize {
+				b.bufferFull = true
 				b.popChan <- b.PopSelectedBlock()
 			}
 
-			//block = nil
+			calculator.AppendNewSeed(seed, proof)
 			b.updateLock.Unlock()
 
 			//timer.Reset(secondQueueInterval)

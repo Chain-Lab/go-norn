@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	ConsensusFloor = 0.75 // 共识要求的最低概率
+	ConsensusFloor = 0.0 // 共识要求的最低概率
 )
 
 var (
