@@ -134,14 +134,14 @@ func handleGetBlockBodiesMsg(pm *P2PManager, msg *p2p.Message, p *Peer) {
 	}
 
 	metrics.RoutineCreateCounterObserve(30)
-	go respondGetBlockBodies(block, p)
+	respondGetBlockBodies(block, p)
 }
 
 func handleSyncStatusReq(pm *P2PManager, msg *p2p.Message, p *Peer) {
 	message := pm.StatusMessage()
 
 	metrics.RoutineCreateCounterObserve(23)
-	go respondGetSyncStatus(message, p)
+	respondGetSyncStatus(message, p)
 }
 
 func handleSyncStatusMsg(pm *P2PManager, msg *p2p.Message, p *Peer) {
@@ -170,7 +170,7 @@ func handleSyncGetBlocksMsg(pm *P2PManager, msg *p2p.Message, p *Peer) {
 	}
 
 	metrics.RoutineCreateCounterObserve(24)
-	go respondSyncGetBlock(block, p)
+	respondSyncGetBlock(block, p)
 }
 
 func handleSyncBlockMsg(pm *P2PManager, msg *p2p.Message, p *Peer) {

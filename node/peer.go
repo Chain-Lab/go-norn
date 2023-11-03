@@ -96,10 +96,9 @@ func NewPeer(peerId peer.ID, s *network.Stream, config PeerConfig) (*Peer, error
 		markSynced:      false,
 	}
 
-	log.Infof("Starting 4 (+2) broadcast routine...")
 	metrics.RoutineCreateCounterObserve(25)
-	go p.broadcastBlock()
-	go p.broadcastBlockHash()
+	//go p.broadcastBlock()
+	//go p.broadcastBlockHash()
 	go p.sendStatus()
 	go p.Handle()
 

@@ -23,9 +23,9 @@ type TxPool struct {
 	waitingQueue chan *common.Transaction
 	txs          sync.Map
 
-	packing  bool
-	packCond *sync.Cond
-	lock     *sync.Mutex
+	//packing  bool
+	//packCond *sync.Cond
+	//lock     *sync.Mutex
 
 	flags  sync.Map
 	height int
@@ -33,14 +33,14 @@ type TxPool struct {
 
 func NewTxPool(chain *BlockChain) *TxPool {
 	txOnce.Do(func() {
-		lock := &sync.Mutex{}
+		//lock := &sync.Mutex{}
 
 		txPoolInst = &TxPool{
-			chain:    chain,
-			txQueue:  make(chan string, 8192),
-			packing:  false,
-			lock:     lock,
-			packCond: sync.NewCond(lock),
+			chain:   chain,
+			txQueue: make(chan string, 40960),
+			//packing:  false,
+			//lock:     lock,
+			//packCond: sync.NewCond(lock),
 			//txs:     sync.Map{},
 			//txs: make(map[common.Hash]*common.Transaction),
 		}
@@ -52,27 +52,27 @@ func GetTxPoolInst() *TxPool {
 	return txPoolInst
 }
 
-func (pool *TxPool) setPackStart() {
-	log.Infoln("Set packing to true.")
-	pool.packing = true
-}
-
-func (pool *TxPool) setPackStop() {
-	pool.packing = false
-}
+//func (pool *TxPool) setPackStart() {
+//	log.Infoln("Set packing to true.")
+//	pool.packing = true
+//}
+//
+//func (pool *TxPool) setPackStop() {
+//	pool.packing = false
+//}
 
 // Package 用于打包交易，这里返回的是 Transaction 的切片
 // todo： 需要具体观察打包交易时的效率问题
 func (pool *TxPool) Package() []common.Transaction {
 	log.Debugln("Start package transaction...")
-	pool.setPackStart()
-	pool.lock.Lock()
-	log.Infoln("pool locked")
+	//pool.setPackStart()
+	//pool.lock.Lock()
+	//log.Infoln("pool locked")
 
-	defer log.Infoln("pool unlocked")
-	defer pool.lock.Unlock()
-	defer pool.packCond.Broadcast()
-	defer pool.setPackStop()
+	//defer log.Infoln("pool unlocked")
+	//defer pool.lock.Unlock()
+	//defer pool.packCond.Broadcast()
+	//defer pool.setPackStop()
 
 	count := 0
 	result := make([]common.Transaction, 0, maxTxPackageCount)
@@ -108,10 +108,10 @@ func (pool *TxPool) Package() []common.Transaction {
 		}
 
 		tx = value.(*common.Transaction)
-		if !tx.Verify() {
-			log.Errorln("Verify failed.")
-			continue
-		}
+		//if !tx.Verify() {
+		//	log.Errorln("Verify failed.")
+		//	continue
+		//}
 		// todo： 这里是传值还是传指针？
 		result = append(result, *tx)
 		count++
@@ -120,14 +120,14 @@ func (pool *TxPool) Package() []common.Transaction {
 }
 
 func (pool *TxPool) Add(transaction *common.Transaction) {
-	pool.lock.Lock()
-	defer pool.lock.Unlock()
+	//pool.lock.Lock()
+	//defer pool.lock.Unlock()
 
 	txHash := hex.EncodeToString(transaction.Body.Hash[:])
 
-	for pool.packing {
-		pool.packCond.Wait()
-	}
+	//for pool.packing {
+	//	pool.packCond.Wait()
+	//}
 
 	select {
 	case pool.txQueue <- txHash:
@@ -144,13 +144,13 @@ func (pool *TxPool) Contain(hash string) bool {
 }
 
 func (pool *TxPool) RemoveTx(hash common.Hash) {
-	pool.lock.Lock()
-	defer pool.lock.Unlock()
+	//pool.lock.Lock()
+	//defer pool.lock.Unlock()
 	txHash := hex.EncodeToString(hash[:])
 
-	for pool.packing {
-		pool.packCond.Wait()
-	}
+	//for pool.packing {
+	//	pool.packCond.Wait()
+	//}
 
 	pool.txs.Delete(txHash)
 }

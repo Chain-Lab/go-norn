@@ -68,7 +68,7 @@ func (p *Peer) Run() {
 
 	p.wg.Add(2)
 	metrics.RoutineCreateCounterObserve(12)
-	go p.pingLoop()
+	//go p.pingLoop()
 
 	// 不可多协程并发写，存在问题
 	go p.readLoop(readErr)
@@ -157,8 +157,6 @@ func (p *Peer) handle(msg *Message) {
 		log.WithField("peer", p.peerID).Traceln("Receive peer ping message.")
 		p.Send(StatusCodePongMsg, make([]byte, 0))
 		return
-		// todo: 怎么将消息传入到上层进行处理
-		// todo: channel 发送消息到 node/peer 中处理
 	case msg.Code == StatusCodePongMsg:
 		return
 	default:

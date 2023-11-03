@@ -22,7 +22,7 @@ import (
 
 const (
 	maxBlockCache         = 64
-	maxTransactionCache   = 8192
+	maxTransactionCache   = 40960
 	maxBlockProcessList   = 12
 	maxBlockChannel       = 128
 	maxDbChannel          = 256
@@ -119,7 +119,7 @@ func (bc *BlockChain) BlockProcessRoutine() {
 	for {
 		select {
 		case block := <-bc.bufferChan:
-			bc.InsertBlock(block)
+			bc.insertBlock(block)
 		}
 	}
 }
@@ -168,7 +168,7 @@ func (bc *BlockChain) PackageNewBlock(txs []common.Transaction, timestamp int64,
 	byteBlockHeaderData, err := utils.SerializeBlockHeader(&block.Header)
 
 	if err != nil {
-		log.WithField("error", err).Debugln("Serialize block header failed.")
+		log.WithField("error", err).Errorln("Serialize block header failed.")
 		return nil, err
 	}
 
@@ -222,7 +222,7 @@ func (bc *BlockChain) NewGenesisBlock() {
 		Transactions: []common.Transaction{},
 	}
 
-	bc.InsertBlock(&genesisBlock)
+	bc.AppendBlockTask(&genesisBlock)
 }
 
 // GetLatestBlock 获取当前的最新区块
@@ -343,8 +343,7 @@ func (bc *BlockChain) writeTxCache(transaction *common.Transaction) {
 }
 
 // InsertBlock 函数用于将区块插入到数据库中
-func (bc *BlockChain) InsertBlock(block *common.Block) {
-	// todo: 这里作为 Public 函数只是为了测试
+func (bc *BlockChain) insertBlock(block *common.Block) {
 	count := len(block.Transactions)
 
 	blockHash := common.Hash(block.Header.BlockHash)
@@ -429,6 +428,7 @@ func (bc *BlockChain) InsertBlock(block *common.Block) {
 		}
 
 		values[idx+transactionStartIndex] = txWriter.Bytes()
+		metrics.TransactionInsertInc()
 	}
 
 	// 批量添加/修改数据到数据库
@@ -460,12 +460,16 @@ func (bc *BlockChain) InsertBlock(block *common.Block) {
 // AppendBlockTask 向区块缓冲视图中添加区块处理任务
 func (bc *BlockChain) AppendBlockTask(block *common.Block) {
 	if block.IsGenesisBlock() {
-		bc.InsertBlock(block)
+		bc.insertBlock(block)
 		return
 	}
 
 	log.Debugln("Append block to buffer.")
 	bc.buffer.AppendBlock(block)
+}
+
+func (bc *BlockChain) InsertBlock(block *common.Block) {
+	bc.bufferChan <- block
 }
 
 // GetTransactionByHash 通过交易的哈希值来获取交易
@@ -530,7 +534,12 @@ func isPrevBlock(prev *common.Block, block *common.Block) bool {
 func (bc *BlockChain) createBlockBuffer(latest *common.Block) {
 	// todo: 需要处理报错
 	log.Traceln("Create new block buffer.")
-	bc.buffer, _ = NewBlockBuffer(latest, bc.bufferChan)
+	var err error
+	bc.buffer, err = NewBlockBuffer(latest, bc.bufferChan)
+
+	if err != nil {
+		log.WithError(err).Errorln("Create new block buffer failed.")
+	}
 }
 
 func (bc *BlockChain) genesisInitialization(block *common.Block) {

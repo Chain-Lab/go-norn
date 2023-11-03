@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	ConsensusFloor = 0.0 // 共识要求的最低概率
+	ConsensusFloor = 0.3 // 共识要求的最低概率
 )
 
 var (
@@ -74,7 +74,7 @@ func VRFCalculate(curve elliptic.Curve, msg []byte) ([]byte, *big.Int, *big.Int,
 }
 
 // VRFCheckOutputConsensus 检查一个 VRF 的输出是否满足共识
-func VRFCheckOutputConsensus(randomOutput []byte) bool {
+func VRFCheckOutputConsensus(randomOutput []byte, local bool) bool {
 	sha2 := sha256.New()
 	sha2.Write(randomOutput)
 	digest := sha2.Sum(nil)
@@ -88,7 +88,9 @@ func VRFCheckOutputConsensus(randomOutput []byte) bool {
 	r = r.Div(r, tt256)
 
 	prob := float64(r.Int64()) / 1000.0
-	log.Debugf("VRF consensus prob = %f", prob)
+	if local {
+		log.Infof("Local VRF consensus prob = %f", prob)
+	}
 	return prob > ConsensusFloor
 }
 
@@ -96,7 +98,7 @@ func VRFCheckOutputConsensus(randomOutput []byte) bool {
 func VRFCheckLocalConsensus(vdfOutput []byte) (bool, error) {
 	rBytes, _, _, _ := VRFCalculate(elliptic.P256(), vdfOutput)
 
-	return VRFCheckOutputConsensus(rBytes), nil
+	return VRFCheckOutputConsensus(rBytes, true), nil
 }
 
 // VRFCheckRemoteConsensus 检查一个其他节点的输出是否满足共识条件
@@ -108,7 +110,7 @@ func VRFCheckRemoteConsensus(key *ecdsa.PublicKey, vdfMsg []byte, s *big.Int, t 
 		return false, nil
 	}
 
-	return VRFCheckOutputConsensus(value), nil
+	return VRFCheckOutputConsensus(value, false), nil
 }
 
 func VRFVerify(curve elliptic.Curve, key *ecdsa.PublicKey, msg []byte, s *big.Int, t *big.Int, value []byte) (bool, error) {

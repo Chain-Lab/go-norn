@@ -76,8 +76,7 @@ func (ts *TimeSyncer) syncRoutine() {
 				RspTime:    0,
 				RecRspTime: 0,
 			}
-			metrics.RoutineCreateCounterObserve(26)
-			go requestTimeSync(msg, peer)
+			requestTimeSync(msg, peer)
 			log.Infoln("Request to remote time sync.")
 		}
 	}
@@ -111,8 +110,8 @@ func (ts *TimeSyncer) ProcessSyncRequest(msg *p2p.TimeSyncMsg, p *Peer) {
 	//	msg.Code = -1
 	//}
 
-	metrics.RoutineCreateCounterObserve(28)
-	go respondTimeSync(msg, p)
+	//metrics.RoutineCreateCounterObserve(28)
+	respondTimeSync(msg, p)
 }
 
 func (ts *TimeSyncer) ProcessSyncRespond(msg *p2p.TimeSyncMsg, p *Peer) {
