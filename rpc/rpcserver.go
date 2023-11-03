@@ -25,7 +25,7 @@ func RPCServerStart() {
 		return
 	}
 
-	limiter := NewRateLimiter(3000)
+	limiter := NewRateLimiter(2000)
 
 	s := grpc.NewServer(
 		grpc.UnaryInterceptor(limiter.UnaryInterceptor),

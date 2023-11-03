@@ -54,13 +54,17 @@ const (
 	maxKnownBlock          = 1024
 	maxKnownTransaction    = 32768
 	maxSyncerStatusChannel = 512
-	packageBlockInterval   = 2
-	gossipNodes            = 4
-	NetworkRendezvous      = "chronos"
-	TxGossipTopic          = "/chronos/1.0.1/transactions"
-	BlockGossipTopic       = "/chronos/1.0.1/blocks"
-	ProtocolId             = protocol.ID("/chronos/1.0.0/p2p")
-	TxProtocolId           = protocol.ID("/chronos/1.0.0/transaction")
+
+	packageBlockInterval = 2
+	gossipNodes          = 8
+	udpBufferSize        = 1024    // UDP Buffer size = 1M
+	pubsubMaxSize        = 1 << 22 // 4 MB
+
+	NetworkRendezvous = "chronos"
+	TxGossipTopic     = "/chronos/1.0.1/transactions"
+	BlockGossipTopic  = "/chronos/1.0.1/blocks"
+	ProtocolId        = protocol.ID("/chronos/1.0.0/p2p")
+	TxProtocolId      = protocol.ID("/chronos/1.0.0/transaction")
 )
 
 type P2PManagerConfig struct {
@@ -125,8 +129,8 @@ func NewP2PManager(config *P2PManagerConfig) (*P2PManager, error) {
 		peerSet:    make([]*Peer, 0, 40),
 		peers:      make(map[peer.ID]*Peer),
 
-		blockBroadcastQueue: make(chan *common.Block, 256),
-		txBroadcastQueue:    make(chan *common.Transaction, 8192*4),
+		blockBroadcastQueue: make(chan *common.Block, 512),
+		txBroadcastQueue:    make(chan *common.Transaction, 40960),
 
 		knownBlock:       knownBlockCache,
 		knownTransaction: knownTxCache,
@@ -194,12 +198,12 @@ func (pm *P2PManager) packageBlockRoutine() {
 
 			consensus, err := crypto.VRFCheckLocalConsensus(seed.Bytes())
 			if !consensus || err != nil {
-				log.Infof("Local is not consensus node")
+				//log.Infof("Local is not consensus node")
 				continue
 			}
 
 			randNumber, s, t, err := crypto.VRFCalculate(elliptic.P256(), seed.Bytes())
-			log.Debugf("Package with seed: %s", hex.EncodeToString(seed.Bytes()))
+			log.Infoln("Package with seed: %s", hex.EncodeToString(seed.Bytes()))
 
 			params := common.GeneralParams{
 				Result:       seed.Bytes(),
@@ -210,15 +214,17 @@ func (pm *P2PManager) packageBlockRoutine() {
 			}
 
 			txs := pm.txPool.Package()
-			//log.Infof("Package %d txs.", len(txs))
+			log.Infof("Package %d txs.", len(txs))
 			newBlock, err := pm.chain.PackageNewBlock(txs, timestamp, &params, packageBlockInterval)
+			log.Infof("Package new block.")
 
 			if err != nil {
-				log.WithField("error", err).Debugln("Package new block failed.")
+				log.WithField("error", err).Warning("Package new block failed.")
 				continue
 			}
 
 			pm.chain.AppendBlockTask(newBlock)
+			log.Infoln("Append block to buffer.")
 			pm.blockBroadcastQueue <- newBlock
 			log.Infof("Package new block# 0x%s", hex.EncodeToString(newBlock.Header.BlockHash[:]))
 		}
@@ -275,12 +281,17 @@ func (pm *P2PManager) broadcastBlock() {
 				log.WithError(err).Errorln("Serialize block failed.")
 				continue
 			}
+			log.Infof("Block #%s size: %d kb txs: %d", block.BlockHash()[:8],
+				len(blockData)/1024, len(block.Transactions))
 
 			err = pm.blockTopic.Publish(context.Background(), blockData)
 			if err != nil {
 				log.WithError(err).Errorln("Publish block failed.")
 				continue
 			}
+
+			log.Infof("Broadcast block 0x%s", block.BlockHash())
+			metrics.GossipBroadcastBlocksCountInc()
 		}
 	}
 }
@@ -291,6 +302,7 @@ func (pm *P2PManager) broadcastTransaction() {
 		select {
 		case tx := <-pm.txBroadcastQueue:
 			pm.UDPGossipBroadcast(tx)
+			time.Sleep(200 * time.Microsecond)
 		}
 	}
 }
@@ -320,7 +332,8 @@ func (pm *P2PManager) gossipBlockSubscribe(ctx context.Context,
 		block, err := utils.DeserializeBlock(blockMsg.Data)
 
 		if err != nil {
-			log.WithField("error", err).Debugln("Deserialize block from bytes failed.")
+			log.WithField("error",
+				err).Warning("Deserialize block from bytes failed.")
 			return
 		}
 
@@ -331,6 +344,7 @@ func (pm *P2PManager) gossipBlockSubscribe(ctx context.Context,
 		}
 
 		pm.markBlock(strHash)
+		log.WithField("hash", strHash).Debugln("Receive new block.")
 
 		if block.Header.Height == 0 {
 			metrics.RoutineCreateCounterObserve(18)
@@ -363,7 +377,6 @@ func (pm *P2PManager) gossipTxSubscribe(ctx context.Context,
 		if txMsg.ReceivedFrom == h.ID() {
 			continue
 		}
-		//log.Infoln("Receive message from gossip.")
 
 		if !pm.Synced() {
 			continue
@@ -476,7 +489,10 @@ func (pm *P2PManager) Discover(ctx context.Context, h host.Host,
 	pm.id = h.ID()
 
 	// 利用 go-libp2p-pubsub 构建广播网络
-	pm.gossip, err = pubsub.NewGossipSub(ctx, h)
+	pm.gossip, err = pubsub.NewGossipSub(ctx, h,
+		pubsub.WithMaxMessageSize(pubsubMaxSize),
+	)
+	//pm.gossip, err = pubsub.(ctx, h)
 	if err != nil {
 		log.WithError(err).Fatalf("Create gossip sub failed")
 		return
@@ -505,7 +521,7 @@ func (pm *P2PManager) Discover(ctx context.Context, h host.Host,
 	//	log.WithError(err).Fatalf("Get sub from topic failed")
 	//	return
 	//}
-	blockSub, err := pm.blockTopic.Subscribe()
+	blockSub, err := pm.blockTopic.Subscribe(pubsub.WithBufferSize(512))
 	if err != nil {
 		log.WithError(err).Fatalf("Get sub from topic failed")
 		return
@@ -684,7 +700,7 @@ func (pm *P2PManager) UDPGossipBroadcast(tx *common.Transaction) {
 
 		socket, err := net.DialUDP("udp", nil, &net.UDPAddr{
 			IP:   ip.IP,
-			Port: 31259,
+			Port: 53333,
 		})
 
 		if err != nil {
@@ -698,12 +714,11 @@ func (pm *P2PManager) UDPGossipBroadcast(tx *common.Transaction) {
 
 		metrics.GossipUDPSendCountInc()
 	}
-	time.Sleep(500 * time.Microsecond)
 }
 
 // TransactionUDP 计划使用的交易广播独立网络，
 func (pm *P2PManager) TransactionUDP() {
-	port := config.Int("node.udp", 31259)
+	port := config.Int("node.udp", 53333)
 	listen, err := net.ListenUDP("udp", &net.UDPAddr{
 		IP:   net.IPv4(0, 0, 0, 0),
 		Port: port,
@@ -718,7 +733,7 @@ func (pm *P2PManager) TransactionUDP() {
 	log.Infoln("Transaction gossip routine start!")
 
 	for {
-		var data [10240]byte
+		var data [udpBufferSize]byte
 		n, _, err := listen.ReadFromUDP(data[:])
 		if err != nil {
 			log.WithError(err).Warningln("Receive tx failed.")

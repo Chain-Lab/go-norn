@@ -50,6 +50,10 @@ var (
 		Name: "block_syncer_status",
 		Help: "The status in time syncer.",
 	})
+	transactionInsertCounter = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "transaction_insert_counter",
+		Help: "The counter for inserted txs.",
+	})
 )
 
 func TimeSyncDeltaSet(value float64) {
@@ -86,4 +90,8 @@ func TimeSyncerStatusSet(code int8) {
 
 func BlockSyncerStatusSet(code int8) {
 	BlockSyncrStatus.Set(float64(code))
+}
+
+func TransactionInsertInc() {
+	transactionInsertCounter.Inc()
 }

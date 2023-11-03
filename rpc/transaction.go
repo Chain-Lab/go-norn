@@ -48,13 +48,13 @@ func (s *transactionService) SubmitTransaction(ctx context.Context, in *pb.Submi
 		return resp, err
 	}
 
-	// 对交易的签名进行验证，如果验证错误直接返回
-	//if !transaction.Verify() {
-	//	resp.Status = pb.SubmitTransactionStatus_SIGNATURE_FAILED.Enum()
-	//	resp.Error = proto.String("Verify transaction signature failed.")
-	//	//log.Infoln("Verify transaction signature failed.")
-	//	return resp, err
-	//}
+	//对交易的签名进行验证，如果验证错误直接返回
+	if !transaction.Verify() {
+		resp.Status = pb.SubmitTransactionStatus_SIGNATURE_FAILED.Enum()
+		resp.Error = proto.String("Verify transaction signature failed.")
+		//log.Infoln("Verify transaction signature failed.")
+		return resp, err
+	}
 
 	// 获取交易池实例，然后添加交易
 	//pool := core.GetTxPoolInst()
@@ -66,6 +66,7 @@ func (s *transactionService) SubmitTransaction(ctx context.Context, in *pb.Submi
 	//}
 	//
 	//pool.Add(transaction)
+
 	pm := node.GetP2PManager()
 
 	if pm == nil {

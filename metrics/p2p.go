@@ -24,9 +24,14 @@ var (
 		Name: "gossip_receive_counter",
 		Help: "P2P network broadcast topic receive counter.",
 	})
+	// go-libp2p gossip 接收区块计数
 	gossipBlockReceiveCounter = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "gossip_block_receive_counter",
 		Help: "P2P network broadcast topic receive blocks counter.",
+	})
+	gossipBlockBroadcastCounter = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "gossip_block_broadcast_counter",
+		Help: "P2P network broadcast topic send blocks counter.",
 	})
 	gossipUDPSendCounter = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "gossip_upd_send_counter",
@@ -52,6 +57,10 @@ func GossipReceiveCountInc() {
 
 func GossipReceiveBlocksCountInc() {
 	gossipBlockReceiveCounter.Inc()
+}
+
+func GossipBroadcastBlocksCountInc() {
+	gossipBlockBroadcastCounter.Inc()
 }
 
 func GossipUDPSendCountInc() {

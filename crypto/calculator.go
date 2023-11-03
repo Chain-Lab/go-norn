@@ -35,8 +35,9 @@ type Calculator struct {
 	order      *big.Int
 	timeParam  int64
 
-	seed  *big.Int
-	proof *big.Int
+	prevSeed *big.Int
+	seed     *big.Int
+	proof    *big.Int
 
 	changed    bool
 	changeLock sync.RWMutex
@@ -67,8 +68,9 @@ func CalculatorInitialization(pp *big.Int, order *big.Int, t int64) {
 			timeParam:  t,
 
 			// 当前阶段的输出和证明
-			seed:  big.NewInt(0),
-			proof: big.NewInt(0),
+			prevSeed: big.NewInt(0),
+			seed:     big.NewInt(0),
+			proof:    big.NewInt(0),
 
 			// 输入是否出现变化（是否需要直接进入下一轮）
 			changed: false,
@@ -109,8 +111,11 @@ func (c *Calculator) VerifyBlockVDF(seed *big.Int, proof *big.Int) bool {
 	c.changeLock.Lock()
 	defer c.changeLock.Unlock()
 
-	if c.seed.Cmp(seed) == 0 || (c.seed.Cmp(zero) != 0 && c.Verify(c.seed,
-		proof, seed)) {
+	if c.prevSeed.Cmp(seed) == 0 || c.seed.Cmp(seed) == 0 || (c.seed.Cmp(
+		zero) != 0 && c.
+		Verify(c.
+			seed,
+			proof, seed)) {
 		return true
 	}
 
@@ -126,7 +131,7 @@ func (c *Calculator) AppendNewSeed(seed *big.Int, proof *big.Int) {
 
 	// 检查如果当前的 seed 没有变化就直接返回 或者
 	// 如果当前的 seed 不是初始的0，并且输入无法通过验证则不更新
-	if c.seed.Cmp(seed) == 0 || (c.seed.Cmp(zero) != 0 && !c.Verify(c.seed, proof, seed)) {
+	if c.prevSeed.Cmp(seed) == 0 || c.seed.Cmp(seed) == 0 || (c.seed.Cmp(zero) != 0 && !c.Verify(c.seed, proof, seed)) {
 		log.Debugln("Block VDF verify failed seed: %s, result: %s",
 			hex.EncodeToString(c.seed.Bytes()), hex.EncodeToString(seed.
 				Bytes()))
@@ -176,6 +181,7 @@ func (c *Calculator) run() {
 			log.Infoln("Start new VDF calculate.")
 
 			c.changed = false
+			c.prevSeed.SetBytes(c.seed.Bytes())
 			c.seed.SetBytes(seed.Bytes())
 			log.Infof("Set seed to %s", hex.EncodeToString(c.seed.Bytes()))
 			c.proof = <-c.prevProofChannel

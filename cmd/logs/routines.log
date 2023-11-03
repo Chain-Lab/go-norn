@@ -1,0 +1,320 @@
+goroutine profile: total 90
+8 @ 0x43bc56 0x44bf1e 0xb0af11 0x46f561
+#	0xb0af10	github.com/libp2p/go-libp2p-pubsub.(*GossipSubRouter).connector+0xd0	/Users/decision/go/pkg/mod/github.com/libp2p/go-libp2p-pubsub@v0.9.3/gossipsub.go:947
+
+2 @ 0x43bc56 0x406f9d 0x406a98 0xb35e53 0x46f561
+#	0xb35e52	github.com/chain-lab/go-chronos/node.(*Peer).sendStatus+0x52	/Users/decision/Repos/go-chronos/node/broadcast.go:51
+
+2 @ 0x43bc56 0x406f9d 0x406ad8 0x8e6d2b 0x46f561
+#	0x8e6d2a	github.com/chain-lab/go-chronos/p2p.(*Peer).writeLoop+0xaa	/Users/decision/Repos/go-chronos/p2p/peer.go:191
+
+2 @ 0x43bc56 0x406f9d 0x406ad8 0xb3b80b 0x46f561
+#	0xb3b80a	github.com/chain-lab/go-chronos/node.(*Peer).Handle+0x4a	/Users/decision/Repos/go-chronos/node/peer.go:170
+
+2 @ 0x43bc56 0x406f9d 0x406ad8 0xc6ba65 0xf0c1da 0x46f561
+#	0xc6ba64	github.com/libp2p/go-libp2p/p2p/net/upgrader.(*listener).Accept+0x44		/Users/decision/go/pkg/mod/github.com/libp2p/go-libp2p@v0.27.8/p2p/net/upgrader/listener.go:162
+#	0xf0c1d9	github.com/libp2p/go-libp2p/p2p/net/swarm.(*Swarm).AddListenAddr.func2+0xf9	/Users/decision/go/pkg/mod/github.com/libp2p/go-libp2p@v0.27.8/p2p/net/swarm/swarm_listen.go:128
+
+2 @ 0x43bc56 0x434297 0x469ae9 0x4db972 0x4dcd59 0x4dcd47 0x6c51a9 0x6d8e85 0x5f3b5b 0x4b8c3a 0xc7649b 0xc7647a 0xc75b0f 0x4b8c3a 0xc42cf7 0xc42cd2 0xc42bbe 0x46f561
+#	0x469ae8	internal/poll.runtime_pollWait+0x88								/Users/decision/sdk/go1.20/src/runtime/netpoll.go:306
+#	0x4db971	internal/poll.(*pollDesc).wait+0x31								/Users/decision/sdk/go1.20/src/internal/poll/fd_poll_runtime.go:84
+#	0x4dcd58	internal/poll.(*pollDesc).waitRead+0x298							/Users/decision/sdk/go1.20/src/internal/poll/fd_poll_runtime.go:89
+#	0x4dcd46	internal/poll.(*FD).Read+0x286									/Users/decision/sdk/go1.20/src/internal/poll/fd_unix.go:167
+#	0x6c51a8	net.(*netFD).Read+0x28										/Users/decision/sdk/go1.20/src/net/fd_posix.go:55
+#	0x6d8e84	net.(*conn).Read+0x44										/Users/decision/sdk/go1.20/src/net/net.go:183
+#	0x5f3b5a	bufio.(*Reader).Read+0x1ba									/Users/decision/sdk/go1.20/src/bufio/bufio.go:237
+#	0x4b8c39	io.ReadAtLeast+0x99										/Users/decision/sdk/go1.20/src/io/io.go:332
+#	0xc7649a	io.ReadFull+0x3a										/Users/decision/sdk/go1.20/src/io/io.go:351
+#	0xc76479	github.com/libp2p/go-libp2p/p2p/security/noise.(*secureSession).readNextInsecureMsgLen+0x19	/Users/decision/go/pkg/mod/github.com/libp2p/go-libp2p@v0.27.8/p2p/security/noise/rw.go:133
+#	0xc75b0e	github.com/libp2p/go-libp2p/p2p/security/noise.(*secureSession).Read+0x22e			/Users/decision/go/pkg/mod/github.com/libp2p/go-libp2p@v0.27.8/p2p/security/noise/rw.go:52
+#	0x4b8c39	io.ReadAtLeast+0x99										/Users/decision/sdk/go1.20/src/io/io.go:332
+#	0xc42cf6	io.ReadFull+0xf6										/Users/decision/sdk/go1.20/src/io/io.go:351
+#	0xc42cd1	github.com/libp2p/go-yamux/v4.(*Session).recvLoop+0xd1						/Users/decision/go/pkg/mod/github.com/libp2p/go-yamux/v4@v4.0.0/session.go:668
+#	0xc42bbd	github.com/libp2p/go-yamux/v4.(*Session).recv+0x1d						/Users/decision/go/pkg/mod/github.com/libp2p/go-yamux/v4@v4.0.0/session.go:640
+
+2 @ 0x43bc56 0x434297 0x469ae9 0x4db972 0x4e127d 0x4e126b 0x6c7335 0x6e23a5 0x6e149d 0x7d58e5 0x7d551d 0x7d6a16 0x46f561
+#	0x469ae8	internal/poll.runtime_pollWait+0x88		/Users/decision/sdk/go1.20/src/runtime/netpoll.go:306
+#	0x4db971	internal/poll.(*pollDesc).wait+0x31		/Users/decision/sdk/go1.20/src/internal/poll/fd_poll_runtime.go:84
+#	0x4e127c	internal/poll.(*pollDesc).waitRead+0x2bc	/Users/decision/sdk/go1.20/src/internal/poll/fd_poll_runtime.go:89
+#	0x4e126a	internal/poll.(*FD).Accept+0x2aa		/Users/decision/sdk/go1.20/src/internal/poll/fd_unix.go:614
+#	0x6c7334	net.(*netFD).accept+0x34			/Users/decision/sdk/go1.20/src/net/fd_unix.go:172
+#	0x6e23a4	net.(*TCPListener).accept+0x24			/Users/decision/sdk/go1.20/src/net/tcpsock_posix.go:148
+#	0x6e149c	net.(*TCPListener).Accept+0x3c			/Users/decision/sdk/go1.20/src/net/tcpsock.go:297
+#	0x7d58e4	net/http.(*Server).Serve+0x384			/Users/decision/sdk/go1.20/src/net/http/server.go:3059
+#	0x7d551c	net/http.(*Server).ListenAndServe+0x7c		/Users/decision/sdk/go1.20/src/net/http/server.go:2988
+#	0x7d6a15	net/http.ListenAndServe+0x95			/Users/decision/sdk/go1.20/src/net/http/server.go:3242
+
+2 @ 0x43bc56 0x44bf1e 0xa4b7a6 0x46f561
+#	0xa4b7a5	github.com/jbenet/goprocess/context.CloseAfterContext.func1+0x85	/Users/decision/go/pkg/mod/github.com/jbenet/goprocess@v0.1.4/context/context.go:65
+
+2 @ 0x43bc56 0x44bf1e 0xb0376b 0x46f561
+#	0xb0376a	github.com/libp2p/go-libp2p-pubsub.(*PubSub).handleSendingMessages+0x16a	/Users/decision/go/pkg/mod/github.com/libp2p/go-libp2p-pubsub@v0.9.3/comm.go:175
+
+2 @ 0x43bc56 0x44bf1e 0xb2e385 0x46f561
+#	0xb2e384	github.com/libp2p/go-libp2p-pubsub.(*validation).validateWorker+0xc4	/Users/decision/go/pkg/mod/github.com/libp2p/go-libp2p-pubsub@v0.9.3/validation.go:283
+
+2 @ 0x43bc56 0x44bf1e 0xc40553 0xc47af9 0xf065ae 0x46f561
+#	0xc40552	github.com/libp2p/go-yamux/v4.(*Session).AcceptStream+0xb2		/Users/decision/go/pkg/mod/github.com/libp2p/go-yamux/v4@v4.0.0/session.go:272
+#	0xc47af8	github.com/libp2p/go-libp2p/p2p/muxer/yamux.(*conn).AcceptStream+0x18	/Users/decision/go/pkg/mod/github.com/libp2p/go-libp2p@v0.27.8/p2p/muxer/yamux/conn.go:43
+#	0xf065ad	github.com/libp2p/go-libp2p/p2p/net/swarm.(*Conn).start.func1+0xad	/Users/decision/go/pkg/mod/github.com/libp2p/go-libp2p@v0.27.8/p2p/net/swarm/swarm_conn.go:114
+
+2 @ 0x43bc56 0x44bf1e 0xc40cbf 0x46f561
+#	0xc40cbe	github.com/libp2p/go-yamux/v4.(*Session).startMeasureRTT+0xde	/Users/decision/go/pkg/mod/github.com/libp2p/go-yamux/v4@v4.0.0/session.go:356
+
+2 @ 0x43bc56 0x44bf1e 0xc42490 0xc41e9e 0x46f561
+#	0xc4248f	github.com/libp2p/go-yamux/v4.(*Session).sendLoop+0x5af	/Users/decision/go/pkg/mod/github.com/libp2p/go-yamux/v4@v4.0.0/session.go:583
+#	0xc41e9d	github.com/libp2p/go-yamux/v4.(*Session).send+0x1d	/Users/decision/go/pkg/mod/github.com/libp2p/go-yamux/v4@v4.0.0/session.go:512
+
+2 @ 0x43bc56 0x44bf1e 0xc44ba9 0xc47b5e 0xf0eaf3 0x4b8c3a 0xa64f37 0xa64f1a 0x89e7da 0xa64790 0xa64b5c 0xabdd6b 0xabda65 0xee1e76 0x46f561
+#	0xc44ba8	github.com/libp2p/go-yamux/v4.(*Stream).Read+0x1a8					/Users/decision/go/pkg/mod/github.com/libp2p/go-yamux/v4@v4.0.0/stream.go:111
+#	0xc47b5d	github.com/libp2p/go-libp2p/p2p/muxer/yamux.(*stream).Read+0x1d				/Users/decision/go/pkg/mod/github.com/libp2p/go-libp2p@v0.27.8/p2p/muxer/yamux/stream.go:17
+#	0xf0eaf2	github.com/libp2p/go-libp2p/p2p/net/swarm.(*Stream).Read+0x32				/Users/decision/go/pkg/mod/github.com/libp2p/go-libp2p@v0.27.8/p2p/net/swarm/swarm_stream.go:55
+#	0x4b8c39	io.ReadAtLeast+0x99									/Users/decision/sdk/go1.20/src/io/io.go:332
+#	0xa64f36	io.ReadFull+0x36									/Users/decision/sdk/go1.20/src/io/io.go:351
+#	0xa64f19	github.com/libp2p/go-msgio.(*simpleByteReader).ReadByte+0x19				/Users/decision/go/pkg/mod/github.com/libp2p/go-msgio@v0.3.0/varint.go:185
+#	0x89e7d9	github.com/multiformats/go-varint.ReadUvarint+0x59					/Users/decision/go/pkg/mod/github.com/multiformats/go-varint@v0.0.7/varint.go:80
+#	0xa6478f	github.com/libp2p/go-msgio.(*varintReader).nextMsgLen+0x2f				/Users/decision/go/pkg/mod/github.com/libp2p/go-msgio@v0.3.0/varint.go:119
+#	0xa64b5b	github.com/libp2p/go-msgio.(*varintReader).ReadMsg+0xbb					/Users/decision/go/pkg/mod/github.com/libp2p/go-msgio@v0.3.0/varint.go:149
+#	0xabdd6a	github.com/libp2p/go-libp2p-kad-dht.(*IpfsDHT).handleNewMessage+0x2aa			/Users/decision/go/pkg/mod/github.com/libp2p/go-libp2p-kad-dht@v0.21.1/dht_net.go:52
+#	0xabda64	github.com/libp2p/go-libp2p-kad-dht.(*IpfsDHT).handleNewStream+0x24			/Users/decision/go/pkg/mod/github.com/libp2p/go-libp2p-kad-dht@v0.21.1/dht_net.go:26
+#	0xee1e75	github.com/libp2p/go-libp2p/p2p/host/basic.(*BasicHost).SetStreamHandler.func1+0x75	/Users/decision/go/pkg/mod/github.com/libp2p/go-libp2p@v0.27.8/p2p/host/basic/basic_host.go:594
+
+2 @ 0x43bc56 0x44bf1e 0xc44ba9 0xc47b5e 0xf0eaf3 0x4b8c3a 0xa64f37 0xa64f1a 0x89e7da 0xa64790 0xa64b5c 0xb0270b 0xee1e76 0x46f561
+#	0xc44ba8	github.com/libp2p/go-yamux/v4.(*Stream).Read+0x1a8					/Users/decision/go/pkg/mod/github.com/libp2p/go-yamux/v4@v4.0.0/stream.go:111
+#	0xc47b5d	github.com/libp2p/go-libp2p/p2p/muxer/yamux.(*stream).Read+0x1d				/Users/decision/go/pkg/mod/github.com/libp2p/go-libp2p@v0.27.8/p2p/muxer/yamux/stream.go:17
+#	0xf0eaf2	github.com/libp2p/go-libp2p/p2p/net/swarm.(*Stream).Read+0x32				/Users/decision/go/pkg/mod/github.com/libp2p/go-libp2p@v0.27.8/p2p/net/swarm/swarm_stream.go:55
+#	0x4b8c39	io.ReadAtLeast+0x99									/Users/decision/sdk/go1.20/src/io/io.go:332
+#	0xa64f36	io.ReadFull+0x36									/Users/decision/sdk/go1.20/src/io/io.go:351
+#	0xa64f19	github.com/libp2p/go-msgio.(*simpleByteReader).ReadByte+0x19				/Users/decision/go/pkg/mod/github.com/libp2p/go-msgio@v0.3.0/varint.go:185
+#	0x89e7d9	github.com/multiformats/go-varint.ReadUvarint+0x59					/Users/decision/go/pkg/mod/github.com/multiformats/go-varint@v0.0.7/varint.go:80
+#	0xa6478f	github.com/libp2p/go-msgio.(*varintReader).nextMsgLen+0x2f				/Users/decision/go/pkg/mod/github.com/libp2p/go-msgio@v0.3.0/varint.go:119
+#	0xa64b5b	github.com/libp2p/go-msgio.(*varintReader).ReadMsg+0xbb					/Users/decision/go/pkg/mod/github.com/libp2p/go-msgio@v0.3.0/varint.go:149
+#	0xb0270a	github.com/libp2p/go-libp2p-pubsub.(*PubSub).handleNewStream+0x3ea			/Users/decision/go/pkg/mod/github.com/libp2p/go-libp2p-pubsub@v0.9.3/comm.go:66
+#	0xee1e75	github.com/libp2p/go-libp2p/p2p/host/basic.(*BasicHost).SetStreamHandler.func1+0x75	/Users/decision/go/pkg/mod/github.com/libp2p/go-libp2p@v0.27.8/p2p/host/basic/basic_host.go:594
+
+2 @ 0x43bc56 0x44bf1e 0xc44ba9 0xc47b5e 0xf0eaf3 0xb03526 0x46f561
+#	0xc44ba8	github.com/libp2p/go-yamux/v4.(*Stream).Read+0x1a8			/Users/decision/go/pkg/mod/github.com/libp2p/go-yamux/v4@v4.0.0/stream.go:111
+#	0xc47b5d	github.com/libp2p/go-libp2p/p2p/muxer/yamux.(*stream).Read+0x1d		/Users/decision/go/pkg/mod/github.com/libp2p/go-libp2p@v0.27.8/p2p/muxer/yamux/stream.go:17
+#	0xf0eaf2	github.com/libp2p/go-libp2p/p2p/net/swarm.(*Stream).Read+0x32		/Users/decision/go/pkg/mod/github.com/libp2p/go-libp2p@v0.27.8/p2p/net/swarm/swarm_stream.go:55
+#	0xb03525	github.com/libp2p/go-libp2p-pubsub.(*PubSub).handlePeerDead+0x85	/Users/decision/go/pkg/mod/github.com/libp2p/go-libp2p-pubsub@v0.9.3/comm.go:147
+
+2 @ 0x43bc56 0x44bf1e 0xc44ba9 0xc47b5e 0xf0eaf3 0xee6755 0xee5347 0x5f357f 0x5f416f 0x5f45b4 0x5f47dd 0x8e65ed 0x46f561
+#	0xc44ba8	github.com/libp2p/go-yamux/v4.(*Stream).Read+0x1a8			/Users/decision/go/pkg/mod/github.com/libp2p/go-yamux/v4@v4.0.0/stream.go:111
+#	0xc47b5d	github.com/libp2p/go-libp2p/p2p/muxer/yamux.(*stream).Read+0x1d		/Users/decision/go/pkg/mod/github.com/libp2p/go-libp2p@v0.27.8/p2p/muxer/yamux/stream.go:17
+#	0xf0eaf2	github.com/libp2p/go-libp2p/p2p/net/swarm.(*Stream).Read+0x32		/Users/decision/go/pkg/mod/github.com/libp2p/go-libp2p@v0.27.8/p2p/net/swarm/swarm_stream.go:55
+#	0xee6754	github.com/multiformats/go-multistream.(*lazyClientConn[...]).Read+0xb4	/Users/decision/go/pkg/mod/github.com/multiformats/go-multistream@v0.4.1/lazyClient.go:68
+#	0xee5346	github.com/libp2p/go-libp2p/p2p/host/basic.(*streamWrapper).Read+0x26	/Users/decision/go/pkg/mod/github.com/libp2p/go-libp2p@v0.27.8/p2p/host/basic/basic_host.go:1134
+#	0x5f357e	bufio.(*Reader).fill+0xfe						/Users/decision/sdk/go1.20/src/bufio/bufio.go:106
+#	0x5f416e	bufio.(*Reader).ReadSlice+0x2e						/Users/decision/sdk/go1.20/src/bufio/bufio.go:372
+#	0x5f45b3	bufio.(*Reader).collectFragments+0x73					/Users/decision/sdk/go1.20/src/bufio/bufio.go:447
+#	0x5f47dc	bufio.(*Reader).ReadBytes+0x1c						/Users/decision/sdk/go1.20/src/bufio/bufio.go:474
+#	0x8e65ec	github.com/chain-lab/go-chronos/p2p.(*Peer).readLoop+0x14c		/Users/decision/Repos/go-chronos/p2p/peer.go:113
+
+2 @ 0x43bc56 0x44bf1e 0xdd8c39 0x46f561
+#	0xdd8c38	github.com/libp2p/go-libp2p/p2p/transport/quicreuse.(*reuse).gc+0x118	/Users/decision/go/pkg/mod/github.com/libp2p/go-libp2p@v0.27.8/p2p/transport/quicreuse/reuse.go:110
+
+1 @ 0x40c6f4 0x449d4c 0x4686cb 0xa6d6d1 0x46f561
+#	0x4686ca	runtime/pprof.readProfile+0x4a		/Users/decision/sdk/go1.20/src/runtime/cpuprof.go:230
+#	0xa6d6d0	runtime/pprof.profileWriter+0x50	/Users/decision/sdk/go1.20/src/runtime/pprof/pprof.go:810
+
+1 @ 0x40c6f4 0x46bb2f 0x865519 0x46f561
+#	0x46bb2e	os/signal.signal_recv+0x2e	/Users/decision/sdk/go1.20/src/runtime/sigqueue.go:152
+#	0x865518	os/signal.loop+0x18		/Users/decision/sdk/go1.20/src/os/signal/signal_unix.go:23
+
+1 @ 0x430976 0x469645 0xa6d175 0xa6cf8d 0xa69d2b 0xf8bcc5 0xf8c813 0x7d222f 0x7d3bc9 0x7d5376 0x7d0d52 0x46f561
+#	0x469644	runtime/pprof.runtime_goroutineProfileWithLabels+0x24	/Users/decision/sdk/go1.20/src/runtime/mprof.go:844
+#	0xa6d174	runtime/pprof.writeRuntimeProfile+0xb4			/Users/decision/sdk/go1.20/src/runtime/pprof/pprof.go:734
+#	0xa6cf8c	runtime/pprof.writeGoroutine+0x4c			/Users/decision/sdk/go1.20/src/runtime/pprof/pprof.go:694
+#	0xa69d2a	runtime/pprof.(*Profile).WriteTo+0x14a			/Users/decision/sdk/go1.20/src/runtime/pprof/pprof.go:329
+#	0xf8bcc4	net/http/pprof.handler.ServeHTTP+0x4a4			/Users/decision/sdk/go1.20/src/net/http/pprof/pprof.go:259
+#	0xf8c812	net/http/pprof.Index+0xf2				/Users/decision/sdk/go1.20/src/net/http/pprof/pprof.go:376
+#	0x7d222e	net/http.HandlerFunc.ServeHTTP+0x2e			/Users/decision/sdk/go1.20/src/net/http/server.go:2122
+#	0x7d3bc8	net/http.(*ServeMux).ServeHTTP+0x148			/Users/decision/sdk/go1.20/src/net/http/server.go:2500
+#	0x7d5375	net/http.serverHandler.ServeHTTP+0x315			/Users/decision/sdk/go1.20/src/net/http/server.go:2936
+#	0x7d0d51	net/http.(*conn).serve+0x611				/Users/decision/sdk/go1.20/src/net/http/server.go:1995
+
+1 @ 0x43bc56 0x406f9d 0x406a98 0xb34777 0x46f561
+#	0xb34776	github.com/chain-lab/go-chronos/node.(*BlockSyncer).run+0x96	/Users/decision/Repos/go-chronos/node/block_syncer.go:106
+
+1 @ 0x43bc56 0x406f9d 0x406a98 0xb34f85 0x46f561
+#	0xb34f84	github.com/chain-lab/go-chronos/node.(*BlockSyncer).blockProcessRoutine+0x44	/Users/decision/Repos/go-chronos/node/block_syncer.go:223
+
+1 @ 0x43bc56 0x406f9d 0x406a98 0xb374fa 0x46f561
+#	0xb374f9	github.com/chain-lab/go-chronos/node.(*P2PManager).packageBlockRoutine+0x59	/Users/decision/Repos/go-chronos/node/manager.go:171
+
+1 @ 0x43bc56 0x406f9d 0x406a98 0xf8f025 0x46f561
+#	0xf8f024	main.main.func1+0x44	/Users/decision/Repos/go-chronos/cmd/chronos/main.go:198
+
+1 @ 0x43bc56 0x406f9d 0x406ad8 0x973153 0x46f561
+#	0x973152	github.com/chain-lab/go-chronos/core.(*BlockChain).BlockProcessRoutine+0x32	/Users/decision/Repos/go-chronos/core/blockchain.go:121
+
+1 @ 0x43bc56 0x406f9d 0x406ad8 0xb34c68 0x46f561
+#	0xb34c67	github.com/chain-lab/go-chronos/node.(*BlockSyncer).statusMsgRoutine+0x47	/Users/decision/Repos/go-chronos/node/block_syncer.go:154
+
+1 @ 0x43bc56 0x406f9d 0x406ad8 0xf8ede5 0x43b827 0x46f561
+#	0xf8ede4	main.main+0x10a4	/Users/decision/Repos/go-chronos/cmd/chronos/main.go:213
+#	0x43b826	runtime.main+0x206	/Users/decision/sdk/go1.20/src/runtime/proc.go:250
+
+1 @ 0x43bc56 0x434297 0x469ae9 0x4db972 0x4dcd59 0x4dcd47 0x6c51a9 0x6d8e85 0x7caa9f 0x46f561
+#	0x469ae8	internal/poll.runtime_pollWait+0x88		/Users/decision/sdk/go1.20/src/runtime/netpoll.go:306
+#	0x4db971	internal/poll.(*pollDesc).wait+0x31		/Users/decision/sdk/go1.20/src/internal/poll/fd_poll_runtime.go:84
+#	0x4dcd58	internal/poll.(*pollDesc).waitRead+0x298	/Users/decision/sdk/go1.20/src/internal/poll/fd_poll_runtime.go:89
+#	0x4dcd46	internal/poll.(*FD).Read+0x286			/Users/decision/sdk/go1.20/src/internal/poll/fd_unix.go:167
+#	0x6c51a8	net.(*netFD).Read+0x28				/Users/decision/sdk/go1.20/src/net/fd_posix.go:55
+#	0x6d8e84	net.(*conn).Read+0x44				/Users/decision/sdk/go1.20/src/net/net.go:183
+#	0x7caa9e	net/http.(*connReader).backgroundRead+0x3e	/Users/decision/sdk/go1.20/src/net/http/server.go:674
+
+1 @ 0x43bc56 0x434297 0x469ae9 0x4db972 0x4dcd59 0x4dcd47 0x6c51a9 0x6d8e85 0x7caf11 0x5f357f 0x5f36dd 0x7d0ebc 0x46f561
+#	0x469ae8	internal/poll.runtime_pollWait+0x88		/Users/decision/sdk/go1.20/src/runtime/netpoll.go:306
+#	0x4db971	internal/poll.(*pollDesc).wait+0x31		/Users/decision/sdk/go1.20/src/internal/poll/fd_poll_runtime.go:84
+#	0x4dcd58	internal/poll.(*pollDesc).waitRead+0x298	/Users/decision/sdk/go1.20/src/internal/poll/fd_poll_runtime.go:89
+#	0x4dcd46	internal/poll.(*FD).Read+0x286			/Users/decision/sdk/go1.20/src/internal/poll/fd_unix.go:167
+#	0x6c51a8	net.(*netFD).Read+0x28				/Users/decision/sdk/go1.20/src/net/fd_posix.go:55
+#	0x6d8e84	net.(*conn).Read+0x44				/Users/decision/sdk/go1.20/src/net/net.go:183
+#	0x7caf10	net/http.(*connReader).Read+0x170		/Users/decision/sdk/go1.20/src/net/http/server.go:782
+#	0x5f357e	bufio.(*Reader).fill+0xfe			/Users/decision/sdk/go1.20/src/bufio/bufio.go:106
+#	0x5f36dc	bufio.(*Reader).Peek+0x5c			/Users/decision/sdk/go1.20/src/bufio/bufio.go:144
+#	0x7d0ebb	net/http.(*conn).serve+0x77b			/Users/decision/sdk/go1.20/src/net/http/server.go:2030
+
+1 @ 0x43bc56 0x434297 0x469ae9 0x4db972 0x4ddb4f 0x4ddb3d 0x6c54e9 0x6e4e45 0x6e30b1 0xb3a92d 0xb3a8f5 0x46f561
+#	0x469ae8	internal/poll.runtime_pollWait+0x88					/Users/decision/sdk/go1.20/src/runtime/netpoll.go:306
+#	0x4db971	internal/poll.(*pollDesc).wait+0x31					/Users/decision/sdk/go1.20/src/internal/poll/fd_poll_runtime.go:84
+#	0x4ddb4e	internal/poll.(*pollDesc).waitRead+0x24e				/Users/decision/sdk/go1.20/src/internal/poll/fd_poll_runtime.go:89
+#	0x4ddb3c	internal/poll.(*FD).ReadFromInet6+0x23c					/Users/decision/sdk/go1.20/src/internal/poll/fd_unix.go:277
+#	0x6c54e8	net.(*netFD).readFromInet6+0x28						/Users/decision/sdk/go1.20/src/net/fd_posix.go:72
+#	0x6e4e44	net.(*UDPConn).readFrom+0x84						/Users/decision/sdk/go1.20/src/net/udpsock_posix.go:59
+#	0x6e30b0	net.(*UDPConn).readFromUDP+0x30						/Users/decision/sdk/go1.20/src/net/udpsock.go:149
+#	0xb3a92c	net.(*UDPConn).ReadFromUDP+0x26c					/Users/decision/sdk/go1.20/src/net/udpsock.go:141
+#	0xb3a8f4	github.com/chain-lab/go-chronos/node.(*P2PManager).TransactionUDP+0x234	/Users/decision/Repos/go-chronos/node/manager.go:728
+
+1 @ 0x43bc56 0x434297 0x469ae9 0x4db972 0x4e127d 0x4e126b 0x6c7335 0x6e23a5 0x6e149d 0xa56793 0xc6ace4 0x46f561
+#	0x469ae8	internal/poll.runtime_pollWait+0x88						/Users/decision/sdk/go1.20/src/runtime/netpoll.go:306
+#	0x4db971	internal/poll.(*pollDesc).wait+0x31						/Users/decision/sdk/go1.20/src/internal/poll/fd_poll_runtime.go:84
+#	0x4e127c	internal/poll.(*pollDesc).waitRead+0x2bc					/Users/decision/sdk/go1.20/src/internal/poll/fd_poll_runtime.go:89
+#	0x4e126a	internal/poll.(*FD).Accept+0x2aa						/Users/decision/sdk/go1.20/src/internal/poll/fd_unix.go:614
+#	0x6c7334	net.(*netFD).accept+0x34							/Users/decision/sdk/go1.20/src/net/fd_unix.go:172
+#	0x6e23a4	net.(*TCPListener).accept+0x24							/Users/decision/sdk/go1.20/src/net/tcpsock_posix.go:148
+#	0x6e149c	net.(*TCPListener).Accept+0x3c							/Users/decision/sdk/go1.20/src/net/tcpsock.go:297
+#	0xa56792	github.com/multiformats/go-multiaddr/net.(*maListener).Accept+0x32		/Users/decision/go/pkg/mod/github.com/multiformats/go-multiaddr@v0.9.0/net/net.go:243
+#	0xc6ace3	github.com/libp2p/go-libp2p/p2p/net/upgrader.(*listener).handleIncoming+0x103	/Users/decision/go/pkg/mod/github.com/libp2p/go-libp2p@v0.27.8/p2p/net/upgrader/listener.go:74
+
+1 @ 0x43bc56 0x434297 0x469ae9 0x4db972 0x4e127d 0x4e126b 0x6c7335 0x6e23a5 0x6e149d 0xbe60d5 0xc0436a 0x46f561
+#	0x469ae8	internal/poll.runtime_pollWait+0x88				/Users/decision/sdk/go1.20/src/runtime/netpoll.go:306
+#	0x4db971	internal/poll.(*pollDesc).wait+0x31				/Users/decision/sdk/go1.20/src/internal/poll/fd_poll_runtime.go:84
+#	0x4e127c	internal/poll.(*pollDesc).waitRead+0x2bc			/Users/decision/sdk/go1.20/src/internal/poll/fd_poll_runtime.go:89
+#	0x4e126a	internal/poll.(*FD).Accept+0x2aa				/Users/decision/sdk/go1.20/src/internal/poll/fd_unix.go:614
+#	0x6c7334	net.(*netFD).accept+0x34					/Users/decision/sdk/go1.20/src/net/fd_unix.go:172
+#	0x6e23a4	net.(*TCPListener).accept+0x24					/Users/decision/sdk/go1.20/src/net/tcpsock_posix.go:148
+#	0x6e149c	net.(*TCPListener).Accept+0x3c					/Users/decision/sdk/go1.20/src/net/tcpsock.go:297
+#	0xbe60d4	google.golang.org/grpc.(*Server).Serve+0x474			/Users/decision/go/pkg/mod/google.golang.org/grpc@v1.56.0/server.go:821
+#	0xc04369	github.com/chain-lab/go-chronos/rpc.RPCServerStart+0x2c9	/Users/decision/Repos/go-chronos/rpc/rpcserver.go:40
+
+1 @ 0x43bc56 0x44bf1e 0x8256bb 0x827a45 0x828b8e 0x828b75 0x828bf5 0x46f561
+#	0x8256ba	github.com/shirou/gopsutil/internal/common.Sleep+0x7a			/Users/decision/go/pkg/mod/github.com/shirou/gopsutil@v3.21.11+incompatible/internal/common/sleep.go:12
+#	0x827a44	github.com/shirou/gopsutil/cpu.PercentWithContext+0x84			/Users/decision/go/pkg/mod/github.com/shirou/gopsutil@v3.21.11+incompatible/cpu/cpu.go:152
+#	0x828b8d	github.com/shirou/gopsutil/cpu.Percent+0x2d				/Users/decision/go/pkg/mod/github.com/shirou/gopsutil@v3.21.11+incompatible/cpu/cpu.go:138
+#	0x828b74	github.com/chain-lab/go-chronos/metrics.getCpuPercent+0x14		/Users/decision/Repos/go-chronos/metrics/regular.go:24
+#	0x828bf4	github.com/chain-lab/go-chronos/metrics.RegularMetricsRoutine+0x34	/Users/decision/Repos/go-chronos/metrics/regular.go:34
+
+1 @ 0x43bc56 0x44bf1e 0x87e3a7 0x46f561
+#	0x87e3a6	github.com/syndtr/goleveldb/leveldb/util.(*BufferPool).drain+0xc6	/Users/decision/go/pkg/mod/github.com/syndtr/goleveldb@v1.0.0/leveldb/util/buffer_pool.go:206
+
+1 @ 0x43bc56 0x44bf1e 0x909557 0x46f561
+#	0x909556	github.com/syndtr/goleveldb/leveldb.(*DB).compactionError+0x136	/Users/decision/go/pkg/mod/github.com/syndtr/goleveldb@v1.0.0/leveldb/db_compaction.go:90
+
+1 @ 0x43bc56 0x44bf1e 0x90e633 0x46f561
+#	0x90e632	github.com/syndtr/goleveldb/leveldb.(*DB).mCompaction+0x112	/Users/decision/go/pkg/mod/github.com/syndtr/goleveldb@v1.0.0/leveldb/db_compaction.go:762
+
+1 @ 0x43bc56 0x44bf1e 0x90ee77 0x46f561
+#	0x90ee76	github.com/syndtr/goleveldb/leveldb.(*DB).tCompaction+0x6b6	/Users/decision/go/pkg/mod/github.com/syndtr/goleveldb@v1.0.0/leveldb/db_compaction.go:825
+
+1 @ 0x43bc56 0x44bf1e 0x912b68 0x46f561
+#	0x912b67	github.com/syndtr/goleveldb/leveldb.(*DB).mpoolDrain+0xa7	/Users/decision/go/pkg/mod/github.com/syndtr/goleveldb@v1.0.0/leveldb/db_state.go:101
+
+1 @ 0x43bc56 0x44bf1e 0xa3d53f 0x46f561
+#	0xa3d53e	github.com/ipfs/go-log/writer.(*MirrorWriter).logRoutine+0x11e	/Users/decision/go/pkg/mod/github.com/ipfs/go-log@v1.0.5/writer/writer.go:71
+
+1 @ 0x43bc56 0x44bf1e 0xa4c4bf 0xa4c19b 0x97e3d6 0x46f561
+#	0xa4c4be	github.com/libp2p/go-libp2p-kad-dht/providers.(*ProviderManager).run+0x2be	/Users/decision/go/pkg/mod/github.com/libp2p/go-libp2p-kad-dht@v0.21.1/providers/providers_manager.go:156
+#	0xa4c19a	github.com/libp2p/go-libp2p-kad-dht/providers.NewProviderManager.func1+0x3a	/Users/decision/go/pkg/mod/github.com/libp2p/go-libp2p-kad-dht@v0.21.1/providers/providers_manager.go:126
+#	0x97e3d5	github.com/jbenet/goprocess.(*process).Go.func1+0x35				/Users/decision/go/pkg/mod/github.com/jbenet/goprocess@v0.1.4/impl-mutex.go:134
+
+1 @ 0x43bc56 0x44bf1e 0xa9e14d 0x46f561
+#	0xa9e14c	go.opencensus.io/stats/view.(*worker).start+0xac	/Users/decision/go/pkg/mod/go.opencensus.io@v0.24.0/stats/view/worker.go:292
+
+1 @ 0x43bc56 0x44bf1e 0xaae4f9 0x46f561
+#	0xaae4f8	github.com/libp2p/go-libp2p-kad-dht/rtrefresh.(*RtRefreshManager).loop+0x238	/Users/decision/go/pkg/mod/github.com/libp2p/go-libp2p-kad-dht@v0.21.1/rtrefresh/rt_refresh_manager.go:149
+
+1 @ 0x43bc56 0x44bf1e 0xabab56 0x97e3d6 0x46f561
+#	0xabab55	github.com/libp2p/go-libp2p-kad-dht.(*IpfsDHT).fixLowPeersRoutine+0x135	/Users/decision/go/pkg/mod/github.com/libp2p/go-libp2p-kad-dht@v0.21.1/dht.go:462
+#	0x97e3d5	github.com/jbenet/goprocess.(*process).Go.func1+0x35			/Users/decision/go/pkg/mod/github.com/jbenet/goprocess@v0.1.4/impl-mutex.go:134
+
+1 @ 0x43bc56 0x44bf1e 0xabb185 0x46f561
+#	0xabb184	github.com/libp2p/go-libp2p-kad-dht.(*IpfsDHT).persistRTPeersInPeerStore+0x104	/Users/decision/go/pkg/mod/github.com/libp2p/go-libp2p-kad-dht@v0.21.1/dht.go:540
+
+1 @ 0x43bc56 0x44bf1e 0xabba95 0x97e3d6 0x46f561
+#	0xabba94	github.com/libp2p/go-libp2p-kad-dht.(*IpfsDHT).rtPeerLoop+0x134	/Users/decision/go/pkg/mod/github.com/libp2p/go-libp2p-kad-dht@v0.21.1/dht.go:591
+#	0x97e3d5	github.com/jbenet/goprocess.(*process).Go.func1+0x35		/Users/decision/go/pkg/mod/github.com/jbenet/goprocess@v0.1.4/impl-mutex.go:134
+
+1 @ 0x43bc56 0x44bf1e 0xacf8de 0x97e3d6 0x46f561
+#	0xacf8dd	github.com/libp2p/go-libp2p-kad-dht.(*subscriberNotifee).subscribe+0x1bd	/Users/decision/go/pkg/mod/github.com/libp2p/go-libp2p-kad-dht@v0.21.1/subscriber_notifee.go:68
+#	0x97e3d5	github.com/jbenet/goprocess.(*process).Go.func1+0x35				/Users/decision/go/pkg/mod/github.com/jbenet/goprocess@v0.1.4/impl-mutex.go:134
+
+1 @ 0x43bc56 0x44bf1e 0xad206e 0x46f561
+#	0xad206d	github.com/libp2p/go-libp2p-pubsub/timecache.background+0x14d	/Users/decision/go/pkg/mod/github.com/libp2p/go-libp2p-pubsub@v0.9.3/timecache/util.go:16
+
+1 @ 0x43bc56 0x44bf1e 0xb02167 0x46f561
+#	0xb02166	github.com/libp2p/go-libp2p-pubsub.(*backoff).cleanupLoop+0xe6	/Users/decision/go/pkg/mod/github.com/libp2p/go-libp2p-pubsub@v0.9.3/backoff.go:100
+
+1 @ 0x43bc56 0x44bf1e 0xb0eb6a 0x46f561
+#	0xb0eb69	github.com/libp2p/go-libp2p-pubsub.(*GossipSubRouter).heartbeatTimer+0x1e9	/Users/decision/go/pkg/mod/github.com/libp2p/go-libp2p-pubsub@v0.9.3/gossipsub.go:1332
+
+1 @ 0x43bc56 0x44bf1e 0xb18a7f 0x46f561
+#	0xb18a7e	github.com/libp2p/go-libp2p-pubsub.(*PubSub).processLoop+0x4de	/Users/decision/go/pkg/mod/github.com/libp2p/go-libp2p-pubsub@v0.9.3/pubsub.go:573
+
+1 @ 0x43bc56 0x44bf1e 0xb2494b 0xb384e5 0x46f561
+#	0xb2494a	github.com/libp2p/go-libp2p-pubsub.(*Subscription).Next+0x8a			/Users/decision/go/pkg/mod/github.com/libp2p/go-libp2p-pubsub@v0.9.3/subscription.go:26
+#	0xb384e4	github.com/chain-lab/go-chronos/node.(*P2PManager).gossipBlockSubscribe+0xc4	/Users/decision/Repos/go-chronos/node/manager.go:307
+
+1 @ 0x43bc56 0x44bf1e 0xb34131 0x46f561
+#	0xb34130	github.com/libp2p/go-libp2p/p2p/discovery/util.Advertise.func1+0x230	/Users/decision/go/pkg/mod/github.com/libp2p/go-libp2p@v0.27.8/p2p/discovery/util/util.go:42
+
+1 @ 0x43bc56 0x44bf1e 0xb392ce 0x46f561
+#	0xb392cd	github.com/chain-lab/go-chronos/node.(*P2PManager).Discover+0x50d	/Users/decision/Repos/go-chronos/node/manager.go:529
+
+1 @ 0x43bc56 0x44bf1e 0xc065cc 0x46f561
+#	0xc065cb	github.com/libp2p/go-libp2p/p2p/host/peerstore/pstoremem.(*memoryAddrBook).background+0x12b	/Users/decision/go/pkg/mod/github.com/libp2p/go-libp2p@v0.27.8/p2p/host/peerstore/pstoremem/addr_book.go:116
+
+1 @ 0x43bc56 0x44bf1e 0xc1e79c 0x46f561
+#	0xc1e79b	github.com/libp2p/go-libp2p/p2p/host/resource-manager.(*resourceManager).background+0x11b	/Users/decision/go/pkg/mod/github.com/libp2p/go-libp2p@v0.27.8/p2p/host/resource-manager/rcmgr.go:348
+
+1 @ 0x43bc56 0x44bf1e 0xc4c7c5 0x46f561
+#	0xc4c7c4	github.com/libp2p/go-libp2p/p2p/net/connmgr.(*BasicConnMgr).background+0x144	/Users/decision/go/pkg/mod/github.com/libp2p/go-libp2p@v0.27.8/p2p/net/connmgr/connmgr.go:347
+
+1 @ 0x43bc56 0x44bf1e 0xc4fe0f 0x46f561
+#	0xc4fe0e	github.com/libp2p/go-libp2p/p2p/net/connmgr.(*decayer).process+0x22e	/Users/decision/go/pkg/mod/github.com/libp2p/go-libp2p@v0.27.8/p2p/net/connmgr/decay.go:164
+
+1 @ 0x43bc56 0x44bf1e 0xe99478 0x46f561
+#	0xe99477	github.com/libp2p/go-libp2p/p2p/host/autonat.(*AmbientAutoNAT).background+0x2f7	/Users/decision/go/pkg/mod/github.com/libp2p/go-libp2p@v0.27.8/p2p/host/autonat/autonat.go:173
+
+1 @ 0x43bc56 0x44bf1e 0xea0ad9 0x46f561
+#	0xea0ad8	github.com/libp2p/go-libp2p/p2p/host/pstoremanager.(*PeerstoreManager).background+0x2b8	/Users/decision/go/pkg/mod/github.com/libp2p/go-libp2p@v0.27.8/p2p/host/pstoremanager/pstoremanager.go:96
+
+1 @ 0x43bc56 0x44bf1e 0xec85ba 0x46f561
+#	0xec85b9	github.com/libp2p/go-libp2p/p2p/protocol/identify.(*idService).loop+0x479	/Users/decision/go/pkg/mod/github.com/libp2p/go-libp2p@v0.27.8/p2p/protocol/identify/id.go:275
+
+1 @ 0x43bc56 0x44bf1e 0xec87f4 0x46f561
+#	0xec87f3	github.com/libp2p/go-libp2p/p2p/protocol/identify.(*idService).loop.func1+0xf3	/Users/decision/go/pkg/mod/github.com/libp2p/go-libp2p@v0.27.8/p2p/protocol/identify/id.go:265
+
+1 @ 0x43bc56 0x44bf1e 0xed19b3 0x46f561
+#	0xed19b2	github.com/libp2p/go-libp2p/p2p/protocol/identify.(*ObservedAddrManager).worker+0x1d2	/Users/decision/go/pkg/mod/github.com/libp2p/go-libp2p@v0.27.8/p2p/protocol/identify/obsaddr.go:258
+
+1 @ 0x43bc56 0x44bf1e 0xee174b 0x46f561
+#	0xee174a	github.com/libp2p/go-libp2p/p2p/host/basic.(*BasicHost).background+0x20a	/Users/decision/go/pkg/mod/github.com/libp2p/go-libp2p@v0.27.8/p2p/host/basic/basic_host.go:546
+
+1 @ 0x43bc56 0x44bf1e 0xeeafbd 0xc6ace4 0x46f561
+#	0xeeafbc	github.com/libp2p/go-libp2p/p2p/protocol/circuitv2/client.(*Listener).Accept+0x13c	/Users/decision/go/pkg/mod/github.com/libp2p/go-libp2p@v0.27.8/p2p/protocol/circuitv2/client/listen.go:21
+#	0xc6ace3	github.com/libp2p/go-libp2p/p2p/net/upgrader.(*listener).handleIncoming+0x103		/Users/decision/go/pkg/mod/github.com/libp2p/go-libp2p@v0.27.8/p2p/net/upgrader/listener.go:74
+
+1 @ 0x43bc56 0x44bf1e 0xf07a8a 0x46f561
+#	0xf07a89	github.com/libp2p/go-libp2p/p2p/net/swarm.(*DialBackoff).background+0xe9	/Users/decision/go/pkg/mod/github.com/libp2p/go-libp2p@v0.27.8/p2p/net/swarm/swarm_dial.go:129

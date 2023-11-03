@@ -24,7 +24,7 @@ const (
 	secondQueueInterval = 100 * time.Microsecond // 区块缓冲视图队列处理延时
 	maxBlockMark        = 200                    // 单个区块最多标记多少次不再处理
 	maxKnownBlock       = 2048                   // lru 缓冲下最多存放多少区块
-	maxQueueBlock       = 512                    // 区块处理第二队列最多存放多少区块
+	maxQueueBlock       = 1024                   // 区块处理第二队列最多存放多少区块
 	maxBufferSize       = 32                     // buffer 缓冲多少高度时弹出一个区块
 )
 
@@ -146,6 +146,7 @@ func (b *BlockBuffer) Process() {
 			if !calculator.VerifyBlockVDF(seed, proof) {
 				log.WithField("hash", block.BlockHash()[:16]).Debugf(
 					"Verify block VDF Failed.")
+				b.updateLock.Unlock()
 				break
 			}
 
@@ -259,6 +260,7 @@ func (b *BlockBuffer) secondProcess() {
 			proof.SetBytes(params.Proof)
 
 			if !calculator.VerifyBlockVDF(seed, proof) {
+				b.updateLock.Unlock()
 				break
 			}
 
