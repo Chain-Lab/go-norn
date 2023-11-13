@@ -18,6 +18,7 @@ import (
 	"github.com/gookit/config/v2"
 	"github.com/gookit/config/v2/yaml"
 	log "github.com/sirupsen/logrus"
+	rand2 "golang.org/x/exp/rand"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"time"
@@ -25,60 +26,69 @@ import (
 
 func main() {
 	LoadConfig("./config.yml")
-	addr := config.String("rpc.address")
+	addresses := config.Strings("rpc.address")
 
 	for {
-		conn, err := grpc.Dial(addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+		// 随机选取列表中的节点
+		idx := rand2.Intn(len(addresses))
+		addr := addresses[idx]
+		log.Infof("Select host %s", addr)
 
+		// 连接到选取的节点
+		conn, err := grpc.Dial(addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 		if err != nil {
 			log.WithField("error", err).Errorln("Start connect failed.")
-			return
+			continue
 		}
 
+		log.Infoln("Connect to host %s", addr)
+
+		// 利用 conn 创建 RPC 客户端
 		c := pb.NewTransactionClient(conn)
 
-		//ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		// 设置超时时间为3秒，超过时间后断开，再选取新的节点连接
+		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 
-		prv, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+		// 随机生成私钥
+		prv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+		if err != nil {
+			log.WithError(err).Errorln("Generate new key failed.")
+			cancel()
+			continue
+		}
 
-		ticker := time.NewTicker(time.Microsecond * 100)
-		reconnect := false
+		count := 0
+		log.Infof("Start send transactions.")
 		for {
-			select {
-			case <-ticker.C:
-				tx := buildTransaction(prv)
-				bytesTransaction, err := utils.SerializeTransaction(tx)
-
-				if err != nil {
-					//log.WithError(err).Errorln("")
-					continue
-				}
-
-				encodedTransaction := hex.EncodeToString(bytesTransaction)
-				resp, err := c.SubmitTransaction(context.Background(), &pb.SubmitTransactionReq{
-					//_, err = c.SubmitTransaction(ctx, &pb.SubmitTransactionReq{
-					SignedTransaction: proto.String(encodedTransaction),
-				})
-
-				if err != nil {
-					log.WithError(err).Errorln(
-						"Signed transaction send failed.")
-				}
-
-				if resp.GetStatus() == pb.SubmitTransactionStatus_Default {
-					// 断线重连，如果返回状态为 default 说明本次 rpc 连接断开（原因？）
-					log.Errorln("Receive code default.")
-					reconnect = true
-				}
-			}
-
-			if reconnect {
-				conn.Close()
-				//cancel()
+			// 构建新的交易
+			tx := buildTransaction(prv)
+			bytesTransaction, err := utils.SerializeTransaction(tx)
+			if err != nil {
+				log.WithError(err).Errorln("Build transaction failed.")
 				break
 			}
-			//log.Infoln(resp.GetStatus())
+
+			// 将字节类型的交易编码
+			encodedTransaction := hex.EncodeToString(bytesTransaction)
+			// 通过 client 向服务端提交交易
+			resp, err := c.SubmitTransaction(ctx, &pb.SubmitTransactionReq{
+				SignedTransaction: proto.String(encodedTransaction),
+			})
+			if err != nil {
+				log.WithError(err).Errorln(
+					"Signed transaction send failed.")
+				break
+			}
+
+			if count >= 2000 || resp.GetStatus() == pb.SubmitTransactionStatus_Default {
+				// 断线重连，如果返回状态为 default 说明本次 rpc 连接断开（原因？）
+				conn.Close()
+				log.Errorln("Receive code default or upper to limit.")
+				break
+			}
+			count += 1
 		}
+		cancel()
 	}
 }
 
