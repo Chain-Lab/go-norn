@@ -10,6 +10,7 @@ import (
 
 const (
 	maxTxPackageCount = 10000 // 交易池打包的最多交易数量
+	maxTxPoolSize     = 20480
 )
 
 var (
@@ -22,6 +23,7 @@ type TxPool struct {
 	txQueue      chan string
 	waitingQueue chan *common.Transaction
 	txs          sync.Map
+	count        int
 
 	flags  sync.Map
 	height int
@@ -32,6 +34,8 @@ func NewTxPool(chain *BlockChain) *TxPool {
 		txPoolInst = &TxPool{
 			chain:   chain,
 			txQueue: make(chan string, 10240),
+
+			count: 0,
 		}
 	})
 	return txPoolInst
@@ -86,12 +90,14 @@ func (pool *TxPool) Package() []common.Transaction {
 		if tx != nil {
 			pool.txs.Delete(txHash)
 			metrics.TxPoolMetricsDec()
+			pool.count--
 			log.Debugln("Transaction already in database.")
 			continue
 		}
 
 		pool.txs.Delete(txHash)
 		metrics.TxPoolMetricsDec()
+		pool.count--
 		tx = value.(*common.Transaction)
 
 		result = append(result, *tx)
@@ -101,9 +107,14 @@ func (pool *TxPool) Package() []common.Transaction {
 }
 
 func (pool *TxPool) Add(transaction *common.Transaction) {
+	if pool.count > maxTxPoolSize {
+		return
+	}
+
 	txHash := hex.EncodeToString(transaction.Body.Hash[:])
 	pool.txs.Store(txHash, transaction)
 	metrics.TxPoolMetricsInc()
+	pool.count++
 }
 
 func (pool *TxPool) Contain(hash string) bool {
@@ -120,6 +131,7 @@ func (pool *TxPool) RemoveTx(hash common.Hash) {
 	}
 
 	pool.txs.Delete(txHash)
+	pool.count--
 	metrics.TxPoolMetricsDec()
 }
 

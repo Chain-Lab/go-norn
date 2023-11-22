@@ -69,22 +69,22 @@ func handleNewBlockMsg(pm *P2PManager, msg *p2p.Message, p *Peer) {
 	}
 }
 
-func handleNewBlockHashMsg(pm *P2PManager, msg *p2p.Message, p *Peer) {
-	status := pm.blockSyncer.getStatus()
-	if status == blockSyncing || status == syncPaused {
-		return
-	}
-
-	payload := msg.Payload
-	blockHash := [32]byte(payload)
-
-	if pm.knownBlock.Contains(blockHash) {
-		return
-	}
-
-	metrics.RoutineCreateCounterObserve(19)
-	go requestBlockWithHash(blockHash, p)
-}
+//func handleNewBlockHashMsg(pm *P2PManager, msg *p2p.Message, p *Peer) {
+//	status := pm.blockSyncer.getStatus()
+//	if status == blockSyncing || status == syncPaused {
+//		return
+//	}
+//
+//	payload := msg.Payload
+//	blockHash := [32]byte(payload)
+//
+//	if pm.knownBlock.Contains(blockHash) {
+//		return
+//	}
+//
+//	metrics.RoutineCreateCounterObserve(19)
+//	go requestBlockWithHash(blockHash, p)
+//}
 
 func handleBlockMsg(pm *P2PManager, msg *p2p.Message, p *Peer) {
 	status := pm.blockSyncer.getStatus()
@@ -119,23 +119,23 @@ func handleBlockMsg(pm *P2PManager, msg *p2p.Message, p *Peer) {
 	}
 }
 
-func handleGetBlockBodiesMsg(pm *P2PManager, msg *p2p.Message, p *Peer) {
-	status := pm.blockSyncer.getStatus()
-	if status != synced || status != bufferSyncing {
-		return
-	}
-
-	blockHash := common.Hash(msg.Payload)
-
-	block := pm.chain.GetBlockFromBuffer(blockHash)
-	if block == nil {
-		log.Debugln("Get block by hash failed")
-		return
-	}
-
-	metrics.RoutineCreateCounterObserve(30)
-	respondGetBlockBodies(block, p)
-}
+//func handleGetBlockBodiesMsg(pm *P2PManager, msg *p2p.Message, p *Peer) {
+//	status := pm.blockSyncer.getStatus()
+//	if status != synced || status != bufferSyncing {
+//		return
+//	}
+//
+//	blockHash := common.Hash(msg.Payload)
+//
+//	block := pm.chain.GetBlockFromBuffer(blockHash)
+//	if block == nil {
+//		log.Debugln("Get block by hash failed")
+//		return
+//	}
+//
+//	metrics.RoutineCreateCounterObserve(30)
+//	respondGetBlockBodies(block, p)
+//}
 
 func handleSyncStatusReq(pm *P2PManager, msg *p2p.Message, p *Peer) {
 	message := pm.StatusMessage()
