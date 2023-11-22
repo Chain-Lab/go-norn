@@ -500,11 +500,6 @@ func (bc *BlockChain) GetTransactionByHash(hash common.Hash) (*common.Transactio
 	return transaction, nil
 }
 
-func (bc *BlockChain) GetBlockFromBuffer(hash common.Hash) *common.Block {
-	strHash := hex.EncodeToString(hash[:])
-	return bc.buffer.GetKnownBlock(strHash)
-}
-
 func (bc *BlockChain) Height() int64 {
 	bc.latestLock.RLock()
 	defer bc.latestLock.RUnlock()

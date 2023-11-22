@@ -31,16 +31,16 @@ import (
 type msgHandler func(pm *P2PManager, msg *p2p.Message, p *Peer)
 
 var handlerMap = map[p2p.StatusCode]msgHandler{
-	p2p.StatusCodeStatusMsg:         handleStatusMsg,         // 状态消息，目前接收对端的高度信息
-	p2p.StatusCodeBlockBodiesMsg:    handleBlockMsg,          // 对应上一个状态码，如果对端请求区块，在缓冲区中取出区块进行响应
-	p2p.StatusCodeGetBlockBodiesMsg: handleGetBlockBodiesMsg, // 请求本地缓冲区中不存在的区块
-	p2p.StatusCodeSyncStatusReq:     handleSyncStatusReq,     // 携带本地的高度信息，请求对端的状态信息，例如高度/缓冲区高度
-	p2p.StatusCodeSyncStatusMsg:     handleSyncStatusMsg,     // 响应对端的状态请求
-	p2p.StatusCodeSyncGetBlocksMsg:  handleSyncGetBlocksMsg,  // 根据高度请求区块
-	p2p.StatusCodeSyncBlocksMsg:     handleSyncBlockMsg,      // 响应对应高度的区块
-	p2p.StatusCodeTimeSyncReq:       handleTimeSyncReq,       // 时间同步请求
-	p2p.StatusCodeTimeSyncRsp:       handleTimeSyncRsp,       // 时间同步响应
-	p2p.StatusCodeNewBlockHashesMsg: handleNewBlockHashMsg,   // 广播新打包的区块哈希值，在同步旧区块（非缓冲区同步状态）时不处理
+	p2p.StatusCodeStatusMsg:        handleStatusMsg,        // 状态消息，目前接收对端的高度信息
+	p2p.StatusCodeBlockBodiesMsg:   handleBlockMsg,         // 对应上一个状态码，如果对端请求区块，在缓冲区中取出区块进行响应
+	p2p.StatusCodeSyncStatusReq:    handleSyncStatusReq,    // 携带本地的高度信息，请求对端的状态信息，例如高度/缓冲区高度
+	p2p.StatusCodeSyncStatusMsg:    handleSyncStatusMsg,    // 响应对端的状态请求
+	p2p.StatusCodeSyncGetBlocksMsg: handleSyncGetBlocksMsg, // 根据高度请求区块
+	p2p.StatusCodeSyncBlocksMsg:    handleSyncBlockMsg,     // 响应对应高度的区块
+	p2p.StatusCodeTimeSyncReq:      handleTimeSyncReq,      // 时间同步请求
+	p2p.StatusCodeTimeSyncRsp:      handleTimeSyncRsp,      // 时间同步响应
+	//p2p.StatusCodeGetBlockBodiesMsg: handleGetBlockBodiesMsg, // 请求本地缓冲区中不存在的区块
+	//p2p.StatusCodeNewBlockHashesMsg: handleNewBlockHashMsg,   // 广播新打包的区块哈希值，在同步旧区块（非缓冲区同步状态）时不处理
 	//p2p.StatusCodeNewBlockMsg:       handleNewBlockMsg,       // 广播新打包的区块，在同步旧区块（非缓冲区同步状态）时不处理
 }
 
@@ -49,15 +49,16 @@ var (
 )
 
 const (
+	// 节点重连限制，如果节点在 10 分钟内尝试连接过但是失败，跳过该节点
 	retryInterval          = 10 * time.Minute
-	streamLimit            = 20
-	maxKnownBlock          = 1024
-	maxKnownTransaction    = 32768
-	maxSyncerStatusChannel = 512
+	streamLimit            = 20    // 用于 P2P 通信的流的数量限制
+	maxKnownBlock          = 1024  // 最大已知区块的 LRU 缓存大小
+	maxKnownTransaction    = 32768 // 最大已知交易的 LRU 缓存大小
+	maxSyncerStatusChannel = 512   // 同步器 syncer 的最大状态 channel 限制
 
-	packageBlockInterval = 2
-	gossipNodes          = 8
-	udpBufferSize        = 1024    // UDP Buffer size = 1M
+	packageBlockInterval = 2       // 区块打包间隔
+	gossipNodes          = 8       // UDP Gossip 广播节点数量
+	udpBufferSize        = 1024    // UDP 缓冲大小 = 1M
 	pubsubMaxSize        = 1 << 22 // 4 MB
 
 	NetworkRendezvous = "chronos"
@@ -67,42 +68,43 @@ const (
 	TxProtocolId      = protocol.ID("/chronos/1.0.0/transaction")
 )
 
+// P2PManagerConfig P2PManager 的实例化配置信息
 type P2PManagerConfig struct {
-	TxPool       *core.TxPool
-	Chain        *core.BlockChain
-	Genesis      bool
-	InitialDelta int64 // 初始时间偏移，仅仅用于进行时间同步测试
+	TxPool       *core.TxPool     // 交易池实例
+	Chain        *core.BlockChain // 区块链实例
+	Genesis      bool             // 是否创世节点
+	InitialDelta int64            // 初始时间偏移，仅仅用于进行时间同步测试
 }
 
 type P2PManager struct {
-	id         peer.ID
+	id         peer.ID               // 本地 P2P 节点 id
 	triedPeers map[peer.ID]time.Time // 尝试连接的节点和连接时间戳，在一定时间内不再进行尝试
 	peerSet    []*Peer               // 已建立连接的节点列表
 	peers      map[peer.ID]*Peer     // 节点 ID -> 节点对象
 
-	gossip     *pubsub.PubSub
-	flood      *pubsub.PubSub
-	blockTopic *pubsub.Topic
-	txTopic    *pubsub.Topic
+	gossip     *pubsub.PubSub // go-libp2p 的 gossip 广播实例
+	blockTopic *pubsub.Topic  // 区块广播 topic
+	txTopic    *pubsub.Topic  // 交易广播 topic
 
-	blockBroadcastQueue chan *common.Block
-	txBroadcastQueue    chan *common.Transaction
+	blockBroadcastQueue chan *common.Block       // 区块广播队列
+	txBroadcastQueue    chan *common.Transaction // 交易广播队列
 
-	knownBlock       *lru.Cache
-	knownTransaction *lru.Cache
+	knownBlock       *lru.Cache // 本地已知的区块缓存
+	knownTransaction *lru.Cache // 本地已知的交易缓存
 
-	txPool *core.TxPool
-	chain  *core.BlockChain
+	txPool *core.TxPool     // 交易池实例
+	chain  *core.BlockChain // 区块链实例
 
-	blockSyncer  *BlockSyncer
-	timeSyncer   *TimeSyncer
+	blockSyncer  *BlockSyncer // 区块同步实例
+	timeSyncer   *TimeSyncer  // 时间同步实例
 	startRoutine sync.Once
 
-	peerSetLock sync.RWMutex
-	genesis     bool
+	peerSetLock sync.RWMutex // 节点管理锁
+	genesis     bool         // 是否创世节点
 }
 
 func NewP2PManager(config *P2PManagerConfig) (*P2PManager, error) {
+	// 创建新的区块缓存
 	knownBlockCache, err := lru.New(maxKnownBlock)
 
 	if err != nil {
@@ -110,6 +112,7 @@ func NewP2PManager(config *P2PManagerConfig) (*P2PManager, error) {
 		return nil, err
 	}
 
+	// 创建新的交易缓存
 	knownTxCache, err := lru.New(maxKnownTransaction)
 
 	if err != nil {
@@ -117,6 +120,7 @@ func NewP2PManager(config *P2PManagerConfig) (*P2PManager, error) {
 		return nil, err
 	}
 
+	// 区块同步配置
 	blockSyncerConfig := &BlockSyncerConfig{
 		Chain: config.Chain,
 	}
@@ -130,7 +134,7 @@ func NewP2PManager(config *P2PManagerConfig) (*P2PManager, error) {
 		peers:      make(map[peer.ID]*Peer),
 
 		blockBroadcastQueue: make(chan *common.Block, 512),
-		txBroadcastQueue:    make(chan *common.Transaction, 40960),
+		txBroadcastQueue:    make(chan *common.Transaction, 10240),
 
 		knownBlock:       knownBlockCache,
 		knownTransaction: knownTxCache,
