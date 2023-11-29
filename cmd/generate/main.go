@@ -45,7 +45,7 @@ func main() {
 	//config.Set("p2p.bootstrap", )
 
 	config.Set("node.port", 31258)
-	config.Set("node.udp", 31259)
+	config.Set("node.udp", 53333)
 	config.Set("rpc.address", "0.0.0.0:45555")
 	config.Set("metrics.port", 8700)
 }

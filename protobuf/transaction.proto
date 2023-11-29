@@ -2,7 +2,7 @@ syntax = "proto3";
 
 option go_package="rpc/pb";
 
-service Transaction {
+service TransactionService {
   rpc SubmitTransaction(SubmitTransactionReq) returns (SubmitTransactionRsp);
 }
 
@@ -21,7 +21,7 @@ enum SubmitTransactionStatus {
 }
 
 message SubmitTransactionReq{
-  // base16 编码，传输效率？
+  // todo: base16 编码，传输效率？
   optional string signedTransaction = 1;
 }
 

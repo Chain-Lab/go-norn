@@ -51,7 +51,8 @@ func NewKDHT(ctx context.Context, host host.Host, bootstrapPeers []multiaddr.Mul
 			log.Printf("Error while connecting to node %q: %-v", peerinfo, err)
 			continue
 		} else {
-			log.Infoln("Connection established with bootstrap node: %q", *peerinfo)
+			log.Infof("Connection established with bootstrap node: %q",
+				*peerinfo)
 		}
 	}
 

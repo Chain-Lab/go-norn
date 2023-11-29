@@ -24,10 +24,6 @@ var (
 		Name: "core_transaction_verify_time",
 		Help: "Transaction verify time usage.",
 	})
-	blockBufferCountMetric = promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "core_block_buffer_count",
-		Help: "Block buffer count",
-	})
 	coreBufferSecondQueueMetrices = promauto.NewGauge(prometheus.GaugeOpts{
 		Name: "core_buffer_second_queue",
 		Help: "Core buffer second blocks",
@@ -48,14 +44,6 @@ func PackageBlockMetricsSet(usage float64) {
 
 func VerifyTransactionMetricsSet(usage float64) {
 	verifyTransactionMetric.Set(usage)
-}
-
-func BlockBufferCountMetricsDec(value int) {
-	blockBufferCountMetric.Sub((float64(value)))
-}
-
-func BlockBufferCountMetricsInc() {
-	blockBufferCountMetric.Inc()
 }
 
 func SecondBufferInc() {

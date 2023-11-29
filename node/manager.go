@@ -157,6 +157,10 @@ func NewP2PManager(config *P2PManagerConfig) (*P2PManager, error) {
 	return handler, nil
 }
 
+func (pm *P2PManager) GetBlockChain() *core.BlockChain {
+	return pm.chain
+}
+
 // AddTransaction 仅用于测试
 func (pm *P2PManager) AddTransaction(tx *common.Transaction) {
 	txHash := hex.EncodeToString(tx.Body.Hash[:])
@@ -207,7 +211,7 @@ func (pm *P2PManager) packageBlockRoutine() {
 			}
 
 			randNumber, s, t, err := crypto.VRFCalculate(elliptic.P256(), seed.Bytes())
-			log.Infoln("Package with seed: %s", hex.EncodeToString(seed.Bytes()))
+			log.Infof("Package with seed: %s", hex.EncodeToString(seed.Bytes()))
 
 			params := common.GeneralParams{
 				Result:       seed.Bytes(),
@@ -672,6 +676,10 @@ func (pm *P2PManager) UDPGossipBroadcast(tx *common.Transaction) {
 	if err != nil {
 		// todo: 如果交易序列化失败先不处理
 		log.WithError(err).Errorln("Serialize transaction failed.")
+		return
+	}
+
+	if len(pm.peerSet) <= 0 {
 		return
 	}
 

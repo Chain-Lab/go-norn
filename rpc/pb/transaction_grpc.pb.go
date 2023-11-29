@@ -18,86 +18,86 @@ import (
 // Requires gRPC-Go v1.32.0 or later.
 const _ = grpc.SupportPackageIsVersion7
 
-// TransactionClient is the client API for Transaction service.
+// TransactionServiceClient is the client API for TransactionService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
-type TransactionClient interface {
+type TransactionServiceClient interface {
 	SubmitTransaction(ctx context.Context, in *SubmitTransactionReq, opts ...grpc.CallOption) (*SubmitTransactionRsp, error)
 }
 
-type transactionClient struct {
+type transactionServiceClient struct {
 	cc grpc.ClientConnInterface
 }
 
-func NewTransactionClient(cc grpc.ClientConnInterface) TransactionClient {
-	return &transactionClient{cc}
+func NewTransactionServiceClient(cc grpc.ClientConnInterface) TransactionServiceClient {
+	return &transactionServiceClient{cc}
 }
 
-func (c *transactionClient) SubmitTransaction(ctx context.Context, in *SubmitTransactionReq, opts ...grpc.CallOption) (*SubmitTransactionRsp, error) {
+func (c *transactionServiceClient) SubmitTransaction(ctx context.Context, in *SubmitTransactionReq, opts ...grpc.CallOption) (*SubmitTransactionRsp, error) {
 	out := new(SubmitTransactionRsp)
-	err := c.cc.Invoke(ctx, "/Transaction/SubmitTransaction", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/TransactionService/SubmitTransaction", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-// TransactionServer is the server API for Transaction service.
-// All implementations must embed UnimplementedTransactionServer
+// TransactionServiceServer is the server API for TransactionService service.
+// All implementations must embed UnimplementedTransactionServiceServer
 // for forward compatibility
-type TransactionServer interface {
+type TransactionServiceServer interface {
 	SubmitTransaction(context.Context, *SubmitTransactionReq) (*SubmitTransactionRsp, error)
-	mustEmbedUnimplementedTransactionServer()
+	mustEmbedUnimplementedTransactionServiceServer()
 }
 
-// UnimplementedTransactionServer must be embedded to have forward compatible implementations.
-type UnimplementedTransactionServer struct {
+// UnimplementedTransactionServiceServer must be embedded to have forward compatible implementations.
+type UnimplementedTransactionServiceServer struct {
 }
 
-func (UnimplementedTransactionServer) SubmitTransaction(context.Context, *SubmitTransactionReq) (*SubmitTransactionRsp, error) {
+func (UnimplementedTransactionServiceServer) SubmitTransaction(context.Context, *SubmitTransactionReq) (*SubmitTransactionRsp, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SubmitTransaction not implemented")
 }
-func (UnimplementedTransactionServer) mustEmbedUnimplementedTransactionServer() {}
+func (UnimplementedTransactionServiceServer) mustEmbedUnimplementedTransactionServiceServer() {}
 
-// UnsafeTransactionServer may be embedded to opt out of forward compatibility for this service.
-// Use of this interface is not recommended, as added methods to TransactionServer will
+// UnsafeTransactionServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to TransactionServiceServer will
 // result in compilation errors.
-type UnsafeTransactionServer interface {
-	mustEmbedUnimplementedTransactionServer()
+type UnsafeTransactionServiceServer interface {
+	mustEmbedUnimplementedTransactionServiceServer()
 }
 
-func RegisterTransactionServer(s grpc.ServiceRegistrar, srv TransactionServer) {
-	s.RegisterService(&Transaction_ServiceDesc, srv)
+func RegisterTransactionServiceServer(s grpc.ServiceRegistrar, srv TransactionServiceServer) {
+	s.RegisterService(&TransactionService_ServiceDesc, srv)
 }
 
-func _Transaction_SubmitTransaction_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _TransactionService_SubmitTransaction_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(SubmitTransactionReq)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(TransactionServer).SubmitTransaction(ctx, in)
+		return srv.(TransactionServiceServer).SubmitTransaction(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/Transaction/SubmitTransaction",
+		FullMethod: "/TransactionService/SubmitTransaction",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(TransactionServer).SubmitTransaction(ctx, req.(*SubmitTransactionReq))
+		return srv.(TransactionServiceServer).SubmitTransaction(ctx, req.(*SubmitTransactionReq))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-// Transaction_ServiceDesc is the grpc.ServiceDesc for Transaction service.
+// TransactionService_ServiceDesc is the grpc.ServiceDesc for TransactionService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
-var Transaction_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "Transaction",
-	HandlerType: (*TransactionServer)(nil),
+var TransactionService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "TransactionService",
+	HandlerType: (*TransactionServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
 			MethodName: "SubmitTransaction",
-			Handler:    _Transaction_SubmitTransaction_Handler,
+			Handler:    _TransactionService_SubmitTransaction_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

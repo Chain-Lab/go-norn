@@ -1,0 +1,72 @@
+syntax = "proto3";
+import "google/protobuf/empty.proto";
+option go_package="rpc/pb";
+
+service Blockchain {
+  rpc GetBlockNumber(google.protobuf.Empty) returns (BlockNumberResp);
+  rpc GetBlockByHash(GetBlockReq) returns (GetBlockResp);
+  rpc GetBlockByNumber(GetBlockReq) returns (GetBlockResp);
+  rpc GetTransactionByHash(GetTransactionReq) returns (GetTransactionResp);
+  rpc GetTransactionByBlockHashAndIndex(GetTransactionReq) returns (GetTransactionResp);
+  rpc GetTransactionByBlockNumberAndIndex(GetTransactionReq) returns (GetTransactionResp);
+}
+
+message BlockHeader {
+  optional uint64 timestamp = 1;
+  optional string prevBlockHash = 2;
+  optional string blockHash = 3;
+  optional string merkleRoot = 4;
+  optional uint64 height = 5;
+  optional string public = 6;
+  optional string params = 7;
+  optional uint64 gasLimit = 8;
+}
+
+message Block {
+  optional BlockHeader header = 1;
+  repeated Transaction transactions = 2;
+}
+
+message Transaction {
+  optional string hash = 1;
+  optional string address = 2;
+  optional string receiver = 3;
+  optional uint64 gas = 4;
+  optional uint64 nonce = 5;
+  optional string event = 6;
+  optional string opt = 7;
+  optional string state = 8;
+  optional string data = 9;
+  optional uint64 expire = 10;
+  optional uint64 timestamp = 11;
+  optional string public = 12;
+  optional string signature = 13;
+}
+
+message BlockNumberResp {
+  optional uint64 timestamp = 1;
+  optional uint64 number = 2;
+}
+
+message GetBlockReq {
+  optional uint64 number = 1;
+  optional string hash = 2;
+  optional bool full = 3;
+}
+
+message GetBlockResp {
+  optional uint64 timestamp = 1;
+  optional Block body = 2;
+}
+
+message GetTransactionReq {
+  optional uint64 blockNumber = 1;
+  optional string blockHash = 2;
+  optional string hash = 3;
+  optional uint64 index = 4;
+}
+
+message GetTransactionResp {
+  optional uint64 timestamp = 1;
+  optional Transaction body = 2;
+}
