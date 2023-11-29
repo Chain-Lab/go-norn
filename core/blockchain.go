@@ -29,8 +29,6 @@ const (
 	transactionStartIndex = 3
 )
 
-type blockList []*common.Block
-
 // !! 为了避免潜在的数据不一致的情况，任何情况下不要对一个 block 实例进行数据的修改
 // 如果需要对区块进行校验或者哈希的修改，对数据进行深拷贝得到一份复制来进行处理
 
@@ -140,6 +138,7 @@ func (bc *BlockChain) PackageNewBlock(txs []common.Transaction, timestamp int64,
 	// 从区块缓冲视图中找到当前视图下最优的区块，具体的选取方法需要查阅文档 （wiki/区块缓冲视图.md）
 	nowHeight := (timestamp-bc.genesisTime)/1000/packageInterval + 1
 	bestBlock := bc.buffer.GetPriorityLeaf(nowHeight)
+	log.Infof("Package block height #%d.", bestBlock.Header.Height+1)
 	publicKey, err := hex.DecodeString(config.String("consensus.pub"))
 
 	if err != nil {

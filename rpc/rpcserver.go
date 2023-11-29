@@ -25,14 +25,15 @@ func RPCServerStart() {
 		return
 	}
 
-	limiter := NewRateLimiter(2000)
+	limiter := NewRateLimiter(3000)
 
 	s := grpc.NewServer(
 		grpc.UnaryInterceptor(limiter.UnaryInterceptor),
 	)
 	// 注册 RPC 处理的 Service
-	pb.RegisterTransactionServer(s, &transactionService{})
+	pb.RegisterTransactionServiceServer(s, &transactionService{})
 	pb.RegisterNodeServer(s, &nodeService{})
+	pb.RegisterBlockchainServer(s, &blockchainService{})
 	reflection.Register(s)
 
 	log.Traceln("RPC server started.")

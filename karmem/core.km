@@ -2,12 +2,18 @@ karmem structs @packed(true) @golang.package(`core`);
 
 struct TransactionBody table {
     Hash [32]byte;
-    Signature [<73]byte;
     Address [20]byte;
-    Public [33]byte;
+    Receiver [20]byte;
+    Gas int64;
+    Nonce int64;
+    Event []byte;
+    Opt []byte;
+    State []byte;
     Data []byte;
     Expire int64;
     Timestamp int64;
+    Public [33]byte;
+    Signature [<73]byte;
 }
 
 struct Transaction inline {
@@ -37,6 +43,7 @@ struct BlockHeader table {
     Height int64;
     PublicKey [33]byte;
     Params []byte;
+    GasLimit int64;
 }
 
 struct Block table {

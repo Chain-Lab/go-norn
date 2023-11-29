@@ -17,7 +17,7 @@ import (
 )
 
 type transactionService struct {
-	pb.UnimplementedTransactionServer
+	pb.UnimplementedTransactionServiceServer
 }
 
 //var TransactionService = transactionService{}
