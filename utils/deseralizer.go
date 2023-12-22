@@ -54,3 +54,10 @@ func DeserializeTimeSyncMsg(byteTimeSyncMsg []byte) (*p2p.TimeSyncMsg, error) {
 
 	return msg, nil
 }
+
+func DeserializeDataCommand(byteDataCommand []byte) (*common.DataCommand, error) {
+	dc := new(common.DataCommand)
+	dc.ReadAsRoot(karmem.NewReader(byteDataCommand))
+
+	return dc, nil
+}

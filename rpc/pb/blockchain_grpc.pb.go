@@ -29,6 +29,7 @@ type BlockchainClient interface {
 	GetTransactionByHash(ctx context.Context, in *GetTransactionReq, opts ...grpc.CallOption) (*GetTransactionResp, error)
 	GetTransactionByBlockHashAndIndex(ctx context.Context, in *GetTransactionReq, opts ...grpc.CallOption) (*GetTransactionResp, error)
 	GetTransactionByBlockNumberAndIndex(ctx context.Context, in *GetTransactionReq, opts ...grpc.CallOption) (*GetTransactionResp, error)
+	ReadContractAddress(ctx context.Context, in *ReadContractAddressReq, opts ...grpc.CallOption) (*ReadContractAddressResp, error)
 }
 
 type blockchainClient struct {
@@ -93,6 +94,15 @@ func (c *blockchainClient) GetTransactionByBlockNumberAndIndex(ctx context.Conte
 	return out, nil
 }
 
+func (c *blockchainClient) ReadContractAddress(ctx context.Context, in *ReadContractAddressReq, opts ...grpc.CallOption) (*ReadContractAddressResp, error) {
+	out := new(ReadContractAddressResp)
+	err := c.cc.Invoke(ctx, "/Blockchain/ReadContractAddress", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // BlockchainServer is the server API for Blockchain service.
 // All implementations must embed UnimplementedBlockchainServer
 // for forward compatibility
@@ -103,6 +113,7 @@ type BlockchainServer interface {
 	GetTransactionByHash(context.Context, *GetTransactionReq) (*GetTransactionResp, error)
 	GetTransactionByBlockHashAndIndex(context.Context, *GetTransactionReq) (*GetTransactionResp, error)
 	GetTransactionByBlockNumberAndIndex(context.Context, *GetTransactionReq) (*GetTransactionResp, error)
+	ReadContractAddress(context.Context, *ReadContractAddressReq) (*ReadContractAddressResp, error)
 	mustEmbedUnimplementedBlockchainServer()
 }
 
@@ -127,6 +138,9 @@ func (UnimplementedBlockchainServer) GetTransactionByBlockHashAndIndex(context.C
 }
 func (UnimplementedBlockchainServer) GetTransactionByBlockNumberAndIndex(context.Context, *GetTransactionReq) (*GetTransactionResp, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetTransactionByBlockNumberAndIndex not implemented")
+}
+func (UnimplementedBlockchainServer) ReadContractAddress(context.Context, *ReadContractAddressReq) (*ReadContractAddressResp, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ReadContractAddress not implemented")
 }
 func (UnimplementedBlockchainServer) mustEmbedUnimplementedBlockchainServer() {}
 
@@ -249,6 +263,24 @@ func _Blockchain_GetTransactionByBlockNumberAndIndex_Handler(srv interface{}, ct
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Blockchain_ReadContractAddress_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ReadContractAddressReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BlockchainServer).ReadContractAddress(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/Blockchain/ReadContractAddress",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BlockchainServer).ReadContractAddress(ctx, req.(*ReadContractAddressReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Blockchain_ServiceDesc is the grpc.ServiceDesc for Blockchain service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -279,6 +311,10 @@ var Blockchain_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetTransactionByBlockNumberAndIndex",
 			Handler:    _Blockchain_GetTransactionByBlockNumberAndIndex_Handler,
+		},
+		{
+			MethodName: "ReadContractAddress",
+			Handler:    _Blockchain_ReadContractAddress_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

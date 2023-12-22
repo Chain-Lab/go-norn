@@ -1,6 +1,8 @@
 package utils
 
 import (
+	"encoding/hex"
+	"fmt"
 	"github.com/chain-lab/go-chronos/common"
 	"strconv"
 )
@@ -17,4 +19,9 @@ func BlockHeight2DBKey(height int64) []byte {
 
 func TxHash2DBKey(hash common.Hash) []byte {
 	return append([]byte("tx#"), hash[:]...)
+}
+
+func DataAddressKey2DBKey(address, key []byte) []byte {
+	dbKey := fmt.Sprintf("data#%s#%s", hex.EncodeToString(address), string(key))
+	return []byte(dbKey)
 }

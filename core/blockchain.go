@@ -27,6 +27,8 @@ const (
 	maxBlockChannel       = 128
 	maxDbChannel          = 256
 	transactionStartIndex = 3
+
+	setCommandString = "set"
 )
 
 // !! 为了避免潜在的数据不一致的情况，任何情况下不要对一个 block 实例进行数据的修改
@@ -52,6 +54,10 @@ type BlockChain struct {
 	bufferChan chan *common.Block
 	buffer     *BlockBuffer
 	appendLock sync.RWMutex
+
+	// 数据存放处理与对应的任务 channel
+	dp     *DataProcessor
+	dpChan chan DataTask
 
 	// genesisParams 当前所维护的链的创世区块参数
 	genesisParams *common.GenesisParams
@@ -79,6 +85,10 @@ func NewBlockchain(db *utils.LevelDB) *BlockChain {
 		return nil
 	}
 
+	dp := NewDataProcessor()
+	dp.db = db
+	go dp.Run()
+
 	// 使用数据库实例 db 实例化一个 Blockchain 对象
 	chain := &BlockChain{
 		db:            db,
@@ -90,6 +100,9 @@ func NewBlockchain(db *utils.LevelDB) *BlockChain {
 
 		latestBlock:  nil,
 		latestHeight: -1,
+
+		dp:     dp,
+		dpChan: dp.taskChannel,
 
 		bufferChan: make(chan *common.Block, maxBlockChannel),
 	}
@@ -428,6 +441,32 @@ func (bc *BlockChain) insertBlock(block *common.Block) {
 
 		values[idx+transactionStartIndex] = txWriter.Bytes()
 		metrics.TransactionInsertInc()
+
+		if tx.Body.Data == nil {
+			continue
+		}
+		dataBytes := tx.Body.Data
+		dc, err := utils.DeserializeDataCommand(dataBytes)
+
+		if err != nil {
+			continue
+		}
+
+		if string(dc.Opt) != setCommandString {
+			continue
+		}
+
+		contractAddr := tx.Body.Receiver
+		key := dc.Key
+		value := dc.Value
+
+		task := DataTask{
+			address: contractAddr[:],
+			key:     key,
+			value:   value,
+		}
+
+		bc.dpChan <- task
 	}
 
 	// 批量添加/修改数据到数据库
@@ -554,4 +593,23 @@ func (bc *BlockChain) genesisInitialization(block *common.Block) {
 		crypto.CalculatorInitialization(pp, order, genesisParams.TimeParam)
 		log.Infoln("Genesis params initialization.")
 	}
+}
+
+func (bc *BlockChain) ReadAddressData(address, key string) ([]byte, error) {
+	db := bc.db
+	addr, err := hex.DecodeString(address)
+	if err != nil {
+		log.WithError(err).Errorln("Decode address failed.")
+		return nil, err
+	}
+
+	dbKey := utils.DataAddressKey2DBKey(addr, []byte(key))
+
+	data, err := db.Get(dbKey)
+	if err != nil {
+		log.WithError(err).Debugln("Get database data failed.")
+		return nil, err
+	}
+
+	return data, nil
 }

@@ -50,3 +50,9 @@ struct Block table {
     Header BlockHeader;
     Transactions []Transaction;
 }
+
+struct DataCommand table {
+    Opt []byte;
+    Key []byte;
+    Value []byte;
+}

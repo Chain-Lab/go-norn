@@ -17,7 +17,8 @@ import (
 )
 
 const (
-	ConsensusFloor = 0.3 // 共识要求的最低概率
+	// todo: 作为参数写入到创世区块
+	ConsensusFloor = 0.0 // 共识要求的最低概率
 )
 
 var (

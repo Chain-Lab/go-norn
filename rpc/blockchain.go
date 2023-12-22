@@ -109,3 +109,25 @@ func (s *blockchainService) GetTransactionByBlockNumberAndIndex(ctx context.
 	err error) {
 	panic("Unimplemented")
 }
+
+func (s *blockchainService) ReadContractAddress(ctx context.
+	Context, in *pb.ReadContractAddressReq) (resp *pb.ReadContractAddressResp,
+	err error) {
+	pm := node.GetP2PManager()
+	// todo: check pm and chain is null
+	chain := pm.GetBlockChain()
+	address := in.Address
+	key := in.Key
+
+	resp = new(pb.ReadContractAddressResp)
+
+	data, err := chain.ReadAddressData(*address, *key)
+
+	if err != nil {
+		log.WithError(err).Debugln("Read blockchain data failed.")
+		return nil, err
+	}
+
+	resp.Hex = proto.String(hex.EncodeToString(data))
+	return resp, nil
+}
