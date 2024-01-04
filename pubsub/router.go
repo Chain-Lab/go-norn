@@ -7,6 +7,7 @@
 package pubsub
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/gorilla/websocket"
 	log "github.com/sirupsen/logrus"
@@ -26,8 +27,8 @@ var (
 type EventTopic string
 
 type EventRouter struct {
-	publishMap map[EventTopic]*EventPublisher
-	//publishChan chan
+	publishMap  map[EventTopic]*EventPublisher
+	publishChan chan Event
 
 	lock sync.RWMutex
 }
@@ -40,6 +41,33 @@ func CreateNewEventRouter() *EventRouter {
 	})
 
 	return routerInst
+}
+
+func (e *EventRouter) Process() {
+	for {
+		select {
+		case event := <-e.publishChan:
+			topic := toTopicStr(event.Address, event.Type)
+			e.lock.RLock()
+
+			publisher, ok := e.publishMap[topic]
+			if publisher == nil || !ok {
+				e.lock.RUnlock()
+				continue
+			}
+
+			eventData, err := json.Marshal(event)
+			if err != nil {
+				log.WithError(err).Debugln("Marshal event to bytes failed.")
+				e.lock.RUnlock()
+				continue
+			}
+
+			publisher.Publish(eventData)
+
+			e.lock.RUnlock()
+		}
+	}
 }
 
 func (e *EventRouter) HandleConnect(w http.ResponseWriter, r *http.Request) {
@@ -75,7 +103,7 @@ func (e *EventRouter) HandleConnect(w http.ResponseWriter, r *http.Request) {
 	}
 	publisher, _ = e.publishMap[topic]
 
-	if publisher.IsFull() {
+	if publisher.Full() {
 		log.Debugln("Publisher connection is full.")
 		conn.Close()
 		return
