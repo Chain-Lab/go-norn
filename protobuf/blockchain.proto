@@ -10,6 +10,7 @@ service Blockchain {
   rpc GetTransactionByBlockHashAndIndex(GetTransactionReq) returns (GetTransactionResp);
   rpc GetTransactionByBlockNumberAndIndex(GetTransactionReq) returns (GetTransactionResp);
   rpc ReadContractAddress(ReadContractAddressReq) returns (ReadContractAddressResp);
+  rpc SendTransactionWithData(SendTransactionWithDataReq) returns (SendTransactionWithDataResp);
 }
 
 message BlockHeader {
@@ -42,6 +43,9 @@ message Transaction {
   optional uint64 timestamp = 11;
   optional string public = 12;
   optional string signature = 13;
+  optional uint64 height = 14;
+  optional string blockHash = 15;
+  optional uint64 index = 16;
 }
 
 message BlockNumberResp {
@@ -70,6 +74,15 @@ message GetTransactionReq {
 message GetTransactionResp {
   optional uint64 timestamp = 1;
   optional Transaction body = 2;
+}
+
+message SendTransactionWithDataReq {
+  optional string key = 1;
+  optional string value = 2;
+}
+
+message SendTransactionWithDataResp {
+  optional string txHash = 1;
 }
 
 message ReadContractAddressReq {

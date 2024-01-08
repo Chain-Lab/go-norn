@@ -11,6 +11,9 @@ struct TransactionBody table {
     State []byte;
     Data []byte;
     Expire int64;
+    Height int64;
+    Index int64;
+    BlockHash [32]byte;
     Timestamp int64;
     Public [33]byte;
     Signature [<73]byte;

@@ -426,6 +426,10 @@ func (bc *BlockChain) insertBlock(block *common.Block) {
 	for idx := range block.Transactions {
 		// todo： 或许需要校验一下交易是否合法
 		tx := block.Transactions[idx]
+		tx.Body.Height = block.Header.Height
+		tx.Body.BlockHash = block.Header.BlockHash
+		tx.Body.Index = int64(idx)
+
 		pool.RemoveTx(tx.Body.Hash)
 		txWriter := karmem.NewWriter(1024)
 		keys[idx+transactionStartIndex] = append([]byte("tx#"), tx.Body.Hash[:]...)

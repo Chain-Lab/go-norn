@@ -7,7 +7,7 @@ import (
 
 var _ unsafe.Pointer
 
-var _Null = make([]byte, 208)
+var _Null = make([]byte, 256)
 var _NullReader = karmem.NewReader(_Null)
 
 type (
@@ -35,6 +35,9 @@ type TransactionBody struct {
 	State     []byte
 	Data      []byte
 	Expire    int64
+	Height    int64
+	Index     int64
+	BlockHash [32]byte
 	Timestamp int64
 	Public    [33]byte
 	Signature []byte
@@ -58,14 +61,14 @@ func (x *TransactionBody) WriteAsRoot(writer *karmem.Writer) (offset uint, err e
 
 func (x *TransactionBody) Write(writer *karmem.Writer, start uint) (offset uint, err error) {
 	offset = start
-	size := uint(208)
+	size := uint(256)
 	if offset == 0 {
 		offset, err = writer.Alloc(size)
 		if err != nil {
 			return 0, err
 		}
 	}
-	writer.Write4At(offset, uint32(201))
+	writer.Write4At(offset, uint32(249))
 	__HashOffset := offset + 4
 	writer.WriteAt(__HashOffset, (*[32]byte)(unsafe.Pointer(&x.Hash))[:])
 	__AddressOffset := offset + 36
@@ -126,18 +129,24 @@ func (x *TransactionBody) Write(writer *karmem.Writer, start uint) (offset uint,
 	writer.WriteAt(__DataOffset, *(*[]byte)(unsafe.Pointer(&__DataSlice)))
 	__ExpireOffset := offset + 140
 	writer.Write8At(__ExpireOffset, *(*uint64)(unsafe.Pointer(&x.Expire)))
-	__TimestampOffset := offset + 148
+	__HeightOffset := offset + 148
+	writer.Write8At(__HeightOffset, *(*uint64)(unsafe.Pointer(&x.Height)))
+	__IndexOffset := offset + 156
+	writer.Write8At(__IndexOffset, *(*uint64)(unsafe.Pointer(&x.Index)))
+	__BlockHashOffset := offset + 164
+	writer.WriteAt(__BlockHashOffset, (*[32]byte)(unsafe.Pointer(&x.BlockHash))[:])
+	__TimestampOffset := offset + 196
 	writer.Write8At(__TimestampOffset, *(*uint64)(unsafe.Pointer(&x.Timestamp)))
-	__PublicOffset := offset + 156
+	__PublicOffset := offset + 204
 	writer.WriteAt(__PublicOffset, (*[33]byte)(unsafe.Pointer(&x.Public))[:])
 	__SignatureSize := uint(1 * len(x.Signature))
 	__SignatureOffset, err := writer.Alloc(__SignatureSize)
 	if err != nil {
 		return 0, err
 	}
-	writer.Write4At(offset+189, uint32(__SignatureOffset))
-	writer.Write4At(offset+189+4, uint32(__SignatureSize))
-	writer.Write4At(offset+189+4+4, 1)
+	writer.Write4At(offset+237, uint32(__SignatureOffset))
+	writer.Write4At(offset+237+4, uint32(__SignatureSize))
+	writer.Write4At(offset+237+4+4, 1)
 	__SignatureSlice := *(*[3]uint)(unsafe.Pointer(&x.Signature))
 	__SignatureSlice[1] = __SignatureSize
 	__SignatureSlice[2] = __SignatureSize
@@ -212,6 +221,14 @@ func (x *TransactionBody) Read(viewer *TransactionBodyViewer, reader *karmem.Rea
 		x.Data[i] = 0
 	}
 	x.Expire = viewer.Expire()
+	x.Height = viewer.Height()
+	x.Index = viewer.Index()
+	__BlockHashSlice := viewer.BlockHash()
+	__BlockHashLen := len(__BlockHashSlice)
+	copy(x.BlockHash[:], __BlockHashSlice)
+	for i := __BlockHashLen; i < len(x.BlockHash); i++ {
+		x.BlockHash[i] = 0
+	}
 	x.Timestamp = viewer.Timestamp()
 	__PublicSlice := viewer.Public()
 	__PublicLen := len(__PublicSlice)
@@ -260,7 +277,7 @@ func (x *Transaction) Write(writer *karmem.Writer, start uint) (offset uint, err
 			return 0, err
 		}
 	}
-	__BodySize := uint(208)
+	__BodySize := uint(256)
 	__BodyOffset, err := writer.Alloc(__BodySize)
 	if err != nil {
 		return 0, err
@@ -789,7 +806,7 @@ func (x *DataCommand) Read(viewer *DataCommandViewer, reader *karmem.Reader) {
 }
 
 type TransactionBodyViewer struct {
-	_data [208]byte
+	_data [256]byte
 }
 
 func NewTransactionBodyViewer(reader *karmem.Reader, offset uint32) (v *TransactionBodyViewer) {
@@ -911,27 +928,48 @@ func (x *TransactionBodyViewer) Expire() (v int64) {
 	}
 	return *(*int64)(unsafe.Add(unsafe.Pointer(&x._data), 140))
 }
-func (x *TransactionBodyViewer) Timestamp() (v int64) {
+func (x *TransactionBodyViewer) Height() (v int64) {
 	if 148+8 > x.size() {
 		return v
 	}
 	return *(*int64)(unsafe.Add(unsafe.Pointer(&x._data), 148))
 }
-func (x *TransactionBodyViewer) Public() (v []byte) {
-	if 156+33 > x.size() {
+func (x *TransactionBodyViewer) Index() (v int64) {
+	if 156+8 > x.size() {
+		return v
+	}
+	return *(*int64)(unsafe.Add(unsafe.Pointer(&x._data), 156))
+}
+func (x *TransactionBodyViewer) BlockHash() (v []byte) {
+	if 164+32 > x.size() {
 		return []byte{}
 	}
 	slice := [3]uintptr{
-		uintptr(unsafe.Add(unsafe.Pointer(&x._data), 156)), 33, 33,
+		uintptr(unsafe.Add(unsafe.Pointer(&x._data), 164)), 32, 32,
+	}
+	return *(*[]byte)(unsafe.Pointer(&slice))
+}
+func (x *TransactionBodyViewer) Timestamp() (v int64) {
+	if 196+8 > x.size() {
+		return v
+	}
+	return *(*int64)(unsafe.Add(unsafe.Pointer(&x._data), 196))
+}
+func (x *TransactionBodyViewer) Public() (v []byte) {
+	if 204+33 > x.size() {
+		return []byte{}
+	}
+	slice := [3]uintptr{
+		uintptr(unsafe.Add(unsafe.Pointer(&x._data), 204)), 33, 33,
 	}
 	return *(*[]byte)(unsafe.Pointer(&slice))
 }
 func (x *TransactionBodyViewer) Signature(reader *karmem.Reader) (v []byte) {
-	if 189+12 > x.size() {
+	if 237+12 > x.size() {
 		return []byte{}
 	}
-	offset := *(*uint32)(unsafe.Add(unsafe.Pointer(&x._data), 189))
-	size := *(*uint32)(unsafe.Add(unsafe.Pointer(&x._data), 189+4))
+	offset := *(*uint32)(unsafe.Add(unsafe.Pointer(&x._data), 237))
+	size := *(*uint32)(unsafe.Add(unsafe.Pointer(&x._data), 237+4))
 	if !reader.IsValidOffset(offset, size) {
 		return []byte{}
 	}
