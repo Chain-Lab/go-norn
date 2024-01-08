@@ -77,8 +77,9 @@ message GetTransactionResp {
 }
 
 message SendTransactionWithDataReq {
-  optional string key = 1;
-  optional string value = 2;
+  optional string receiver = 1;
+  optional string key = 2;
+  optional string value = 3;
 }
 
 message SendTransactionWithDataResp {
