@@ -30,5 +30,6 @@ func DecodePrivateKeyFromHexString(hexString string) (*ecdsa.PrivateKey,
 
 	result.PublicKey.X = x
 	result.PublicKey.Y = y
+	result.Curve = elliptic.P256()
 	return result, nil
 }
