@@ -8,16 +8,21 @@ package rpc
 
 import (
 	"context"
+	"crypto/ecdsa"
+	"crypto/rand"
+	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
 	"github.com/chain-lab/go-chronos/common"
+	"github.com/chain-lab/go-chronos/crypto"
 	"github.com/chain-lab/go-chronos/node"
 	"github.com/chain-lab/go-chronos/rpc/pb"
 	"github.com/chain-lab/go-chronos/utils"
 	"github.com/gogo/protobuf/proto"
+	"github.com/gookit/config/v2"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/types/known/emptypb"
-	"strings"
+	karmem "karmem.org/golang"
 	"time"
 )
 
@@ -44,7 +49,13 @@ func (s *blockchainService) GetBlockByHash(ctx context.Context,
 	// todo: validate the hash value
 	hash := in.Hash
 	full := in.Full
-	byteHash, err := hex.DecodeString(*hash)
+
+	if hash == nil {
+		return nil, fmt.Errorf("block hash is required")
+	}
+
+	strHash := removePrefixIfExists(*hash)
+	byteHash, err := hex.DecodeString(strHash)
 
 	if err != nil {
 		log.WithError(err).Debugln("Decode block hash failed.")
@@ -57,7 +68,7 @@ func (s *blockchainService) GetBlockByHash(ctx context.Context,
 
 	block, err := chain.GetBlockByHash((*common.Hash)(byteHash))
 
-	if err != nil {
+	if err != nil || block == nil {
 		log.WithError(err).WithField("hash",
 			hash).Debugln("Get block by hash failed.")
 	}
@@ -110,7 +121,7 @@ func (s *blockchainService) GetTransactionByHash(ctx context.Context,
 		return nil, fmt.Errorf("transaction hash is empty")
 	}
 
-	strHash := strings.Trim(*txHash, "0x")
+	strHash := removePrefixIfExists(*txHash)
 	pm := node.GetP2PManager()
 	chain := pm.GetBlockChain()
 	hash, err := hex.DecodeString(strHash)
@@ -133,7 +144,7 @@ func (s *blockchainService) GetTransactionByHash(ctx context.Context,
 }
 
 func (s *blockchainService) GetTransactionByBlockHashAndIndex(ctx context.
-Context, in *pb.GetTransactionReq) (resp *pb.GetTransactionResp,
+	Context, in *pb.GetTransactionReq) (resp *pb.GetTransactionResp,
 	err error) {
 	// todo: validate the hash value
 	hash := in.BlockHash
@@ -174,7 +185,7 @@ Context, in *pb.GetTransactionReq) (resp *pb.GetTransactionResp,
 }
 
 func (s *blockchainService) GetTransactionByBlockNumberAndIndex(ctx context.
-Context, in *pb.GetTransactionReq) (resp *pb.GetTransactionResp,
+	Context, in *pb.GetTransactionReq) (resp *pb.GetTransactionResp,
 	err error) {
 	height := in.BlockNumber
 	index := in.Index
@@ -212,7 +223,7 @@ Context, in *pb.GetTransactionReq) (resp *pb.GetTransactionResp,
 }
 
 func (s *blockchainService) ReadContractAddress(ctx context.
-Context, in *pb.ReadContractAddressReq) (resp *pb.ReadContractAddressResp,
+	Context, in *pb.ReadContractAddressReq) (resp *pb.ReadContractAddressResp,
 	err error) {
 	pm := node.GetP2PManager()
 	// todo: check pm and chain is null
@@ -231,4 +242,93 @@ Context, in *pb.ReadContractAddressReq) (resp *pb.ReadContractAddressResp,
 
 	resp.Hex = proto.String(hex.EncodeToString(data))
 	return resp, nil
+}
+
+func (s *blockchainService) SendTransactionWithData(ctx context.
+	Context, in *pb.SendTransactionWithDataReq) (resp *pb.SendTransactionWithDataResp,
+	err error) {
+	receiver := in.Receiver
+	if receiver == nil {
+		return nil, fmt.Errorf("transaction receiver is required")
+	}
+
+	// todo: build transaction as a function
+	prvHex := config.String("consensus.prv")
+	prv, err := crypto.DecodePrivateKeyFromHexString(prvHex)
+
+	if err != nil {
+		log.WithError(err).Debugln("Decode private key from hex string failed.")
+		return nil, err
+	}
+
+	timestamp := time.Now().UnixMilli()
+
+	address, err := hex.DecodeString(*receiver)
+	if err != nil {
+		log.WithError(err).Errorln("Decode address failed.")
+		return
+	}
+
+	// 构建交易体
+	txBody := common.TransactionBody{
+		Data:      nil,
+		Receiver:  [20]byte(address),
+		Timestamp: timestamp,
+		Expire:    timestamp + 3000,
+	}
+
+	txBody.Public = [33]byte(crypto.PublicKey2Bytes(&prv.PublicKey))
+	txBody.Address = crypto.PublicKeyBytes2Address(txBody.Public)
+	txBody.Hash = [32]byte{}
+	txBody.Signature = []byte{}
+
+	if in.Key != nil && in.Value != nil {
+		dataCmd := common.DataCommand{
+			Opt:   []byte("set"),
+			Key:   []byte(*in.Key),
+			Value: []byte(*in.Value),
+		}
+
+		writer := karmem.NewWriter(1024)
+		dataCmd.WriteAsRoot(writer)
+		txBody.Data = writer.Bytes()
+	}
+
+	// 将当前未签名的交易进行序列化 -> 字节形式
+	writer := karmem.NewWriter(1024)
+	txBody.WriteAsRoot(writer)
+	txBodyBytes := writer.Bytes()
+
+	hash := sha256.New()
+	hash.Write(txBodyBytes)
+	txHashBytes := hash.Sum(nil)
+	txSignatureBytes, err := ecdsa.SignASN1(rand.Reader, prv, txHashBytes)
+
+	if err != nil {
+		log.WithField("error", err).Errorln("Sign transaction failed.")
+		return
+	}
+
+	// 写入签名和哈希信息
+	txBody.Hash = [32]byte(txHashBytes)
+	txBody.Signature = txSignatureBytes
+	tx := &common.Transaction{
+		Body: txBody,
+	}
+
+	pm := node.GetP2PManager()
+	pm.AddTransaction(tx)
+
+	resp = new(pb.SendTransactionWithDataResp)
+	resp.TxHash = proto.String(hex.EncodeToString(tx.Body.Hash[:]))
+
+	return resp, nil
+}
+
+func removePrefixIfExists(hexString string) string {
+	if hexString[:2] == "0x" {
+		return hexString[2:]
+	} else {
+		return hexString
+	}
 }

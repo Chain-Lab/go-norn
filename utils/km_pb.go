@@ -36,8 +36,13 @@ func KarmemBlock2Protobuf(block *common.Block, full bool) *pb.Block {
 	}
 
 	pbBlock.Transactions = make([]*pb.Transaction, 0)
-	for _, tx := range block.Transactions {
-		pbBlock.Transactions = append(pbBlock.Transactions, KarmemTransaction2Protobuf(&tx))
+	for idx, tx := range block.Transactions {
+		transaction := tx
+		transaction.Body.BlockHash = block.Header.BlockHash
+		transaction.Body.Index = int64(idx)
+		transaction.Body.Height = block.Header.Height
+		pbBlock.Transactions = append(pbBlock.Transactions,
+			KarmemTransaction2Protobuf(&transaction))
 	}
 
 	return pbBlock

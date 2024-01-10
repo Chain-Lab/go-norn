@@ -234,6 +234,17 @@ func (bc *BlockChain) NewGenesisBlock() {
 		Transactions: []common.Transaction{},
 	}
 
+	byteBlockHeaderData, err := utils.SerializeBlockHeader(&genesisBlock.Header)
+	if err != nil {
+		log.WithField("error", err).Errorln("Serialize block header failed.")
+		return
+	}
+
+	hash := sha256.New()
+	hash.Write(byteBlockHeaderData)
+	blockHash := common.Hash(hash.Sum(nil))
+	genesisBlock.Header.BlockHash = blockHash
+
 	bc.AppendBlockTask(&genesisBlock)
 }
 

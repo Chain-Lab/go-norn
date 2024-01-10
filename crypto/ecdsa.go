@@ -13,7 +13,8 @@ import (
 	"math/big"
 )
 
-func decodePrivateKeyFromHexString(hexString string) (*ecdsa.PrivateKey, error) {
+func DecodePrivateKeyFromHexString(hexString string) (*ecdsa.PrivateKey,
+	error) {
 	result := new(ecdsa.PrivateKey)
 	k := new(big.Int)
 
