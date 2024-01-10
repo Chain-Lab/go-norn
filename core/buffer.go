@@ -26,7 +26,7 @@ const (
 	maxKnownBlock       = 2048                   // lru 缓冲下最多存放多少区块
 	maxProcessedBlock   = 2048                   // lru 缓冲下最多存放多少区块
 	maxQueueBlock       = 1024                   // 区块处理第二队列最多存放多少区块
-	maxBufferSize       = 32                     // buffer 缓冲多少高度时弹出一个区块
+	maxBufferSize       = 12                     // buffer 缓冲多少高度时弹出一个区块
 )
 
 // BlockBuffer 维护一个树形结构的缓冲区，保存当前视图下的区块信息

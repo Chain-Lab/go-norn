@@ -8,6 +8,7 @@ import (
 	"github.com/chain-lab/go-chronos/core"
 	metrics2 "github.com/chain-lab/go-chronos/metrics"
 	"github.com/chain-lab/go-chronos/node"
+	"github.com/chain-lab/go-chronos/pubsub"
 	"github.com/chain-lab/go-chronos/rpc"
 	"github.com/chain-lab/go-chronos/utils"
 	"github.com/gookit/config/v2"
@@ -185,6 +186,12 @@ func main() {
 	// 节点发现协程
 	metrics2.RoutineCreateCounterObserve(3)
 	go pm.Discover(ctx, host, kdht, node.NetworkRendezvous)
+
+	// 事件订阅/发布协程
+	router := pubsub.CreateNewEventRouter()
+	http.HandleFunc("/subscribe", router.HandleConnect)
+	go router.Process()
+	go http.ListenAndServe("localhost:8888", nil)
 
 	if genesis {
 		log.Infof("Create genesis block after 10s...")

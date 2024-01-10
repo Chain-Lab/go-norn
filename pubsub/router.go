@@ -36,11 +36,16 @@ type EventRouter struct {
 func CreateNewEventRouter() *EventRouter {
 	routerOnce.Do(func() {
 		routerInst = &EventRouter{
-			publishMap: make(map[EventTopic]*EventPublisher),
+			publishMap:  make(map[EventTopic]*EventPublisher),
+			publishChan: make(chan Event, 256),
 		}
 	})
 
 	return routerInst
+}
+
+func (e *EventRouter) AppendEvent(event Event) {
+	e.publishChan <- event
 }
 
 func (e *EventRouter) Process() {
@@ -48,6 +53,7 @@ func (e *EventRouter) Process() {
 		select {
 		case event := <-e.publishChan:
 			topic := toTopicStr(event.Address, event.Type)
+			log.Infof("Receive task with topic %s", topic)
 			e.lock.RLock()
 
 			publisher, ok := e.publishMap[topic]
@@ -74,6 +80,7 @@ func (e *EventRouter) HandleConnect(w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.WithError(err).Errorln("Handle event websocket request failed.")
+		conn.Close()
 		return
 	}
 
@@ -83,16 +90,19 @@ func (e *EventRouter) HandleConnect(w http.ResponseWriter, r *http.Request) {
 	request, err := DeserializeEventRequest(message)
 
 	if err != nil {
-		log.WithError(err).Debugln("Deserialize request to object failed.")
+		log.WithError(err).Errorln("Deserialize request to object failed.")
+		conn.Close()
 		return
 	}
 
 	if request.Address == "" || request.EventType == "" {
-		log.Debugln("Address or type is empty...")
+		log.Errorln("Address or type is empty...")
+		conn.Close()
 		return
 	}
 
 	topic := toTopicStr(request.Address, request.EventType)
+	log.Infof("Receive subscribe with topic %s", topic)
 
 	e.lock.Lock()
 	defer e.lock.Unlock()

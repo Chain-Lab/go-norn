@@ -484,6 +484,8 @@ func (bc *BlockChain) insertBlock(block *common.Block) {
 		value := dc.Value
 
 		task := DataTask{
+			hash:    tx.Body.Hash,
+			height:  block.Header.Height,
 			address: contractAddr[:],
 			key:     key,
 			value:   value,

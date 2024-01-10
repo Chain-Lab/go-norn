@@ -43,6 +43,10 @@ func (e *EventPublisher) Publish(data []byte) {
 	defer e.lock.Unlock()
 
 	for idx, conn := range e.conns {
+		if conn == nil {
+			continue
+		}
+
 		err := conn.WriteMessage(websocket.TextMessage, data)
 		if err != nil {
 			log.WithError(err).Errorln("Write message to conn failed.")
