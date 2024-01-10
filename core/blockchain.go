@@ -203,6 +203,13 @@ func (bc *BlockChain) NewGenesisBlock() {
 		return
 	}
 
+	publicKey, err := hex.DecodeString(config.String("consensus.pub"))
+
+	if err != nil {
+		log.Errorln("Get public key from config failed.")
+		return
+	}
+
 	// 生成创世区块内的 VDF 参数
 	genesisParams, err := crypto.GenerateGenesisParams()
 
@@ -230,6 +237,7 @@ func (bc *BlockChain) NewGenesisBlock() {
 			MerkleRoot:    [32]byte(nullHash),
 			Height:        0,
 			Params:        genesisParamsBytes,
+			PublicKey:     [33]byte(publicKey),
 		},
 		Transactions: []common.Transaction{},
 	}
