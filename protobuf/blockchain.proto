@@ -77,9 +77,10 @@ message GetTransactionResp {
 }
 
 message SendTransactionWithDataReq {
-  optional string receiver = 1;
-  optional string key = 2;
-  optional string value = 3;
+  optional string type = 1; // "set" or "append"
+  optional string receiver = 2;
+  optional string key = 3;
+  optional string value = 4; // json string
 }
 
 message SendTransactionWithDataResp {

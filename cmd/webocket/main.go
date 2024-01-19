@@ -7,12 +7,12 @@
 package main
 
 import (
-	"github.com/chain-lab/go-chronos/pubsub"
-	"net/http"
+	"encoding/json"
+	"fmt"
 )
 
 func main() {
-	router := pubsub.CreateNewEventRouter()
-	http.HandleFunc("/subscribe", router.HandleConnect)
-	http.ListenAndServe("localhost:8888", nil)
+	mapValue := map[string]string{}
+	err := json.Unmarshal([]byte("{}sfdbsdifsduf"), &mapValue)
+	fmt.Print(err)
 }

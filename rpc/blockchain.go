@@ -26,6 +26,11 @@ import (
 	"time"
 )
 
+const (
+	setCommandString    = "set"
+	appendCommandString = "append"
+)
+
 type blockchainService struct {
 	pb.UnimplementedBlockchainServer
 	// todo: block cache?
@@ -252,6 +257,11 @@ func (s *blockchainService) SendTransactionWithData(ctx context.
 		return nil, fmt.Errorf("transaction receiver is required")
 	}
 
+	if in.Type == nil || (*in.Type != setCommandString && *in.
+		Type != appendCommandString) {
+		return nil, fmt.Errorf("transaction type error")
+	}
+
 	// todo: build transaction as a function
 	prvHex := config.String("consensus.prv")
 	prv, err := crypto.DecodePrivateKeyFromHexString(prvHex)
@@ -284,7 +294,7 @@ func (s *blockchainService) SendTransactionWithData(ctx context.
 
 	if in.Key != nil && in.Value != nil {
 		dataCmd := common.DataCommand{
-			Opt:   []byte("set"),
+			Opt:   []byte(*in.Type),
 			Key:   []byte(*in.Key),
 			Value: []byte(*in.Value),
 		}

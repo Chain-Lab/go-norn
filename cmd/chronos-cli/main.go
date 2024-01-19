@@ -29,8 +29,8 @@ import (
 )
 
 const (
-	addr = "localhost:45555"
-	//addr = "43.156.111.199:45555"
+	//addr = "localhost:45555"
+	addr = "43.156.154.25:45555"
 )
 
 func main() {

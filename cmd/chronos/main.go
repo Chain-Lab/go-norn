@@ -191,7 +191,7 @@ func main() {
 	router := pubsub.CreateNewEventRouter()
 	http.HandleFunc("/subscribe", router.HandleConnect)
 	go router.Process()
-	go http.ListenAndServe("localhost:8888", nil)
+	go http.ListenAndServe(":8888", nil)
 
 	if genesis {
 		log.Infof("Create genesis block after 10s...")

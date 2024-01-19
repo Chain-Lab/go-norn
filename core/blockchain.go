@@ -28,7 +28,9 @@ const (
 	maxDbChannel          = 256
 	transactionStartIndex = 3
 
-	setCommandString = "set"
+	setCommandString    = "set"
+	appendCommandString = "append"
+	// implement
 )
 
 // !! 为了避免潜在的数据不一致的情况，任何情况下不要对一个 block 实例进行数据的修改
@@ -57,7 +59,7 @@ type BlockChain struct {
 
 	// 数据存放处理与对应的任务 channel
 	dp     *DataProcessor
-	dpChan chan DataTask
+	dpChan chan *DataTask
 
 	// genesisParams 当前所维护的链的创世区块参数
 	genesisParams *common.GenesisParams
@@ -475,23 +477,37 @@ func (bc *BlockChain) insertBlock(block *common.Block) {
 			continue
 		}
 
-		if string(dc.Opt) != setCommandString {
-			continue
+		if string(dc.Opt) == setCommandString {
+			contractAddr := tx.Body.Receiver
+			key := dc.Key
+			value := dc.Value
+
+			task := DataTask{
+				Type:    setCommandString,
+				Hash:    tx.Body.Hash,
+				Height:  block.Header.Height,
+				Address: contractAddr[:],
+				Key:     key,
+				Value:   value,
+			}
+
+			bc.dpChan <- &task
+		} else if string(dc.Opt) == appendCommandString {
+			contractAddr := tx.Body.Receiver
+			key := dc.Key
+			value := dc.Value
+
+			task := DataTask{
+				Type:    appendCommandString,
+				Hash:    tx.Body.Hash,
+				Height:  block.Header.Height,
+				Address: contractAddr[:],
+				Key:     key,
+				Value:   value,
+			}
+
+			bc.dpChan <- &task
 		}
-
-		contractAddr := tx.Body.Receiver
-		key := dc.Key
-		value := dc.Value
-
-		task := DataTask{
-			hash:    tx.Body.Hash,
-			height:  block.Header.Height,
-			address: contractAddr[:],
-			key:     key,
-			value:   value,
-		}
-
-		bc.dpChan <- task
 	}
 
 	// 批量添加/修改数据到数据库
