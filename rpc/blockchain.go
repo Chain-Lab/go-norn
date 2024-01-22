@@ -245,7 +245,7 @@ func (s *blockchainService) ReadContractAddress(ctx context.
 		return nil, err
 	}
 
-	resp.Hex = proto.String(hex.EncodeToString(data))
+	resp.Hex = proto.String(string(data))
 	return resp, nil
 }
 
