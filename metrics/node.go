@@ -13,28 +13,34 @@ import (
 )
 
 var (
+	// 时间同步的差值
 	timeSyncDelta = promauto.NewGauge(prometheus.GaugeOpts{
 		Name: "node_time_sync_delta",
 		Help: "Time sync delta per round sync.",
 	})
+	// 插入数据库的交易数量
 	transactionInsertCount = promauto.NewGauge(prometheus.GaugeOpts{
 		Name: "node_transaction_insert_count",
 		Help: "Node transaction insert count.",
 	})
+	// 连接的对端节点数量
 	connectNodeCount = promauto.NewGauge(prometheus.GaugeOpts{
 		Name: "node_connect_count",
 		Help: "The count of connected node.",
 	})
+	// 区块高度数量
 	blockHeightCount = promauto.NewGauge(prometheus.GaugeOpts{
 		Name: "block_height_count",
 		Help: "Block height count",
 	})
+	// 创建的协程相关的代码
 	RoutineCreateCodeCounter = promauto.NewCounterVec(prometheus.CounterOpts{
 		Name: "routine_create_summary",
 		Help: "The summary for create new routine.",
 	},
 		[]string{"code"},
 	)
+	// 从对端接收到的消息类型
 	HandleReceivedMessageCodeCounter = promauto.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "handle_received_message_codes",
@@ -42,10 +48,12 @@ var (
 		},
 		[]string{"code"},
 	)
+	// 时间同步状态
 	TimeSyncrStatus = promauto.NewGauge(prometheus.GaugeOpts{
 		Name: "time_syncer_status",
 		Help: "The status in time syncer.",
 	})
+	// 区块同步状态
 	BlockSyncrStatus = promauto.NewGauge(prometheus.GaugeOpts{
 		Name: "block_syncer_status",
 		Help: "The status in time syncer.",

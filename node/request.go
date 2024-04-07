@@ -1,3 +1,5 @@
+// Package node
+// @Description: 节点发送的请求方法
 package node
 
 import (

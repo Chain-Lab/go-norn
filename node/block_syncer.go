@@ -1,9 +1,5 @@
-/**
-  @author: decision
-  @date: 2023/3/13
-  @note: 同步器，在完成同步之前管理所有的对端节点，进行区块数据的同步，在完成同步后才将管理权交给 backend
-**/
-
+// Package node
+// @Description: 同步器，在完成同步之前管理所有的对端节点，进行区块数据的同步，在完成同步后才将管理权交给 manager、
 package node
 
 import (
@@ -18,20 +14,10 @@ import (
 )
 
 const (
-	maxBufferSize = 12
-)
-
-const (
 	syncPaused    uint8 = 0x00 // 同步状态为暂停
 	blockSyncing  uint8 = 0x01 // 同步区块中，此时关闭缓冲区的接收
 	bufferSyncing uint8 = 0x02 // 同步缓冲区，开放缓冲区的接收
 	synced        uint8 = 0x03 // 同步完成，到达缓冲高度，加入共识
-)
-
-const (
-	blockNoneMark      uint8 = 0x00 // 已发送区块请求，但是还没有回复
-	blockGottenMark    uint8 = 0x01 // 已经得到区块
-	blockRequestedMark uint8 = 0x02 // 没有发送区块的请求
 )
 
 const (
@@ -49,20 +35,25 @@ type BlockSyncer struct {
 	remoteHeight int64 // 目前其他节点的最高高度
 	targetHeight int64 // 到达 buffer 同步状态后的目标高度
 	knownHeight  int64 // 目前已知节点中的最新高度
-	//dbLatestHeight   int64               // 数据库中存储的最高区块高度
+
 	requestTimestamp map[int64]time.Time     // 区块请求的时间戳, height -> time
 	blockMap         map[int64]*common.Block // height -> block 对应高度的区块
 	peerReqTime      map[peer.ID]time.Time
 
-	chain          *core.BlockChain
-	status         uint8
-	statusMsg      chan *p2p.SyncStatusMsg
-	lock           sync.RWMutex
-	peerStatusLock sync.RWMutex
+	chain          *core.BlockChain        // 区块链实例
+	status         uint8                   // 当前同步状态
+	statusMsg      chan *p2p.SyncStatusMsg // 同步器接收到的同步消息
+	lock           sync.RWMutex            // 状态锁
+	peerStatusLock sync.RWMutex            // peerSet 管理锁
 
 	//cond *sync.Cond
 }
 
+// NewBlockSyncer
+//
+//	@Description: 初始化区块同步器，manager 在启动时初始化
+//	@param config - 同步器配置，包含了区块链实例
+//	@return *BlockSyncer
 func NewBlockSyncer(config *BlockSyncerConfig) *BlockSyncer {
 	syncer := BlockSyncer{
 		peerSet: make([]*Peer, 0, 40),
@@ -83,20 +74,27 @@ func NewBlockSyncer(config *BlockSyncerConfig) *BlockSyncer {
 	return &syncer
 }
 
+// Start
+//
+//	@Description: 启动同步器实例
+//	@receiver bs
 func (bs *BlockSyncer) Start() {
 	metrics.RoutineCreateCounterObserve(11)
-	go bs.run()
-	go bs.statusMsgRoutine()
-	go bs.blockProcessRoutine()
+	go bs.run()                 // 启动同步协程
+	go bs.statusMsgRoutine()    // 启动同步消息管理协程
+	go bs.blockProcessRoutine() // 启动区块处理协程
 
 	bs.lock.Lock()
 	metrics.BlockSyncerStatusSet(int8(blockSyncing))
-	bs.status = blockSyncing
+	bs.status = blockSyncing // 设置同步状态为 syncing
 	bs.lock.Unlock()
 	log.Infoln("Start process block syncer.")
 }
 
-// Run 同步协程，每秒触发检查是否有空闲的 peer，如果有，就由该 peer 去拉取区块
+// run
+//
+//	@Description: 同步协程，每秒触发检查是否有空闲的 peer，如果有，就由该 peer 去拉取区块
+//	@receiver bs
 func (bs *BlockSyncer) run() {
 	ticker := time.NewTicker(500 * time.Millisecond)
 	log.Traceln("Start block syncer routine.")
@@ -147,10 +145,14 @@ func (bs *BlockSyncer) run() {
 	}
 }
 
-// statusMsgRoutine 状态信息处理协程，获取状态信息队列中的信息， 然后计算对端最高高度
+// statusMsgRoutine
+//
+//	@Description: 状态信息处理协程，获取状态信息队列中的信息， 然后计算对端最高高度
+//	@receiver bs
 func (bs *BlockSyncer) statusMsgRoutine() {
 	for {
 		select {
+		// 从 channel 中得到一个状态消息
 		case msg := <-bs.statusMsg:
 			height := msg.LatestHeight
 			bufferHeight := msg.BufferedEndHeight
@@ -161,43 +163,25 @@ func (bs *BlockSyncer) statusMsgRoutine() {
 				continue
 			}
 
+			// 计算当前所见到的其它节点的最高高度
 			bs.remoteHeight = max(height, bs.remoteHeight)
 			log.WithField("Remote height", height).Traceln("Sync remote height.")
 
+			// 如果缓冲高度为 -1 且正在同步状态，设定 target 高度
+			// 当前还未同步到其它节点的缓冲区高度
 			if bufferHeight != -1 && bs.status == blockSyncing {
 				bs.targetHeight = max(bufferHeight, bs.targetHeight)
 				log.WithField("Buffer height", bufferHeight).Traceln("Sync buffer height.")
 			}
-
 			dbLatestHeight := bs.chain.Height()
 
 			if bs.remoteHeight == bs.knownHeight {
-				//log.WithFields(log.Fields{
-				//	"remote": bs.remoteHeight,
-				//	"local":  bs.knownHeight,
-				//}).Infoln("Reach remote block height.")
 				metrics.BlockSyncerStatusSet(int8(bufferSyncing))
 				bs.status = bufferSyncing
 			}
 
 			if dbLatestHeight == bs.targetHeight {
 				log.Infoln("Reach target block height.")
-				// 非创世区块节点在这里才到达同步完成的状态
-				//go func() {
-				//	// todo: 处理报错
-				//	block, _ := bs.chain.GetLatestBlock()
-				//	bytesParams := block.Header.Params
-				//	params, _ := utils.DeserializeGeneralParams(bytesParams)
-				//
-				//	seed := new(big.Int)
-				//	pi := new(big.Int)
-				//
-				//	seed.SetBytes(params.Result)
-				//	pi.SetBytes(params.Proof)
-				//
-				//	calculator := crypto.GetCalculatorInstance()
-				//	calculator.AppendNewSeed(seed, pi)
-				//}()
 
 				metrics.BlockSyncerStatusSet(int8(synced))
 				bs.status = synced
@@ -215,7 +199,10 @@ func (bs *BlockSyncer) statusMsgRoutine() {
 	}
 }
 
-// blockProcessRoutine 区块处理协程， 每 1s 取出map中的区块加入到 chain 中
+// blockProcessRoutine
+//
+//	@Description: 区块处理协程， 每 1s 取出map中的区块加入到 chain 中
+//	@receiver bs
 func (bs *BlockSyncer) blockProcessRoutine() {
 	ticker := time.NewTicker(checkInterval)
 	for {
@@ -226,14 +213,9 @@ func (bs *BlockSyncer) blockProcessRoutine() {
 			remoteHeight := bs.remoteHeight
 			bs.lock.RUnlock()
 
+			//  遍历当前高度到对端最高高度，依次取出区块并插入数据库
 			for height := knownHeight; height <= remoteHeight; height++ {
 				if bs.blockMap[height] != nil {
-					//log.WithFields(log.Fields{
-					//	"height": height,
-					//	"target": bs.targetHeight,
-					//	"remote": bs.remoteHeight,
-					//	"known":  bs.knownHeight,
-					//}).Info("Append block to buffer.")
 					bs.insertBlock(height)
 				} else {
 					break
@@ -251,6 +233,11 @@ func (bs *BlockSyncer) blockProcessRoutine() {
 	}
 }
 
+// AddPeer
+//
+//	@Description: 添加一个对端节点
+//	@receiver bs
+//	@param p - 节点实例
 func (bs *BlockSyncer) AddPeer(p *Peer) {
 	bs.peerStatusLock.Lock()
 	defer bs.peerStatusLock.Unlock()
@@ -259,10 +246,20 @@ func (bs *BlockSyncer) AddPeer(p *Peer) {
 	bs.peerReqTime[p.peerID] = time.UnixMilli(0)
 }
 
+// appendStatusMsg
+//
+//	@Description: 添加同步状态消息到 channel
+//	@receiver bs
+//	@param msg - 其它节点发来的同步状态消息
 func (bs *BlockSyncer) appendStatusMsg(msg *p2p.SyncStatusMsg) {
 	bs.statusMsg <- msg
 }
 
+// selectBlockHeight
+//
+//	@Description: 选取一个最近的未同步的区块进行拉取，即最近没有拉取过，且高度最低
+//	@receiver bs
+//	@return int64 - 所需要拉取的区块高度
 func (bs *BlockSyncer) selectBlockHeight() int64 {
 	bs.lock.RLock()
 	defer bs.lock.RUnlock()
@@ -286,6 +283,11 @@ func (bs *BlockSyncer) selectBlockHeight() int64 {
 	return -1
 }
 
+// appendBlock
+//
+//	@Description: 添加区块到同步器
+//	@receiver bs
+//	@param block - 区块实例
 func (bs *BlockSyncer) appendBlock(block *common.Block) {
 	bs.lock.Lock()
 	defer bs.lock.Unlock()
@@ -294,6 +296,11 @@ func (bs *BlockSyncer) appendBlock(block *common.Block) {
 	bs.blockMap[blockHeight] = block
 }
 
+// insertBlock
+//
+//	@Description: 向区块链上插入高度为 height 的区块
+//	@receiver bs
+//	@param height - 所需要插入的区块的高度
 func (bs *BlockSyncer) insertBlock(height int64) {
 	bs.lock.Lock()
 	defer bs.lock.Unlock()
@@ -313,12 +320,21 @@ func (bs *BlockSyncer) insertBlock(height int64) {
 	delete(bs.blockMap, height)
 }
 
+// getStatus
+//
+//	@Description: 获取同步器的同步状态
+//	@receiver bs
+//	@return uint8 - 同步状态
 func (bs *BlockSyncer) getStatus() uint8 {
 	bs.lock.RLock()
 	defer bs.lock.RUnlock()
 	return bs.status
 }
 
+// setSynced
+//
+//	@Description: 设置同步器状态为同步完成
+//	@receiver bs
 func (bs *BlockSyncer) setSynced() {
 	bs.lock.Lock()
 	defer bs.lock.Unlock()

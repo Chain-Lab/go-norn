@@ -1,9 +1,5 @@
-/**
-  @author: decision
-  @date: 2023/12/21
-  @note:
-**/
-
+// Package core
+// @Description: v1.1.0 新增的数据处理功能，可以在 data 字段写入 set、append 类的指令来添加数据
 package core
 
 import (
@@ -25,19 +21,23 @@ var (
 )
 
 type DataTask struct {
-	Type    string
-	Hash    common.Hash
-	Height  int64
-	Address []byte
-	Key     []byte
-	Value   []byte
+	Type    string      // 命令类型，当前有 set、append
+	Hash    common.Hash // 该指令对应交易的哈希值
+	Height  int64       // 该指令处理的高度
+	Address []byte      // 存放、添加数据的地址
+	Key     []byte      // 数据的 key
+	Value   []byte      // 数据的 value
 }
 
 type DataProcessor struct {
-	taskChannel chan *DataTask
-	db          *utils.LevelDB
+	taskChannel chan *DataTask // processor 的任务接收队列
+	db          *utils.LevelDB // 数据库实例
 }
 
+// NewDataProcessor
+//
+//	@Description: 实例化数据处理器，接收 channel 传来的任务并进行处理
+//	@return *DataProcessor - 数据处理器实例
 func NewDataProcessor() *DataProcessor {
 	taskChan := make(chan *DataTask, taskChannelSize)
 
@@ -46,10 +46,16 @@ func NewDataProcessor() *DataProcessor {
 	}
 }
 
+// Run
+//
+//	@Description: 数据处理器的运行函数
+//	@receiver DataProcessor 实例
 func (dp *DataProcessor) Run() {
+	// 无限循环处理任务
 	for {
 		select {
 		// todo: batch insert with a buffer
+		// 如果 channel 中存在任务待处理，则取出
 		case task := <-dp.taskChannel:
 			if task.Type == setCommandString {
 				dp.setData(task)
@@ -62,12 +68,17 @@ func (dp *DataProcessor) Run() {
 					log.WithError(err).Errorln("Receive append task failed.")
 					continue
 				}
-				dp.appendDate(task)
+				dp.appendData(task)
 			}
 		}
 	}
 }
 
+// setData
+//
+//	@Description: 设置数据任务，它会覆盖相同 address、 key 下的数据
+//	@receiver DataProcessor 实例
+//	@param task - 实例化的任务信息
 func (dp *DataProcessor) setData(task *DataTask) {
 	db := dp.db
 	dbKey := utils.DataAddressKey2DBKey(task.Address, task.Key)
@@ -76,13 +87,19 @@ func (dp *DataProcessor) setData(task *DataTask) {
 	var mapArray []map[string]string
 	var value []byte
 
+	// 尝试将任务中的 value 解析为 string -> string 的 json 格式
+	// 这里是为了判断 value 是否为一个 {"key1": "value1", ...} 的 json
+	// 用来兼容 append 的逻辑
 	err := json.Unmarshal(task.Value, &mapValue)
 	if err != nil {
+		// 如果出错，则解析失败，将 value 直接进行设置
 		value = task.Value
 	} else {
+		// 否则，在一个 [] json 体中追加当前的 json 数据
 		mapArray = append(mapArray, mapValue)
 		value, _ = json.Marshal(mapArray)
 	}
+	// 尝试添加到数据库
 	_ = db.Insert(dbKey, task.Value)
 	log.Infof("Trying insert data with key %s and value %s", dbKey,
 		string(value))
@@ -92,6 +109,7 @@ func (dp *DataProcessor) setData(task *DataTask) {
 		"value": string(value),
 	}
 
+	// 触发数据变更事件
 	router := pubsub.CreateNewEventRouter()
 	event := pubsub.Event{
 		Type:    "data",
@@ -105,11 +123,17 @@ func (dp *DataProcessor) setData(task *DataTask) {
 	router.AppendEvent(event)
 }
 
-func (dp *DataProcessor) appendDate(task *DataTask) {
+// appendData
+//
+//	@Description: 添加数据任务，它会在数据后追加数据，而不是覆盖
+//	@receiver DataProcessor 实例
+//	@param task
+func (dp *DataProcessor) appendData(task *DataTask) {
 	db := dp.db
 
 	dbKey := utils.DataAddressKey2DBKey(task.Address, task.Key)
 
+	// 这里的代码作用同 setData 函数
 	mapValue := map[string]string{}
 	var mapArray []map[string]string
 	err := json.Unmarshal(task.Value, &mapValue)
@@ -120,6 +144,8 @@ func (dp *DataProcessor) appendDate(task *DataTask) {
 	value, err := db.Get(dbKey)
 	log.Infoln(string(value))
 	if err == nil {
+		// 从数据库中得到 value 并且将它解析为 [{}, {}....] 的形式
+		// 如果解析失败则直接触发错误
 		log.Info(string(value))
 		err = json.Unmarshal(value, &mapArray)
 		if err != nil {
@@ -127,6 +153,7 @@ func (dp *DataProcessor) appendDate(task *DataTask) {
 			return
 		}
 	}
+	// 解析成功，向后追加数据
 	mapArray = append(mapArray, mapValue)
 
 	value, err = json.Marshal(mapArray)
@@ -135,6 +162,7 @@ func (dp *DataProcessor) appendDate(task *DataTask) {
 		return
 	}
 
+	// 向数据库中 insert 数据
 	_ = db.Insert(dbKey, value)
 	log.Infof("Trying append data with key %s and value %s", dbKey,
 		string(value))
@@ -144,6 +172,7 @@ func (dp *DataProcessor) appendDate(task *DataTask) {
 		"value": string(value),
 	}
 
+	// 触发数据变更事件
 	router := pubsub.CreateNewEventRouter()
 	event := pubsub.Event{
 		Type:    "data",

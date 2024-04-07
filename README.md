@@ -16,7 +16,7 @@
 <br />
 <div align="center">
 
-<h3 align="center">Go-Chronos (provisional)</h3>
+<h3 align="center">Go-Norn</h3>
 
   <p align="center">
     A PoVF-base blockchain node implemented with Go-lang
@@ -29,7 +29,7 @@
 <!-- ABOUT THE PROJECT -->
 ## About The Project
 
-Chronos is a blockchain node based on Proof of Verifiable Function (PoVF). Based on the unpredictability of verifiable 
+Norn is a blockchain node based on Proof of Verifiable Function (PoVF). Based on the unpredictability of verifiable 
 functions, PoVF provides a fair and decentralized consensus mechanism.
 
 <!-- GETTING STARTED -->
@@ -39,20 +39,20 @@ functions, PoVF provides a fair and decentralized consensus mechanism.
 
 1. Clone the repo
    ```sh
-   git clone https://github.com/Chain-Lab/go-chronos.git
+   git clone https://github.com/Chain-Lab/go-norn.git
    ```
 2. Build node
    ```sh
-   cd ./cmd/chronos
+   cd ./cmd/norn
    go build
    ```
-3.1. Run a genesis chronos node
+3.1. Run a genesis norn node
    ```sh
-   ./chronos -d [data_path] -g -c [config_path]
+   ./norn -d [data_path] -g -c [config_path]
    ```
 3.2. Run general node
    ```sh
-   ./chronos -d [data_path] -c [config_path] -b [bootstrap_url]
+   ./norn -d [data_path] -c [config_path] -b [bootstrap_url]
    ```
 
 
@@ -66,13 +66,13 @@ Distributed under the MIT License. See `LICENSE.txt` for more information.
 
 <!-- MARKDOWN LINKS & IMAGES -->
 <!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
-[contributors-shield]: https://img.shields.io/github/contributors/Chain-Lab/go-chronos.svg?style=for-the-badge
-[contributors-url]: https://github.com/Chain-Lab/go-chronos/graphs/contributors
-[forks-shield]: https://img.shields.io/github/forks/Chain-Lab/go-chronos.svg?style=for-the-badge
-[forks-url]: https://github.com/Chain-Lab/go-chronos/network/members
-[stars-shield]: https://img.shields.io/github/stars/Chain-Lab/go-chronos.svg?style=for-the-badge
-[stars-url]: https://github.com/Chain-Lab/go-chronos/stargazers
-[issues-shield]: https://img.shields.io/github/issues/Chain-Lab/go-chronos.svg?style=for-the-badge
-[issues-url]: https://github.com/Chain-Lab/go-chronos/issues
-[license-shield]: https://img.shields.io/github/license/Chain-Lab/go-chronos.svg?style=for-the-badge
-[license-url]: https://github.com/Chain-Lab/go-chronos/blob/master/LICENSE.txt
+[contributors-shield]: https://img.shields.io/github/contributors/Chain-Lab/go-norn.svg?style=for-the-badge
+[contributors-url]: https://github.com/Chain-Lab/go-norn/graphs/contributors
+[forks-shield]: https://img.shields.io/github/forks/Chain-Lab/go-norn.svg?style=for-the-badge
+[forks-url]: https://github.com/Chain-Lab/go-norn/network/members
+[stars-shield]: https://img.shields.io/github/stars/Chain-Lab/go-norn.svg?style=for-the-badge
+[stars-url]: https://github.com/Chain-Lab/go-norn/stargazers
+[issues-shield]: https://img.shields.io/github/issues/Chain-Lab/go-norn.svg?style=for-the-badge
+[issues-url]: https://github.com/Chain-Lab/go-norn/issues
+[license-shield]: https://img.shields.io/github/license/Chain-Lab/go-norn.svg?style=for-the-badge
+[license-url]: https://github.com/Chain-Lab/go-norn/blob/master/LICENSE.txt

@@ -1,3 +1,6 @@
+// Package p2p
+// @Description: 最底层的 Peer，它接收来自 node.Peer 的消息，序列化后发送到数据流，并且接收远端的数据，反序列化后传递给 node.Peer
+// @Description: 这里可以作为一个黑盒使用，类似 socket 中的 send，recv，不进行详细的注释
 package p2p
 
 import (
@@ -102,7 +105,6 @@ func (p *Peer) pingLoop() {
 func (p *Peer) readLoop(errc chan<- error) {
 	log.Traceln("Start read loop.")
 
-	//var messagePool = sync.Pool{New: func() any { return new(Message) }}
 	defer p.wg.Done()
 	for {
 		if p.stopped {
@@ -111,16 +113,11 @@ func (p *Peer) readLoop(errc chan<- error) {
 
 		log.Traceln("New read loop.")
 		dataBytes, err := p.rw.ReadBytes(0xff)
-
-		//log.Infof("Read byte code data: %v", dataBytes)
-
 		if err != nil {
 			log.WithField("error", err).Debugln("Read bytes error.")
 			errc <- err
 			return
 		}
-
-		//log.WithField("length", len(dataBytes)).Infoln("Receive data bytes.")
 
 		if len(dataBytes) == 0 {
 			continue
@@ -139,15 +136,7 @@ func (p *Peer) readLoop(errc chan<- error) {
 		// todo: 修改编码为int64
 		msg.ReceiveAt = now.UnixMilli()
 
-		//log.WithFields(log.Fields{
-		//	"code":   msg.Code,
-		//	"length": len(dataBytes),
-		//	"data":   hex.EncodeToString(decodedPayload),
-		//}).Infoln("Receive message.")
 		p.handle(msg)
-
-		//msg.Reset()
-		//messagePool.Put(msg)
 	}
 }
 
@@ -175,7 +164,6 @@ func (p *Peer) Send(msgCode StatusCode, payload []byte) {
 		ReceiveAt: 0,
 	}
 
-	//log.WithField("payload", hex.EncodeToString(payload)).Infoln("Send msg to channel.")
 	p.sendQueue <- &msg
 	metrics.SendQueueCountInc()
 }

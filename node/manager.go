@@ -1,3 +1,5 @@
+// Package node
+// @Description: 连接管理器，作为一个集中化的实例管理其它 peer 传来的信息
 package node
 
 import (
@@ -45,7 +47,7 @@ var handlerMap = map[p2p.StatusCode]msgHandler{
 }
 
 var (
-	handlerInst *P2PManager = nil
+	managerInst *P2PManager = nil
 )
 
 const (
@@ -127,7 +129,7 @@ func NewP2PManager(config *P2PManagerConfig) (*P2PManager, error) {
 	bs := NewBlockSyncer(blockSyncerConfig)
 	ts := NewTimeSyncer(config.Genesis, config.InitialDelta)
 
-	handler := &P2PManager{
+	manager := &P2PManager{
 		// todo: 限制节点数量，Kad 应该限制了节点数量不超过20个
 		triedPeers: make(map[peer.ID]time.Time),
 		peerSet:    make([]*Peer, 0, 40),
@@ -149,19 +151,32 @@ func NewP2PManager(config *P2PManagerConfig) (*P2PManager, error) {
 	}
 
 	metrics.RoutineCreateCounterObserve(15)
-	go handler.packageBlockRoutine()
+
+	// 启动节点的打包交易协程
+	go manager.packageBlockRoutine()
+
+	// 启动区块同步器和时间同步器
 	bs.Start()
 	ts.Start()
-	handlerInst = handler
+	managerInst = manager
 
-	return handler, nil
+	return manager, nil
 }
 
+// GetBlockChain
+//
+//	@Description: 获取当前节点的区块链实例
+//	@receiver pm
+//	@return *core.BlockChain - 区块链实例
 func (pm *P2PManager) GetBlockChain() *core.BlockChain {
 	return pm.chain
 }
 
-// AddTransaction 仅用于测试
+// AddTransaction
+//
+//	@Description: 用于测试，添加交易到交易池
+//	@receiver pm
+//	@param tx - 交易实例
 func (pm *P2PManager) AddTransaction(tx *common.Transaction) {
 	txHash := hex.EncodeToString(tx.Body.Hash[:])
 	pm.markTransaction(txHash)
@@ -169,11 +184,19 @@ func (pm *P2PManager) AddTransaction(tx *common.Transaction) {
 	pm.txPool.Add(tx)
 }
 
+// GetP2PManager
+//
+//	@Description: 获取 Manager 实例
+//	@return *P2PManager - Manager 实例
 func GetP2PManager() *P2PManager {
 	// todo: 这样的写法会有脏读的问题，也就是在分配地址后，对象可能还没有完全初始化
-	return handlerInst
+	return managerInst
 }
 
+// packageBlockRoutine
+//
+//	@Description: 交易打包实例
+//	@receiver pm
 func (pm *P2PManager) packageBlockRoutine() {
 	ticker := time.NewTicker(1 * time.Second)
 
@@ -186,30 +209,32 @@ func (pm *P2PManager) packageBlockRoutine() {
 				continue
 			}
 
+			//  如果未完成同步，则不进行打包
 			if !pm.Synced() {
 				log.Infoln("Waiting for node synced.")
 				continue
 			}
 
+			// 获取最新区块
 			latest, _ := pm.chain.GetLatestBlock()
-
 			if latest == nil {
 				log.Infoln("Waiting for genesis block.")
 				continue
 			}
 
+			// 获取当前的 VDF 计算信息
 			calc := crypto.GetCalculatorInstance()
-			full := pm.chain.BufferFull()
-			//pm.chain.
-			seed, pi := calc.GetSeedParams(full)
+			seed, pi := calc.GetSeedParams()
 			log.Debugf("Get seed: %s", hex.EncodeToString(seed.Bytes()))
 
+			// 判断当前节点是否为共识节点
 			consensus, err := crypto.VRFCheckLocalConsensus(seed.Bytes())
 			if !consensus || err != nil {
 				//log.Infof("Local is not consensus node")
 				continue
 			}
 
+			// VRF 计算得到的随机数，需要包含到区块中
 			randNumber, s, t, err := crypto.VRFCalculate(elliptic.P256(), seed.Bytes())
 			log.Infof("Package with seed: %s", hex.EncodeToString(seed.Bytes()))
 
@@ -221,6 +246,7 @@ func (pm *P2PManager) packageBlockRoutine() {
 				T:            t.Bytes(),
 			}
 
+			// 交易池打包返回一个交易数组
 			txs := pm.txPool.Package()
 			log.Infof("Package %d txs.", len(txs))
 			newBlock, err := pm.chain.PackageNewBlock(txs, timestamp, &params, packageBlockInterval)
@@ -239,6 +265,15 @@ func (pm *P2PManager) packageBlockRoutine() {
 	}
 }
 
+// NewPeer
+//
+//	@Description: 创建一个新的 Peer，它基于底层发送消息的 p2p.Peer 实现
+//	@receiver pm - Manager 实例
+//	@param peerId - 节点的 p2p id信息
+//	@param s - 消息读写流
+//	@param remoteAddr - 对端的连接地址
+//	@return *Peer - node.Peer 实例
+//	@return error - 如果出错则返回报错
 func (pm *P2PManager) NewPeer(peerId peer.ID, s *network.Stream,
 	remoteAddr string) (*Peer,
 	error) {
@@ -249,6 +284,7 @@ func (pm *P2PManager) NewPeer(peerId peer.ID, s *network.Stream,
 		remoteMultAddr: remoteAddr,
 	}
 
+	// 调用公有的 NewPeer 方法创建新节点
 	p, err := NewPeer(peerId, s, cfg)
 
 	if err != nil {
@@ -256,6 +292,7 @@ func (pm *P2PManager) NewPeer(peerId peer.ID, s *network.Stream,
 		return nil, err
 	}
 
+	// 添加到 peerset 中，并且添加给同步器
 	pm.peerSet = append(pm.peerSet, p)
 	log.Infoln(p.addr)
 	pm.peers[p.peerID] = p
@@ -263,6 +300,12 @@ func (pm *P2PManager) NewPeer(peerId peer.ID, s *network.Stream,
 	return p, err
 }
 
+// isKnownTransaction
+//
+//	@Description: 判断交易哈希为 hash 的交易是否在当前节点出现过
+//	@receiver pm
+//	@param hash - 交易的哈希值
+//	@return bool - 如果交易出现过，返回 true
 func (pm *P2PManager) isKnownTransaction(hash common.Hash) bool {
 	strHash := hex.EncodeToString(hash[:])
 	if pm.txPool.Contain(strHash) {
@@ -278,6 +321,10 @@ func (pm *P2PManager) isKnownTransaction(hash common.Hash) bool {
 	return tx != nil
 }
 
+// broadcastBlock
+//
+//	@Description: 区块广播协程，这里使用的是 go-libp2p 的 gossip 广播
+//	@receiver pm
 func (pm *P2PManager) broadcastBlock() {
 	log.Infoln("P2P manger broadcast block routine start!")
 	for {
@@ -292,6 +339,7 @@ func (pm *P2PManager) broadcastBlock() {
 			log.Infof("Block #%s size: %d kb txs: %d", block.BlockHash()[:8],
 				len(blockData)/1024, len(block.Transactions))
 
+			// 向 Topic 中广播区块
 			err = pm.blockTopic.Publish(context.Background(), blockData)
 			if err != nil {
 				log.WithError(err).Errorln("Publish block failed.")
@@ -304,6 +352,10 @@ func (pm *P2PManager) broadcastBlock() {
 	}
 }
 
+// broadcastTransaction
+//
+//	@Description: 交易广播协程，这里使用的是基于 UDP 的 gossip 协议，如果使用 go-libp2p 会影响到区块的广播效率，进而导致分叉
+//	@receiver pm
 func (pm *P2PManager) broadcastTransaction() {
 	log.Infoln("P2P manger broadcast transaction routine start!")
 	for {
@@ -315,30 +367,39 @@ func (pm *P2PManager) broadcastTransaction() {
 	}
 }
 
+// gossipBlockSubscribe
+//
+//	@Description: 区块接收协程，在 topic 中接收到其它节点广播的区块
+//	@receiver pm
+//	@param ctx - 广播上下文
+//	@param sub - 订阅实例
+//	@param h - 本地 p2p 节点实例
 func (pm *P2PManager) gossipBlockSubscribe(ctx context.Context,
 	sub *pubsub.Subscription, h host.Host) {
 	log.Infoln("P2P gossip block subscription routine start!")
 	for {
+		// 从订阅中接收消息
 		blockMsg, err := sub.Next(ctx)
-
 		if err != nil {
 			log.Errorf("Get block data from subscription failed: %s", err)
 			continue
 		}
 
+		// 如果是来自本地的广播，则跳过
 		if blockMsg.ReceivedFrom == h.ID() {
 			continue
 		}
 
 		metrics.GossipReceiveBlocksCountInc()
 
+		// 获取同步状态，如果未同步完成则跳过处理
 		status := pm.blockSyncer.getStatus()
 		if status == blockSyncing || status == syncPaused {
 			continue
 		}
 
+		// 尝试反序列化区块，如果失败则跳过并报错
 		block, err := utils.DeserializeBlock(blockMsg.Data)
-
 		if err != nil {
 			log.WithField("error",
 				err).Warning("Deserialize block from bytes failed.")
@@ -371,93 +432,55 @@ func (pm *P2PManager) gossipBlockSubscribe(ctx context.Context,
 	}
 }
 
-func (pm *P2PManager) gossipTxSubscribe(ctx context.Context,
-	sub *pubsub.Subscription, h host.Host) {
-	log.Infoln("P2P gossip transaction subscription routine start!")
-	for {
-		txMsg, err := sub.Next(ctx)
-
-		if err != nil {
-			log.Errorf("Get tx data from subscription failed: %s", err)
-			continue
-		}
-
-		if txMsg.ReceivedFrom == h.ID() {
-			continue
-		}
-
-		if !pm.Synced() {
-			continue
-		}
-
-		metrics.GossipReceiveCountInc()
-		transaction, err := utils.DeserializeTransaction(txMsg.Data)
-		if err != nil {
-			log.WithField("error", err).Errorln("Deserializer transaction failed.")
-			continue
-		}
-
-		txHash := hex.EncodeToString(transaction.Body.Hash[:])
-		if pm.isKnownTransaction(transaction.Body.Hash) {
-			return
-		}
-
-		pm.markTransaction(txHash)
-		pm.txPool.Add(transaction)
-	}
-}
-
-func (pm *P2PManager) getPeersWithoutBlock(blockHash common.Hash) []*Peer {
-	pm.peerSetLock.RLock()
-	defer pm.peerSetLock.RUnlock()
-
-	list := make([]*Peer, 0, len(pm.peerSet))
-	strHash := hex.EncodeToString(blockHash[:])
-	for idx := range pm.peerSet {
-		p := pm.peerSet[idx]
-		if !p.KnownBlock(strHash) && !p.Stopped() {
-			list = append(list, p)
-		}
-	}
-	return list
-}
-
+// appendBlockToSyncer
+//
+//	@Description: 将区块添加到同步器中，这里是在端对端接收到区块时进行添加
+//	@receiver pm
+//	@param block - 区块实例
 func (pm *P2PManager) appendBlockToSyncer(block *common.Block) {
 	pm.blockSyncer.appendBlock(block)
 }
 
-func (pm *P2PManager) getPeersWithoutTransaction(txHash common.Hash) []*Peer {
-	pm.peerSetLock.RLock()
-	defer pm.peerSetLock.RUnlock()
-
-	list := make([]*Peer, 0, len(pm.peerSet))
-	strHash := hex.EncodeToString(txHash[:])
-	for idx := range pm.peerSet {
-		p := pm.peerSet[idx]
-		if !p.KnownTransaction(strHash) && !p.Stopped() {
-			list = append(list, p)
-		}
-	}
-	return list
-}
-
+// SetSynced
+//
+//	@Description: 设置当前的同步器的同步状态为完成
+//	@receiver pm
 func (pm *P2PManager) SetSynced() {
 	pm.blockSyncer.setSynced()
 }
 
+// markBlock
+//
+//	@Description: 标志区块在本地出现过
+//	@receiver pm
+//	@param hash - 区块的哈希值
 func (pm *P2PManager) markBlock(hash string) {
 	pm.knownBlock.Add(hash, nil)
 }
 
+// markTransaction
+//
+//	@Description: 标志交易在本地出现过
+//	@receiver pm
+//	@param hash - 交易的哈希值
 func (pm *P2PManager) markTransaction(hash string) {
 	pm.knownTransaction.Add(hash, nil)
 }
 
+// syncStatus
+//
+//	@Description: 获取同步器的同步状态
+//	@receiver pm
+//	@return uint8
 func (pm *P2PManager) syncStatus() uint8 {
 	return pm.blockSyncer.status
 }
 
-// HandleStream 用于在收到对端连接时候处理 stream, 在这里构建 peer 用于通信
+// HandleStream
+//
+//	@Description: 用于在收到对端连接时候处理 stream, 在这里构建 peer 用于通信
+//	@receiver pm
+//	@param s - 接收到新的连接请求
 func (pm *P2PManager) HandleStream(s network.Stream) {
 	pm.peerSetLock.Lock()
 	defer pm.peerSetLock.Unlock()
@@ -483,7 +506,14 @@ func (pm *P2PManager) HandleStream(s network.Stream) {
 	metrics.ConnectedNodeInc()
 }
 
-// Discover 基于 kademlia 协议发现其他节点
+// Discover
+//
+//	@Description: 基于 kademlia 协议发现其他节点
+//	@receiver pm
+//	@param ctx - 上下文 context
+//	@param h - 本地节点实例
+//	@param dht - kademlia 实例
+//	@param rendezvous - 进行节点发现的 “密语/暗号”
 func (pm *P2PManager) Discover(ctx context.Context, h host.Host,
 	dht *dht.IpfsDHT,
 	rendezvous string) {
@@ -500,23 +530,11 @@ func (pm *P2PManager) Discover(ctx context.Context, h host.Host,
 	pm.gossip, err = pubsub.NewGossipSub(ctx, h,
 		pubsub.WithMaxMessageSize(pubsubMaxSize),
 	)
-	//pm.gossip, err = pubsub.(ctx, h)
 	if err != nil {
 		log.WithError(err).Fatalf("Create gossip sub failed")
 		return
 	}
-	//pm.flood, err = pubsub.NewFloodSub(ctx, h)
-	//if err != nil {
-	//	log.WithError(err).Fatalf("Create flood sub failed")
-	//	return
-	//}
 
-	//pm.txTopic, err = pm.gossip.Join(TxGossipTopic)
-	//if err != nil {
-	//	log.WithError(err).Fatalf("Join transaction topic failed")
-	//	return
-	//}
-	//log.Infof("Join to topic %s", TxGossipTopic)
 	pm.blockTopic, err = pm.gossip.Join(BlockGossipTopic)
 	if err != nil {
 		log.WithError(err).Fatalf("Join block topic failed")
@@ -524,11 +542,6 @@ func (pm *P2PManager) Discover(ctx context.Context, h host.Host,
 	}
 	log.Infof("Join to topic %s", BlockGossipTopic)
 
-	//txSub, err := pm.txTopic.Subscribe()
-	//if err != nil {
-	//	log.WithError(err).Fatalf("Get sub from topic failed")
-	//	return
-	//}
 	blockSub, err := pm.blockTopic.Subscribe(pubsub.WithBufferSize(512))
 	if err != nil {
 		log.WithError(err).Fatalf("Get sub from topic failed")
@@ -562,6 +575,13 @@ func (pm *P2PManager) Discover(ctx context.Context, h host.Host,
 
 }
 
+// CheckAndCreateStream
+//
+//	@Description: 检查并创建数据传输流
+//	@receiver pm
+//	@param ctx - 处理上下文
+//	@param h - 本地节点实例
+//	@param p - 对端节点实例
 func (pm *P2PManager) CheckAndCreateStream(ctx context.Context, h host.Host,
 	p peer.AddrInfo) {
 	pm.peerSetLock.Lock()
@@ -668,6 +688,11 @@ func (pm *P2PManager) removePeerIfStopped(idx int) bool {
 	return false
 }
 
+// UDPGossipBroadcast
+//
+//	@Description: 交易的 UDP 广播方法，随机选取，邻居节点发送交易
+//	@receiver pm
+//	@param tx
 func (pm *P2PManager) UDPGossipBroadcast(tx *common.Transaction) {
 	pm.peerSetLock.RLock()
 	defer pm.peerSetLock.RUnlock()
@@ -728,7 +753,10 @@ func (pm *P2PManager) UDPGossipBroadcast(tx *common.Transaction) {
 	}
 }
 
-// TransactionUDP 计划使用的交易广播独立网络，
+// TransactionUDP
+//
+//	@Description: 从 UDP 中接收其它节点广播到该节点的交易
+//	@receiver pm
 func (pm *P2PManager) TransactionUDP() {
 	port := config.Int("node.udp", 53333)
 	listen, err := net.ListenUDP("udp", &net.UDPAddr{
@@ -752,11 +780,7 @@ func (pm *P2PManager) TransactionUDP() {
 			continue
 		}
 
-		// bm: BroadcastMessage
 		tx, err := utils.DeserializeTransaction(data[:n])
-
-		//var id peer.ID
-		//var txData []byte
 
 		if err != nil {
 			log.WithError(err).Warningln("Deserialize data failed.")
@@ -764,10 +788,6 @@ func (pm *P2PManager) TransactionUDP() {
 		}
 
 		// todo: 如何验证一个交易是非法的？当前的逻辑下可以使用 Verify 方法来校验
-		//tx, err := utils.DeserializeTransaction(txData)
-		//if err != nil {
-		//p := pm.peers[id]
-		//if p != nil {
 		txHash := hex.EncodeToString(tx.Body.Hash[:])
 		exists := pm.knownTransaction.Contains(txHash)
 		if !exists {

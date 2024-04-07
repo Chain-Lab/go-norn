@@ -1,9 +1,5 @@
-/**
-  @author: decision
-  @date: 2023/4/17
-  @note: VRF 计算及验证函数
-**/
-
+// Package crypto
+// @Description:  VRF 计算及验证函数
 package crypto
 
 import (
@@ -22,12 +18,22 @@ const (
 )
 
 var (
-	tt260 = BigPow(2, 260)
-	tt256 = BigPow(2, 256)
+	tt260 = BigPow(2, 260) // 2 ^ 260
+	tt256 = BigPow(2, 256) // 2 ^ 256
 )
 
+// VRFCalculate
+//
+//	@Description: 使用本地的私钥对消息 m 进行 VRF 计算，并返回证明参数 (s,t)
+//	@param curve - 计算所在的曲线
+//	@param msg - 需要计算的消息
+//	@return []byte - VRF 计算结果
+//	@return *big.Int - 证明参数 s
+//	@return *big.Int - 证明参数 t
+//	@return error - 错误信息
 func VRFCalculate(curve elliptic.Curve, msg []byte) ([]byte, *big.Int, *big.Int, error) {
 	N := curve.Params().N
+	// 读取本地的私钥
 	prvHex := config.String("consensus.prv")
 	//prvHex := "f8bc37201dfa59c1b62ce77a168c168e2a525ebad8e18c131be8ab4be6b5a5cb"
 	prv, err := DecodePrivateKeyFromHexString(prvHex)
@@ -36,19 +42,22 @@ func VRFCalculate(curve elliptic.Curve, msg []byte) ([]byte, *big.Int, *big.Int,
 		return nil, nil, nil, err
 	}
 
-	// todo: 消息需要哈希一下，避免由于输入消息过短出现安全问题
+	// 对消息进行哈希，避免消息过短
 	sha2 := sha256.New()
 	sha2.Write(msg)
 	digest := sha2.Sum(nil)
 
+	// 将摘要映射为椭圆曲线上的点 M = (xM, yM)
 	xM, yM := curve.ScalarBaseMult(digest)
+	// 选取随机数 r
 	r, err := rand.Int(rand.Reader, N)
-
 	if err != nil {
 		log.WithField("err", err).Errorln("Generate random number in VRF failed.")
 		return nil, nil, nil, err
 	}
 
+	// 椭圆曲线上的倍乘计算，得到 rM 和 rO，O 为椭圆曲线上的基点
+	// 并且得到 V = kO，k 是私钥
 	xRm, yRm := curve.ScalarMult(xM, yM, r.Bytes())   // Calculate rM
 	xRo, yRo := curve.ScalarBaseMult(r.Bytes())       // Calculate rO
 	xV, yV := curve.ScalarMult(xM, yM, prv.D.Bytes()) // V = kO
@@ -56,7 +65,6 @@ func VRFCalculate(curve elliptic.Curve, msg []byte) ([]byte, *big.Int, *big.Int,
 	sBytes := elliptic.MarshalCompressed(curve, xRm, yRm) // s = marshal(rM)
 	oBytes := elliptic.MarshalCompressed(curve, xRo, yRo) // o = marshal(rO)
 
-	// 这里可以改为一个 Hash 函数
 	s, o := new(big.Int), new(big.Int)
 	s.SetBytes(sBytes)
 	o.SetBytes(oBytes)
@@ -74,7 +82,12 @@ func VRFCalculate(curve elliptic.Curve, msg []byte) ([]byte, *big.Int, *big.Int,
 	return rBytes, s, t, nil
 }
 
-// VRFCheckOutputConsensus 检查一个 VRF 的输出是否满足共识
+// VRFCheckOutputConsensus
+//
+//	@Description: 检查一个 VRF 的输出是否满足共识
+//	@param randomOutput
+//	@param local - 是否为本地的验证计算
+//	@return bool - VRF 是否满足共识条件
 func VRFCheckOutputConsensus(randomOutput []byte, local bool) bool {
 	sha2 := sha256.New()
 	sha2.Write(randomOutput)
@@ -95,14 +108,28 @@ func VRFCheckOutputConsensus(randomOutput []byte, local bool) bool {
 	return prob > ConsensusFloor
 }
 
-// VRFCheckLocalConsensus 检查当前节点是否是一个共识节点
+// VRFCheckLocalConsensus
+//
+//	@Description: 检查当前节点是否是一个共识节点
+//	@param vdfOutput - 当前的 VDF 轮的输出结果
+//	@return bool - 当前节点是否是共识节点
+//	@return error - 报错信息
 func VRFCheckLocalConsensus(vdfOutput []byte) (bool, error) {
 	rBytes, _, _, _ := VRFCalculate(elliptic.P256(), vdfOutput)
 
 	return VRFCheckOutputConsensus(rBytes, true), nil
 }
 
-// VRFCheckRemoteConsensus 检查一个其他节点的输出是否满足共识条件
+// VRFCheckRemoteConsensus
+//
+//	@Description: 检查一个其他节点的输出是否满足共识条件
+//	@param key - 节点公钥
+//	@param vdfMsg - 区块中包含的 VDF 信息
+//	@param s - VRF 证明参数 s
+//	@param t - VRF 证明参数 t
+//	@param value - 对端节点的 VRF 输出结果
+//	@return bool - 是否共识节点
+//	@return error - 报错信息
 func VRFCheckRemoteConsensus(key *ecdsa.PublicKey, vdfMsg []byte, s *big.Int, t *big.Int, value []byte) (bool, error) {
 	verified, err := VRFVerify(elliptic.P256(), key, vdfMsg, s, t, value)
 	if !verified || err != nil {
@@ -114,6 +141,17 @@ func VRFCheckRemoteConsensus(key *ecdsa.PublicKey, vdfMsg []byte, s *big.Int, t 
 	return VRFCheckOutputConsensus(value, false), nil
 }
 
+// VRFVerify
+//
+//	@Description: VRF 验证函数
+//	@param curve - 选取的计算曲线
+//	@param key - 公钥
+//	@param msg - VRF 计算的消息
+//	@param s - 证明参数 s
+//	@param t - 证明参数 t
+//	@param value - VRF 的输出结果，可以转换为椭圆曲线上的点
+//	@return bool - VRF 验证结果
+//	@return error - 错误信息
 func VRFVerify(curve elliptic.Curve, key *ecdsa.PublicKey, msg []byte, s *big.Int, t *big.Int, value []byte) (bool, error) {
 	N := curve.Params().N
 	xR, yR := elliptic.UnmarshalCompressed(curve, value) // random number -> point V

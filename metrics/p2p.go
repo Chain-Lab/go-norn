@@ -70,8 +70,3 @@ func GossipUDPSendCountInc() {
 func GossipUDPRecvCountInc() {
 	gossipUDPRecvCounter.Inc()
 }
-
-//
-//func SendQueueCountDec() {
-//	sendQueueCount.Dec()
-//}

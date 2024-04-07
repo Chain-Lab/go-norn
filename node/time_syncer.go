@@ -1,9 +1,5 @@
-/**
-  @author: decision
-  @date: 2023/6/26
-  @note:
-**/
-
+// Package node
+// @Description: 时间同步器
 package node
 
 import (

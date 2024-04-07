@@ -11,6 +11,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 	log "github.com/sirupsen/logrus"
 	"sync"
+	"time"
 )
 
 const (
@@ -56,24 +57,32 @@ type Peer struct {
 	// todo： 还需要将区块、交易传出给上层结构处理的管道
 }
 
+// NewPeer
+//
+//	@Description: 新建节点实例，在接收到其它节点的连接建立请求或发现节点尝试建立连接时调用
+//	@param peerId - 对端节点的 id
+//	@param s - 数据流
+//	@param config - 节点配置信息
+//	@return *Peer - 节点实例，作为 manager 和 p2p.Peer 的中间层
+//	@return error
 func NewPeer(peerId peer.ID, s *network.Stream, config PeerConfig) (*Peer, error) {
 	msgQueue := make(chan *p2p.Message, messageQueueCap)
-	pp, err := p2p.NewPeer(peerId, s, msgQueue)
 
+	// 创建一个 p2p.Peer 实例，p2p.Peer 用于发送消息，并接收到的消息传递到 node.Peer
+	pp, err := p2p.NewPeer(peerId, s, msgQueue)
 	if err != nil {
 		log.WithField("error", err).Errorln("Create p2p peer failed.")
 		return nil, err
 	}
 
+	// 缓存初始化
 	blockLru, err := lru.New(maxKnownBlocks)
-
 	if err != nil {
 		log.WithField("error", err).Errorln("Create block lru failed.")
 		return nil, err
 	}
 
 	txLru, err := lru.New(maxKnownTxs)
-
 	if err != nil {
 		log.WithField("error", err).Errorln("Create transaction lru failed")
 		return nil, err
@@ -175,6 +184,31 @@ func (p *Peer) Handle() {
 				metrics.RecordHandleReceivedCode(int(msg.Code))
 				go handle(p.handler, msg, p)
 			}
+		}
+	}
+}
+
+// sendStatus
+//
+//	@Description: 向其它节点请求同步信息
+//	@receiver p
+func (p *Peer) sendStatus() {
+	ticker := time.NewTicker(490 * time.Millisecond)
+	for {
+		if p.peer.Stopped() {
+			break
+		}
+
+		select {
+		case <-ticker.C:
+			height := p.chain.Height()
+			requestSyncStatusMsg(height, p)
+		}
+
+		// fixed[230725]：在同步完成后不再请求对端高度
+		status := p.handler.blockSyncer.getStatus()
+		if status == synced {
+			break
 		}
 	}
 }

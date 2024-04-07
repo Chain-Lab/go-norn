@@ -1,9 +1,5 @@
-/**
-  @author: decision
-  @date: 2023/3/?
-  @note: VDF 计算协程，从 channel 中接收任务，计算后再放入 channel
-**/
-
+// Package crypto
+// @Description: VDF 计算协程，从 channel 中接收任务，计算后再放入 channel
 package crypto
 
 import (
@@ -52,6 +48,12 @@ func GetCalculatorInstance() *Calculator {
 	return calculatorInst
 }
 
+// CalculatorInitialization
+//
+//	@Description: 初始化 VDF 计算实例
+//	@param pp - 证明所用到的安全参数，对应论文中的 l
+//	@param order - 计算所在的群的阶
+//	@param t - 计算的时间参数 t，需要计算的为 m^{2^{t}}
 func CalculatorInitialization(pp *big.Int, order *big.Int, t int64) {
 	calculatorOnce.Do(func() {
 		calculatorInst = &Calculator{
@@ -87,8 +89,13 @@ func CalculatorInitialization(pp *big.Int, order *big.Int, t int64) {
 	})
 }
 
-// GetSeedParams 读取计算信息，如果channel中有数据则优先获取
-func (c *Calculator) GetSeedParams(bufferFull bool) (*big.Int, *big.Int) {
+// GetSeedParams
+//
+//	@Description: 读取计算信息，如果channel中有数据则优先获取
+//	@receiver c - 计算实例
+//	@return *big.Int - 计算结果
+//	@return *big.Int - 证明 pi
+func (c *Calculator) GetSeedParams() (*big.Int, *big.Int) {
 	seed := new(big.Int)
 	proof := new(big.Int)
 
@@ -107,10 +114,19 @@ func (c *Calculator) GetSeedParams(bufferFull bool) (*big.Int, *big.Int) {
 	return seed, proof
 }
 
+// VerifyBlockVDF
+//
+//	@Description: 验证某个区块的 VDF 是否正确
+//	@receiver c - 计算实例
+//	@param seed - 传入的区块的 seed
+//	@param proof - 证明参数
+//	@return bool - 是否正确
 func (c *Calculator) VerifyBlockVDF(seed *big.Int, proof *big.Int) bool {
 	c.changeLock.Lock()
 	defer c.changeLock.Unlock()
 
+	// 如果区块的 seed 和上一个参数相同或 seed 与当前的 seed 相同，或者在不为 0 的情况下验证成功
+	// 返回参数正确
 	if c.prevSeed.Cmp(seed) == 0 || c.seed.Cmp(seed) == 0 || (c.seed.Cmp(
 		zero) != 0 && c.
 		Verify(c.
@@ -122,7 +138,12 @@ func (c *Calculator) VerifyBlockVDF(seed *big.Int, proof *big.Int) bool {
 	return false
 }
 
-// AppendNewSeed 在计算运行时修改此时的运行参数
+// AppendNewSeed
+//
+//	@Description: 在计算运行时修改此时的运行参数，常用语其它节点完成计算，但是本地还没完成计算
+//	@receiver c
+//	@param seed - 区块携带的 seed
+//	@param proof - 证明 pi
 func (c *Calculator) AppendNewSeed(seed *big.Int, proof *big.Int) {
 	c.changeLock.Lock()
 	defer c.changeLock.Unlock()
@@ -138,7 +159,6 @@ func (c *Calculator) AppendNewSeed(seed *big.Int, proof *big.Int) {
 		return
 	}
 
-	// todo： 这里切换的地方感觉还是存在问题
 	c.changed = true
 	log.Debugf("New Seed: %s, Proof: %s", hex.EncodeToString(seed.Bytes()),
 		hex.EncodeToString(proof.Bytes()))
@@ -146,7 +166,12 @@ func (c *Calculator) AppendNewSeed(seed *big.Int, proof *big.Int) {
 	c.prevProofChannel <- proof
 }
 
-// GenerateParams 用于生成计算参数，返回 order(n), proof_param
+// GenerateParams
+//
+//	@Description: 用于生成计算参数，返回 order(n), proof_param
+//	@return *big.Int - 阶
+//	@return *big.Int - 证明参数
+//	@return error
 func GenerateParams() (*big.Int, *big.Int, error) {
 	r := rand.Reader
 	n := new(big.Int)
@@ -173,6 +198,10 @@ func GenerateParams() (*big.Int, *big.Int, error) {
 	return n, pp, nil
 }
 
+// run
+//
+//	@Description: VDF 计算运行主程序，如果其它节点传入了正确的参数，会中断当前计算并且开始新一轮的计算
+//	@receiver c
 func (c *Calculator) run() {
 	for {
 		select {
@@ -200,7 +229,13 @@ func (c *Calculator) run() {
 	}
 }
 
-// calculate 输入参数 seed，根据对象的参数来计算 VDF
+// calculate
+//
+//	@Description: 输入参数 seed，根据对象的参数来计算 VDF，参考论文：A survey of two verifiable delay functions
+//	@receiver c
+//	@param seed - 当前轮计算的 seed
+//	@return *big.Int - VDF 计算结果
+//	@return *big.Int - VDF 证明 pi
 func (c *Calculator) calculate(seed *big.Int) (*big.Int, *big.Int) {
 	pi, r := big.NewInt(1), big.NewInt(1)
 	g := new(big.Int)
@@ -247,7 +282,6 @@ func (c *Calculator) Verify(seed *big.Int, pi *big.Int, result *big.Int) bool {
 	tPi := big.NewInt(0)
 	tPi.SetBytes(pi.Bytes())
 
-	// todo: 写一下 calculate 和 verify 实现的公式的过程
 	r := big.NewInt(2)
 	t := big.NewInt(c.timeParam)
 

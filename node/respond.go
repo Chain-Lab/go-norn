@@ -1,3 +1,5 @@
+// Package node
+// @Description: 节点接收到的请求回应方法
 package node
 
 import (

@@ -6,6 +6,12 @@ import (
 	karmem "karmem.org/golang"
 )
 
+// DeserializeBlock
+//
+//	@Description: 区块反序列化函数，将 bytes 数据反序列化为 karmem 的 block
+//	@param byteBlockData
+//	@return *common.Block - 如果序列化失败返回 nil
+//	@return error - 该版本默认返回 nil
 func DeserializeBlock(byteBlockData []byte) (*common.Block, error) {
 	block := new(common.Block)
 	block.ReadAsRoot(karmem.NewReader(byteBlockData))
@@ -13,6 +19,12 @@ func DeserializeBlock(byteBlockData []byte) (*common.Block, error) {
 	return block, nil
 }
 
+// DeserializeTransaction
+//
+//	@Description: 交易的反序列化函数，将 bytes 数据反序列化为 karmem 的 transaction
+//	@param byteTxData
+//	@return *common.Transaction - 如果序列化失败返回 nil
+//	@return error - 该版本默认返回 nil
 func DeserializeTransaction(byteTxData []byte) (*common.Transaction, error) {
 	transaction := new(common.Transaction)
 	transaction.ReadAsRoot(karmem.NewReader(byteTxData))

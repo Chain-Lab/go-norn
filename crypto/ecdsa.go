@@ -13,6 +13,12 @@ import (
 	"math/big"
 )
 
+// DecodePrivateKeyFromHexString
+//
+//	@Description: 从 16 进制的字符串转换为私钥类型，同时计算它的公钥
+//	@param hexString - 16 进制字符串
+//	@return *ecdsa.PrivateKey - 私钥
+//	@return error - 报错信息
 func DecodePrivateKeyFromHexString(hexString string) (*ecdsa.PrivateKey,
 	error) {
 	result := new(ecdsa.PrivateKey)
