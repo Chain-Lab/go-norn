@@ -8,11 +8,11 @@ package utils
 
 import (
 	"encoding/hex"
-	"github.com/chain-lab/go-chronos/common"
+	"github.com/chain-lab/go-norn/common"
 	"github.com/gogo/protobuf/proto"
 	"time"
 )
-import "github.com/chain-lab/go-chronos/rpc/pb"
+import "github.com/chain-lab/go-norn/rpc/pb"
 
 func KarmemBlock2Protobuf(block *common.Block, full bool) *pb.Block {
 	pbBlock := new(pb.Block)

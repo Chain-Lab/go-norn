@@ -7,7 +7,7 @@ import (
 	"bufio"
 	"context"
 	"encoding/base64"
-	"github.com/chain-lab/go-chronos/metrics"
+	"github.com/chain-lab/go-norn/metrics"
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
 	log "github.com/sirupsen/logrus"

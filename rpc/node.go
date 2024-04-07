@@ -8,8 +8,8 @@ package rpc
 
 import (
 	"context"
-	"github.com/chain-lab/go-chronos/node"
-	"github.com/chain-lab/go-chronos/rpc/pb"
+	"github.com/chain-lab/go-norn/node"
+	"github.com/chain-lab/go-norn/rpc/pb"
 )
 
 type nodeService struct {

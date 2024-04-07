@@ -9,10 +9,10 @@ package rpc
 import (
 	"context"
 	"encoding/hex"
-	"github.com/chain-lab/go-chronos/metrics"
-	"github.com/chain-lab/go-chronos/node"
-	"github.com/chain-lab/go-chronos/rpc/pb"
-	"github.com/chain-lab/go-chronos/utils"
+	"github.com/chain-lab/go-norn/metrics"
+	"github.com/chain-lab/go-norn/node"
+	"github.com/chain-lab/go-norn/rpc/pb"
+	"github.com/chain-lab/go-norn/utils"
 	"github.com/gogo/protobuf/proto"
 )
 

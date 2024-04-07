@@ -4,7 +4,7 @@ package core
 
 import (
 	"crypto/sha256"
-	"github.com/chain-lab/go-chronos/common"
+	"github.com/chain-lab/go-norn/common"
 	"math"
 )
 
@@ -53,7 +53,7 @@ func BuildMerkleTree(txs []common.Transaction) []byte {
 
 	// 二叉树的结构，其高度为 log2(length)
 	height := int(math.Log2(float64(length))) + 1
-	
+
 	for i := 0; i < height; i++ {
 		levelLength := len(nodes) / 2
 		if len(nodes)%2 != 0 {

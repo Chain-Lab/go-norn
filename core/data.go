@@ -5,9 +5,9 @@ package core
 import (
 	"encoding/hex"
 	"encoding/json"
-	"github.com/chain-lab/go-chronos/common"
-	"github.com/chain-lab/go-chronos/pubsub"
-	"github.com/chain-lab/go-chronos/utils"
+	"github.com/chain-lab/go-norn/common"
+	"github.com/chain-lab/go-norn/pubsub"
+	"github.com/chain-lab/go-norn/utils"
 	log "github.com/sirupsen/logrus"
 	"strconv"
 )

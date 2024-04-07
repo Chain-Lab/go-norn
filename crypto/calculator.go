@@ -5,8 +5,8 @@ package crypto
 import (
 	"crypto/rand"
 	"encoding/hex"
-	"github.com/chain-lab/go-chronos/common"
-	"github.com/chain-lab/go-chronos/metrics"
+	"github.com/chain-lab/go-norn/common"
+	"github.com/chain-lab/go-norn/metrics"
 	log "github.com/sirupsen/logrus"
 	"math/big"
 	"sync"

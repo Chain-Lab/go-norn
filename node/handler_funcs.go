@@ -9,11 +9,11 @@ package node
 import (
 	"encoding/binary"
 	"encoding/hex"
-	"github.com/chain-lab/go-chronos/common"
-	"github.com/chain-lab/go-chronos/crypto"
-	"github.com/chain-lab/go-chronos/metrics"
-	"github.com/chain-lab/go-chronos/p2p"
-	"github.com/chain-lab/go-chronos/utils"
+	"github.com/chain-lab/go-norn/common"
+	"github.com/chain-lab/go-norn/crypto"
+	"github.com/chain-lab/go-norn/metrics"
+	"github.com/chain-lab/go-norn/p2p"
+	"github.com/chain-lab/go-norn/utils"
 	log "github.com/sirupsen/logrus"
 	"math/big"
 )

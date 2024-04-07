@@ -8,10 +8,10 @@ package core
 
 import (
 	"encoding/hex"
-	"github.com/chain-lab/go-chronos/common"
-	"github.com/chain-lab/go-chronos/crypto"
-	"github.com/chain-lab/go-chronos/metrics"
-	"github.com/chain-lab/go-chronos/utils"
+	"github.com/chain-lab/go-norn/common"
+	"github.com/chain-lab/go-norn/crypto"
+	"github.com/chain-lab/go-norn/metrics"
+	"github.com/chain-lab/go-norn/utils"
 	lru "github.com/hashicorp/golang-lru"
 	log "github.com/sirupsen/logrus"
 	"math/big"

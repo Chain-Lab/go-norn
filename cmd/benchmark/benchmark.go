@@ -4,7 +4,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
-	"github.com/chain-lab/go-chronos/common"
+	"github.com/chain-lab/go-norn/common"
 	log "github.com/sirupsen/logrus"
 	"time"
 )

@@ -7,7 +7,7 @@
 package rpc
 
 import (
-	"github.com/chain-lab/go-chronos/rpc/pb"
+	"github.com/chain-lab/go-norn/rpc/pb"
 	"github.com/gookit/config/v2"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"

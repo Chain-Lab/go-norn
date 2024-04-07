@@ -3,7 +3,7 @@ package utils
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/chain-lab/go-chronos/common"
+	"github.com/chain-lab/go-norn/common"
 	"strconv"
 )
 

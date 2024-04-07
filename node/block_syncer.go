@@ -3,10 +3,10 @@
 package node
 
 import (
-	"github.com/chain-lab/go-chronos/common"
-	"github.com/chain-lab/go-chronos/core"
-	"github.com/chain-lab/go-chronos/metrics"
-	"github.com/chain-lab/go-chronos/p2p"
+	"github.com/chain-lab/go-norn/common"
+	"github.com/chain-lab/go-norn/core"
+	"github.com/chain-lab/go-norn/metrics"
+	"github.com/chain-lab/go-norn/p2p"
 	"github.com/libp2p/go-libp2p/core/peer"
 	log "github.com/sirupsen/logrus"
 	"sync"

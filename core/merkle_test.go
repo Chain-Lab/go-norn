@@ -5,7 +5,7 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"encoding/hex"
-	"github.com/chain-lab/go-chronos/common"
+	"github.com/chain-lab/go-norn/common"
 	"testing"
 	"time"
 )

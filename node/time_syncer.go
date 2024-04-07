@@ -3,8 +3,8 @@
 package node
 
 import (
-	"github.com/chain-lab/go-chronos/metrics"
-	"github.com/chain-lab/go-chronos/p2p"
+	"github.com/chain-lab/go-norn/metrics"
+	"github.com/chain-lab/go-norn/p2p"
 	log "github.com/sirupsen/logrus"
 	"math/rand"
 	"sync"

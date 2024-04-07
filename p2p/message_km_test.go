@@ -2,7 +2,7 @@ package p2p
 
 import (
 	"encoding/hex"
-	"github.com/chain-lab/go-chronos/utils"
+	"github.com/chain-lab/go-norn/utils"
 	"testing"
 )
 

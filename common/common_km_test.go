@@ -5,7 +5,7 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/sha256"
-	"github.com/chain-lab/go-chronos/crypto"
+	"github.com/chain-lab/go-norn/crypto"
 	log "github.com/sirupsen/logrus"
 	karmem "karmem.org/golang"
 	"testing"

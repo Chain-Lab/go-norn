@@ -6,7 +6,7 @@ import (
 	"crypto/elliptic"
 	"crypto/sha256"
 	"encoding/hex"
-	"github.com/chain-lab/go-chronos/metrics"
+	"github.com/chain-lab/go-norn/metrics"
 	log "github.com/sirupsen/logrus"
 	karmem "karmem.org/golang"
 	"time"

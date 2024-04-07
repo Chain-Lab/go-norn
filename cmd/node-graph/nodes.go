@@ -8,7 +8,7 @@ package main
 
 import (
 	"context"
-	"github.com/chain-lab/go-chronos/rpc/pb"
+	"github.com/chain-lab/go-norn/rpc/pb"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
