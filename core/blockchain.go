@@ -10,6 +10,7 @@ import (
 	"encoding/hex"
 	"github.com/chain-lab/go-norn/common"
 	"github.com/chain-lab/go-norn/crypto"
+	"github.com/chain-lab/go-norn/interfaces"
 	"github.com/chain-lab/go-norn/metrics"
 	"github.com/gookit/config/v2"
 	lru "github.com/hashicorp/golang-lru"
@@ -38,7 +39,7 @@ const (
 
 type BlockChain struct {
 	// 数据库相关的成员变量
-	db *utils.LevelDB
+	db interfaces.DBInterface
 
 	// 当前的链所维护的区块高度对应区块 blockHeightMap、区块 cache 和交易 cache
 	blockHeightMap *lru.Cache
@@ -70,7 +71,7 @@ type BlockChain struct {
 //	@Description: 创建一个 BlockChain ，需要传入一个 LevelDB 实例 db
 //	@param db - 已初始化的 levelDB 数据库实例
 //	@return *BlockChain - 实例化的数据库处理对象，如果出错返回 nil
-func NewBlockchain(db *utils.LevelDB) *BlockChain {
+func NewBlockchain(db interfaces.DBInterface) *BlockChain {
 	// 实例化一系列的 cache 并处理可能出现的错误，创建三个 LRU 缓存
 	blockCache, err := lru.New(maxBlockCache)
 	if err != nil {

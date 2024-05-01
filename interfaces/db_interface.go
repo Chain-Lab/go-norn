@@ -1,11 +1,9 @@
 package interfaces
 
-import "github.com/syndtr/goleveldb/leveldb"
-
 type DBInterface interface {
 	Get(key []byte) ([]byte, error)
-	InsertInsert(key []byte, value []byte) error
-	Remove([]byte) bool
-	BatchInsert(batch *leveldb.Batch)
-	BatchRemove()
+	Insert(key []byte, value []byte) error
+	Remove(key []byte) error
+	BatchInsert(key [][]byte, value [][]byte) error
+	BatchDelete(key [][]byte) error
 }

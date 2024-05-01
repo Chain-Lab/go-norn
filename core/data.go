@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"github.com/chain-lab/go-norn/common"
+	"github.com/chain-lab/go-norn/interfaces"
 	"github.com/chain-lab/go-norn/pubsub"
 	"github.com/chain-lab/go-norn/utils"
 	log "github.com/sirupsen/logrus"
@@ -30,8 +31,8 @@ type DataTask struct {
 }
 
 type DataProcessor struct {
-	taskChannel chan *DataTask // processor 的任务接收队列
-	db          *utils.LevelDB // 数据库实例
+	taskChannel chan *DataTask         // processor 的任务接收队列
+	db          interfaces.DBInterface // 数据库实例
 }
 
 // NewDataProcessor
