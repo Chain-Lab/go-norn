@@ -1,0 +1,107 @@
+.
+├── LICENSE
+├── README.md
+├── cmd
+│   ├── chronos                     // 运行主程序
+│   │   ├── init.go                 // 命令行初始化代码
+│   │   ├── main.go                 // 主运行代码
+│   │   └── utils.go                // 交易构建工具
+│   ├── chronos-cli                 // 数据存储调试工具
+│   │   └── main.go                 // 主运行代码
+│   ├── generate                    // 配置文件生成工具
+│   │   ├── config.yml              // 配置文件模版
+│   │   └── main.go                 // 工具主运行代码
+│   ├── graph                       // TPS 数据拉取工具
+│   │   └── main.go                 // 主运行代码
+│   ├── sender                      // 交易发送测试工具
+│   │   ├── config.yml              // 节点配置文件
+│   │   ├── main.go                 // 主运行代码
+│   │   └── utils.go                // 交易构建代码
+├── common                          // 基础数据结构
+│   ├── block.go                    // 区块相关代码
+│   ├── common_km.go                // karmem 生成的区块、交易序列化代码
+│   ├── common_km_test.go           // karmem 测试代码
+│   ├── transaction.go              // 交易相关代码
+│   └── types.go                    // 类型定义
+├── config.yml                      // 配置文件
+├── core                            // 核心区块链结构
+│   ├── blockchain.go               // 区块链结构代码
+│   ├── blockchain_test.go          // 部分单元测试代码
+│   ├── buffer.go                   // 区块缓冲区代码
+│   ├── buffer_test.go              // 部分单元测试代码
+│   ├── config.go                   // 配置文件初始化代码
+│   ├── data.go                     // 链上数据存取代码
+│   ├── merkle.go                   // Merkle 树的实现
+│   ├── merkle_test.go              // Merkle 树单元测试代码
+│   ├── test_tools.go               // 交易池测试代码
+│   └── txpool.go                   // 交易池代码
+├── crypto                          // VRF、VDF 相关代码
+│   ├── bigint.go                   // 大整数计算代码
+│   ├── calculator.go               // VDF 计算协程代码
+│   ├── calculator_test.go          // VDF 计算测试
+│   ├── convertor.go                // 私钥、地址转换代码
+│   ├── ecdsa.go                    // 椭圆曲线计算相关代码
+│   ├── vrf.go                      // VRF 计算代码
+│   └── vrf_test.go                 // VRF 计算测试
+├── go.mod                          // go mod 相关库的版本信息
+├── go.sum
+├── interfaces                      // 数据库接口
+│   └── db_interface.go
+├── karmem                          // Karmem 结构定义代码
+│   ├── README.md
+│   ├── core.km                     // 区块、交易的定义
+│   ├── node_message.km             // 节点间通信结构定义
+│   └── p2p_message.km              // P2P 通信结构定义
+├── metrics                         // 指标信息公开代码
+│   ├── core.go                     // 区块链内指标定义
+│   ├── node.go                     // 节点相关指标
+│   ├── p2p.go                      // P2P 相关指标
+│   ├── regular.go                  // 常规指标
+│   ├── routines.go                 // 协程信息指标
+│   └── rpc.go                      // RPC 相关指标
+├── node                            // 节点通信代码
+│   ├── block_syncer.go             // 区块同步器代码
+│   ├── handler_funcs.go            // 状态码处理函数定义
+│   ├── manager.go                  // 核心的区块统一管理器
+│   ├── peer.go                     // 邻居节点定义代码
+│   ├── request.go                  // 一系列请求函数
+│   ├── respond.go                  // 一系列响应函数
+│   └── time_syncer.go              // 时间同步器
+├── p2p                             // P2P 相关代码，基于 go-p2plib
+│   ├── message_km.go               // Karmem 生成的消息序列化代码
+│   ├── message_km_test.go
+│   └── peer.go                     // 基于 go-libp2p 的节点通信代码
+├── prometheus.yml                  // promethus 运行配置信息
+├── protobuf                        // RPC 通信接口定义
+│   ├── blockchain.proto            // 区块链相关 RPC接口
+│   ├── node.proto                  // 节点自身信息相关 RPC 接口
+│   └── transaction.proto           // 交易相关 RPC 接口
+├── pubsub                          // 订阅接口的实现
+│   ├── event.go                    // 订阅事件定义代码
+│   ├── publisher.go                // 本地节点的发布者逻辑代码
+│   ├── request.go                  // 序列化请求结构代码
+│   ├── router.go                   // 发布、订阅的路由
+│   └── router_test.go              // 路由测试代码
+├── rpc                             // RPC 相关代码
+│   ├── blockchain.go               // 区块链 RPC 服务实现
+│   ├── limiter.go                  // RPC 连接限制器
+│   ├── node.go                     // 节点自身 RPC 服务实现
+│   ├── pb                          // Protobuf 生成的 pb 处理代码
+│   │   ├── blockchain.pb.go
+│   │   ├── blockchain_grpc.pb.go
+│   │   ├── node.pb.go
+│   │   ├── node_grpc.pb.go
+│   │   ├── transaction.pb.go
+│   │   └── transaction_grpc.pb.go
+│   ├── rpcclient.go                // RPC 客户端的实现
+│   ├── rpcserver.go                // RPC 服务端的实现
+│   └── transaction.go              // 交易相关 RPC 接口实现
+├── utils                           // 工具代码
+│   ├── config.go                   // 配置文件处理代码
+│   ├── converter.go                // 转换器代码
+│   ├── dbtools.go                  // 数据库相关工具代码
+│   ├── deseralizer.go              // 反序列化器代码
+│   ├── km_pb.go                    // km 序列结构到 protobuf 结构转换
+│   ├── leveldb.go                  // level 数据库代码
+│   ├── serializer.go               // 序列化器
+└─  └── serializer_test.go
