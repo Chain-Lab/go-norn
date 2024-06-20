@@ -19,7 +19,7 @@
 <h3 align="center">Go-Norn</h3>
 
   <p align="center">
-    A PoVF-base blockchain node implemented with Go-lang
+    一个基于可验证随机函数的
     <br />
     <br />
   </p>
@@ -27,39 +27,41 @@
 
 
 <!-- ABOUT THE PROJECT -->
-## About The Project
+## 关于项目
 
-Norn is a blockchain node based on Proof of Verifiable Function (PoVF). Based on the unpredictability of verifiable 
-functions, PoVF provides a fair and decentralized consensus mechanism.
+Norn 是一个基于可验证函数的区块链节点。基于可验证函数的随机性，PoVF 提供了一种公平、去中心化的共识机制。
 
 <!-- GETTING STARTED -->
-## Getting Started
+## 开始
 
-### Build & Run node
+### 编译&&运行节点
 
-1. Clone the repo
+1. 克隆仓库
    ```sh
    git clone https://github.com/Chain-Lab/go-norn.git
    ```
-2. Build node
+2. 编译节点
    ```sh
    cd ./cmd/norn
    go build
    ```
-3. generate config
+
+3. 生成配置文件
    ```sh
    cd ./cmd/generate
    go build
    ./generate
    ```
 
-4. Run a genesis norn node
+4. 运行一个创世节点，`data_path` 指定 levelDB 的数据存储目录，`config_path` 指定配置文件路径
    ```sh
    ./norn -d [data_path] -g -c [config_path]
    ```
-5. Run general node
+5. 运行一个普通节点，`bootstrap_url` 指定启动节点路径
    ```sh
    ./norn -d [data_path] -c [config_path] -b [bootstrap_url]
+   ```
+
 
 <!-- LICENSE -->
 ## License
