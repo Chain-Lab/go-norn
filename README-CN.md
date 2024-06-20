@@ -19,7 +19,7 @@
 <h3 align="center">Go-Norn</h3>
 
   <p align="center">
-    一个基于可验证随机函数的
+    一个通过 Go-lang 实现的基于可验证随机函数的区块链节点
     <br />
     <br />
   </p>
