@@ -12,6 +12,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"github.com/chain-lab/go-norn/common"
 	"github.com/chain-lab/go-norn/crypto"
@@ -21,6 +22,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/gookit/config/v2"
 	log "github.com/sirupsen/logrus"
+	"github.com/syndtr/goleveldb/leveldb"
 	"google.golang.org/protobuf/types/known/emptypb"
 	karmem "karmem.org/golang"
 	"time"
@@ -240,9 +242,11 @@ func (s *blockchainService) ReadContractAddress(ctx context.
 
 	data, err := chain.ReadAddressData(*address, *key)
 
-	if err != nil {
+	if errors.Is(err, leveldb.ErrNotFound) {
+		data = []byte("")
+	} else if err != nil {
 		log.WithError(err).Debugln("Read blockchain data failed.")
-		return nil, err
+		return resp, err
 	}
 
 	resp.Hex = proto.String(string(data))
