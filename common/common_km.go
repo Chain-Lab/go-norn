@@ -41,6 +41,7 @@ type TransactionBody struct {
 	Timestamp int64
 	Public    [33]byte
 	Signature []byte
+	IP        [4]byte
 }
 
 func NewTransactionBody() TransactionBody {
@@ -68,7 +69,7 @@ func (x *TransactionBody) Write(writer *karmem.Writer, start uint) (offset uint,
 			return 0, err
 		}
 	}
-	writer.Write4At(offset, uint32(249))
+	writer.Write4At(offset, uint32(253))
 	__HashOffset := offset + 4
 	writer.WriteAt(__HashOffset, (*[32]byte)(unsafe.Pointer(&x.Hash))[:])
 	__AddressOffset := offset + 36
@@ -151,6 +152,8 @@ func (x *TransactionBody) Write(writer *karmem.Writer, start uint) (offset uint,
 	__SignatureSlice[1] = __SignatureSize
 	__SignatureSlice[2] = __SignatureSize
 	writer.WriteAt(__SignatureOffset, *(*[]byte)(unsafe.Pointer(&__SignatureSlice)))
+	__IPOffset := offset + 249
+	writer.WriteAt(__IPOffset, (*[4]byte)(unsafe.Pointer(&x.IP))[:])
 
 	return offset, nil
 }
@@ -245,6 +248,12 @@ func (x *TransactionBody) Read(viewer *TransactionBodyViewer, reader *karmem.Rea
 	copy(x.Signature, __SignatureSlice)
 	for i := __SignatureLen; i < len(x.Signature); i++ {
 		x.Signature[i] = 0
+	}
+	__IPSlice := viewer.IP()
+	__IPLen := len(__IPSlice)
+	copy(x.IP[:], __IPSlice)
+	for i := __IPLen; i < len(x.IP); i++ {
+		x.IP[i] = 0
 	}
 }
 
@@ -519,6 +528,7 @@ type BlockHeader struct {
 	PublicKey     [33]byte
 	Params        []byte
 	GasLimit      int64
+	IPs           []byte
 }
 
 func NewBlockHeader() BlockHeader {
@@ -539,14 +549,14 @@ func (x *BlockHeader) WriteAsRoot(writer *karmem.Writer) (offset uint, err error
 
 func (x *BlockHeader) Write(writer *karmem.Writer, start uint) (offset uint, err error) {
 	offset = start
-	size := uint(176)
+	size := uint(184)
 	if offset == 0 {
 		offset, err = writer.Alloc(size)
 		if err != nil {
 			return 0, err
 		}
 	}
-	writer.Write4At(offset, uint32(169))
+	writer.Write4At(offset, uint32(181))
 	__TimestampOffset := offset + 4
 	writer.Write8At(__TimestampOffset, *(*uint64)(unsafe.Pointer(&x.Timestamp)))
 	__PrevBlockHashOffset := offset + 12
@@ -573,6 +583,18 @@ func (x *BlockHeader) Write(writer *karmem.Writer, start uint) (offset uint, err
 	writer.WriteAt(__ParamsOffset, *(*[]byte)(unsafe.Pointer(&__ParamsSlice)))
 	__GasLimitOffset := offset + 161
 	writer.Write8At(__GasLimitOffset, *(*uint64)(unsafe.Pointer(&x.GasLimit)))
+	__IPsSize := uint(1 * len(x.IPs))
+	__IPsOffset, err := writer.Alloc(__IPsSize)
+	if err != nil {
+		return 0, err
+	}
+	writer.Write4At(offset+169, uint32(__IPsOffset))
+	writer.Write4At(offset+169+4, uint32(__IPsSize))
+	writer.Write4At(offset+169+4+4, 1)
+	__IPsSlice := *(*[3]uint)(unsafe.Pointer(&x.IPs))
+	__IPsSlice[1] = __IPsSize
+	__IPsSlice[2] = __IPsSize
+	writer.WriteAt(__IPsOffset, *(*[]byte)(unsafe.Pointer(&__IPsSlice)))
 
 	return offset, nil
 }
@@ -619,6 +641,16 @@ func (x *BlockHeader) Read(viewer *BlockHeaderViewer, reader *karmem.Reader) {
 		x.Params[i] = 0
 	}
 	x.GasLimit = viewer.GasLimit()
+	__IPsSlice := viewer.IPs(reader)
+	__IPsLen := len(__IPsSlice)
+	if __IPsLen > cap(x.IPs) {
+		x.IPs = append(x.IPs, make([]byte, __IPsLen-len(x.IPs))...)
+	}
+	x.IPs = x.IPs[:__IPsLen]
+	copy(x.IPs, __IPsSlice)
+	for i := __IPsLen; i < len(x.IPs); i++ {
+		x.IPs[i] = 0
+	}
 }
 
 type Block struct {
@@ -652,7 +684,7 @@ func (x *Block) Write(writer *karmem.Writer, start uint) (offset uint, err error
 		}
 	}
 	writer.Write4At(offset, uint32(20))
-	__HeaderSize := uint(176)
+	__HeaderSize := uint(184)
 	__HeaderOffset, err := writer.Alloc(__HeaderSize)
 	if err != nil {
 		return 0, err
@@ -982,6 +1014,15 @@ func (x *TransactionBodyViewer) Signature(reader *karmem.Reader) (v []byte) {
 	}
 	return *(*[]byte)(unsafe.Pointer(&slice))
 }
+func (x *TransactionBodyViewer) IP() (v []byte) {
+	if 249+4 > x.size() {
+		return []byte{}
+	}
+	slice := [3]uintptr{
+		uintptr(unsafe.Add(unsafe.Pointer(&x._data), 249)), 4, 4,
+	}
+	return *(*[]byte)(unsafe.Pointer(&slice))
+}
 
 type TransactionViewer struct {
 	_data [8]byte
@@ -1144,7 +1185,7 @@ func (x *GeneralParamsViewer) T(reader *karmem.Reader) (v []byte) {
 }
 
 type BlockHeaderViewer struct {
-	_data [176]byte
+	_data [184]byte
 }
 
 func NewBlockHeaderViewer(reader *karmem.Reader, offset uint32) (v *BlockHeaderViewer) {
@@ -1229,6 +1270,21 @@ func (x *BlockHeaderViewer) GasLimit() (v int64) {
 		return v
 	}
 	return *(*int64)(unsafe.Add(unsafe.Pointer(&x._data), 161))
+}
+func (x *BlockHeaderViewer) IPs(reader *karmem.Reader) (v []byte) {
+	if 169+12 > x.size() {
+		return []byte{}
+	}
+	offset := *(*uint32)(unsafe.Add(unsafe.Pointer(&x._data), 169))
+	size := *(*uint32)(unsafe.Add(unsafe.Pointer(&x._data), 169+4))
+	if !reader.IsValidOffset(offset, size) {
+		return []byte{}
+	}
+	length := uintptr(size / 1)
+	slice := [3]uintptr{
+		uintptr(unsafe.Add(reader.Pointer, offset)), length, length,
+	}
+	return *(*[]byte)(unsafe.Pointer(&slice))
 }
 
 type BlockViewer struct {

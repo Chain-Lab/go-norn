@@ -8,6 +8,7 @@ import (
 	"github.com/chain-lab/go-norn/crypto"
 	log "github.com/sirupsen/logrus"
 	karmem "karmem.org/golang"
+	"net"
 	"time"
 )
 
@@ -18,10 +19,13 @@ func buildTransaction(key *ecdsa.PrivateKey) *common.Transaction {
 	timestamp := time.Now().UnixMilli()
 
 	// 构建交易体
+	ipAddress := getLocalIP()
+
 	txBody := common.TransactionBody{
 		Data:      data,
 		Timestamp: timestamp,
 		Expire:    timestamp + 3000,
+		IP:        ipAddress,
 	}
 
 	// 设置交易的公钥、地址，初始化哈希值、签名为空
@@ -54,4 +58,11 @@ func buildTransaction(key *ecdsa.PrivateKey) *common.Transaction {
 	}
 
 	return &tx
+}
+
+func getLocalIP() [4]byte {
+	var ipArray [4]byte
+	loopbackIP := net.IPv4(127, 0, 0, 1) // 默认环回地址
+	copy(ipArray[:], loopbackIP)
+	return ipArray
 }

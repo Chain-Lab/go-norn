@@ -17,6 +17,7 @@ struct TransactionBody table {
     Timestamp int64;
     Public [33]byte;
     Signature [<73]byte;
+    IP [4]byte;
 }
 
 struct Transaction inline {
@@ -47,11 +48,13 @@ struct BlockHeader table {
     PublicKey [33]byte;
     Params []byte;
     GasLimit int64;
+    IPs []byte;
 }
 
 struct Block table {
     Header BlockHeader;
     Transactions []Transaction;
+
 }
 
 struct DataCommand table {

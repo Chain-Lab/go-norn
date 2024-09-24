@@ -153,7 +153,7 @@ func (bc *BlockChain) BlockProcessRoutine() {
 //	@param packageInterval - 打包的间隔
 //	@return *common.Block - 完成打包的区块，如果出错返回为 nil
 //	@return error - 错误信息
-func (bc *BlockChain) PackageNewBlock(txs []common.Transaction, timestamp int64, params *common.GeneralParams, packageInterval int64) (*common.Block, error) {
+func (bc *BlockChain) PackageNewBlock(txs []common.Transaction, timestamp int64, params *common.GeneralParams, packageInterval int64, IPs []byte) (*common.Block, error) {
 	packageStart := time.Now()
 
 	// 对传入的区块参数进行序列化
@@ -178,6 +178,14 @@ func (bc *BlockChain) PackageNewBlock(txs []common.Transaction, timestamp int64,
 
 	// 对交易列表构建 Merkle 哈希树
 	merkleRoot := BuildMerkleTree(txs)
+
+	var ipAddresses []byte
+	// 遍历交易池中的交易，提取 IP 地址
+	for _, tx := range txs {
+		ip := tx.Body.IP // 假设交易对象有一个方法获取 IP 地址
+		ipAddresses = append(ipAddresses, ip[:]...)
+	}
+
 	// 区块创建
 	block := common.Block{
 		Header: common.BlockHeader{
@@ -189,6 +197,7 @@ func (bc *BlockChain) PackageNewBlock(txs []common.Transaction, timestamp int64,
 			Height:        bestBlock.Header.Height + 1,
 			PublicKey:     [33]byte(publicKey),
 			Params:        paramsBytes,
+			IPs:           ipAddresses,
 		},
 		Transactions: txs,
 	}
