@@ -25,7 +25,7 @@ import (
 )
 
 func main() {
-	LoadConfig("./config.yml")
+	//LoadConfig("./config.yml")
 	addresses := config.Strings("rpc.address")
 
 	for {
