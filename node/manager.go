@@ -153,7 +153,7 @@ func NewP2PManager(config *P2PManagerConfig) (*P2PManager, error) {
 	metrics.RoutineCreateCounterObserve(15)
 
 	// 启动节点的打包交易协程
-	go manager.packageBlockRoutine()
+	//go manager.packageBlockRoutine()
 
 	// 启动区块同步器和时间同步器
 	bs.Start()
